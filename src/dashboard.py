@@ -237,21 +237,34 @@ function panel(c){
  }
 }
 function tier(s){return s<=25?"low":s<=50?"moderate":s<=70?"elevated":"high";}
+function apiKey(){
+ let k=localStorage.getItem('anthropic_api_key');
+ if(!k){k=(prompt('Enter your Anthropic API key (stored only in this browser’s localStorage):')||'').trim();
+  if(k)localStorage.setItem('anthropic_api_key',k);}
+ return k;
+}
 async function genSummary(){
  const c=CASES.find(x=>x.id===activeId);
+ const key=apiKey();
+ if(!key){document.getElementById('aiContent').innerHTML='<div class="ai-empty">An API key is required to generate summaries — rule and ML scores above remain fully usable.</div>';return;}
  const btn=document.getElementById('aiBtn');btn.disabled=true;btn.textContent='Generating…';
  document.getElementById('aiContent').innerHTML='<div class="ai-empty">Contacting model…</div>';
  const conflictTxt=c.conflicts.length?c.conflicts.map(k=>k.severity+" "+k.type+": "+k.description).join(" | "):"none detected";
  const prompt="You are an underwriting assistant writing a short internal case summary for a life insurance underwriter. Use ONLY the facts below — never invent numbers. 4–6 sentences, plain professional tone, no headers or bullets. If conflicts exist, address them explicitly and support the referral.\n\n"
   +`Applicant: ${c.name}, age ${c.age}, ${c.occupation}\nPolicy: ${c.policy}, coverage ${fmt$(c.coverage)}\nSmoker status (dataset): ${c.smoker}\nBMI: ${c.bmi}\nConditions: ${c.conditions}\nDTI: ${(c.dti*100).toFixed(1)}%\nCredit score: ${c.credit}\nRule score: ${c.rule_score}/100\nML (gradient boosting) score: ${c.ml_score.toFixed(0)}/100 (AUC ${(M.risk_models.gradient_boosting.auc*100).toFixed(1)}% on held-out test)\nCross-document conflicts: ${conflictTxt}\nSystem decision: ${c.decision} — ${c.rate_class}\nReasons: ${c.reasons.join("; ")}\n\nWrite the summary now.`;
  try{
-  const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},
+  const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
+   headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
    body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,messages:[{role:"user",content:prompt}]})});
   const d=await r.json();
+  if(!r.ok){
+   if(r.status===401)localStorage.removeItem('anthropic_api_key');
+   throw new Error((d.error&&d.error.message)||('API error '+r.status));
+  }
   const text=(d.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n').trim();
   aiCache[c.id]=text||"No summary returned.";render();
  }catch(e){
-  document.getElementById('aiContent').innerHTML='<div class="ai-empty">Model unreachable right now — rule and ML scores above remain fully usable.</div>';
+  document.getElementById('aiContent').innerHTML='<div class="ai-empty">'+String(e.message||'Model unreachable right now').replace(/</g,'&lt;')+' — rule and ML scores above remain fully usable.</div>';
   btn.disabled=false;btn.textContent='Generate Summary';
  }
 }
