@@ -220,6 +220,18 @@ function overview(){
   ${Object.entries(tc).map(([t,n],i)=>`<div class="hist-bar-row"><div class="hist-label">${t}</div>
    <div class="hist-track"><div class="hist-fill" style="width:${n/mx*100}%;background:${cols[i]}"></div></div><div class="hist-count">${n}</div></div>`).join('')}
   <div class="note">Below ${A_LINE} with clean signals → green auto-approve. ${A_LINE}–${D_LINE-1}, any major conflict, model disagreement, or disclosed unique circumstances → yellow manual review. At or above ${D_LINE}, or material misrepresentation → red decline.</div></div>
+ <div class="card"><h3>Continuous Learning — real datasets & run-over-run improvement</h3>
+  ${(()=>{const el=M.external_learning||{datasets:[]};const hist=M.model_history||[];
+   const ds=el.datasets.filter(d=>!d.error);
+   const histMax=Math.max(...hist.map(h=>h.n_train_pool),1);
+   return `<div class="note" style="margin:0 0 12px">The models learn a risk prior from <b>${ds.length} public real-world datasets (${(el.total_rows||0).toLocaleString()} records)</b> — heart disease, diabetes, cancer survival, mortality and credit-default studies — blended into every score as the “external prior” feature. On top of that, every pipeline run adds a fresh batch to a growing training pool, so the models retrain on more data each time.</div>
+   <table class="xt"><tr><th>Dataset</th><th>Records</th><th>Shared factors</th><th>Prior AUC</th></tr>
+    ${ds.map(d=>`<tr><td>${d.name}</td><td class="mono">${d.rows.toLocaleString()}</td><td class="mono">${d.features.join(', ')}</td><td class="mono">${(d.auc*100).toFixed(0)}%</td></tr>`).join('')}</table>
+   <div style="margin-top:16px"><b style="font-size:12.5px">Training runs</b>
+    ${hist.map(h=>`<div class="hist-bar-row"><div class="hist-label">Run ${h.run}</div>
+     <div class="hist-track"><div class="hist-fill" style="width:${h.n_train_pool/histMax*100}%;background:var(--acc)"></div></div>
+     <div class="hist-count" style="width:190px">${h.n_train_pool.toLocaleString()} records · GB AUC ${(h.gb_auc*100).toFixed(1)}%</div></div>`).join('')}</div>`;})()}
+ </div>
  <div class="card"><h3>Gradient Boosting — Feature Importance</h3>
   ${Object.entries(fi).sort((a,b)=>b[1]-a[1]).map(([f,v])=>`<div class="coef-bar-row"><div class="coef-label">${f}</div>
    <div class="coef-track"><div class="coef-fill" style="left:0;width:${v/mxf*100}%"></div></div><div class="coef-val">${v.toFixed(3)}</div></div>`).join('')}
@@ -329,13 +341,25 @@ function ruleScoreJS(f){
  p=f.alcohol==="Heavy"?12:f.alcohol==="Moderate"?2:0;factors.push(["Alcohol use",f.alcohol,p]);
  return [Math.min(factors.reduce((s,x)=>s+x[2],0),100),factors];
 }
-function mlScoreJS(f){
+function extPriorJS(f){
+ // identical computation to external_data.prior_scores(), using the exported dataset models
+ const pm=M.risk_models.prior_export||[];if(!pm.length)return 0.5;
+ const cx={age:f.age,bmi:f.bmi,smoker:f.smoker==="Smoker"?1:0,
+  diabetes:f.conditions.toLowerCase().includes("diabetes")?1:0,sys_bp:f.sysbp,chol:f.chol};
+ let s=0;
+ pm.forEach(m=>{let z=m.intercept;
+  m.features.forEach((n,i)=>{z+=m.coef[i]*((cx[n]-m.mean[i])/m.std[i]);});
+  s+=1/(1+Math.exp(-z));});
+ return s/pm.length;
+}
+function mlScoreJS(f,prior){
  const ex=M.risk_models.lr_export;
  const conds=f.conditions.trim()&&f.conditions.trim().toLowerCase()!=="none"?f.conditions.split(",").filter(s=>s.trim()).length:0;
  const dti=Math.min(Math.max(f.income>0?f.debt/f.income:0,0),3);
  const x={Age:f.age,BMI:f.bmi,smoker_now:f.smoker==="Smoker"?1:0,smoker_former:f.smoker==="Former smoker"?1:0,
   n_conditions:conds,"Family History Flag":f.family?1:0,"Debt-to-Income Ratio":dti,"Credit Score":f.credit,
-  hazardous_activity:f.hazard?1:0,driving_violations:f.violations,alcohol_heavy:f.alcohol==="Heavy"?1:0};
+  hazardous_activity:f.hazard?1:0,driving_violations:f.violations,alcohol_heavy:f.alcohol==="Heavy"?1:0,
+  external_prior:prior};
  let z=ex.intercept;
  ex.features.forEach((name,i)=>{z+=ex.coef[i]*((x[name]-ex.scaler_mean[i])/ex.scaler_std[i]);});
  return 100/(1+Math.exp(-z));
@@ -354,33 +378,38 @@ function decideJS(rule,ml,unique){
   reasons.push(`Composite score ${comp} is below the ${A_LINE}-point approval line; engines agree and no special circumstances were disclosed`);}
  return {verdict,decision,rate,comp,reasons};
 }
+let pdfLoaded=false;
 function scoreView(){
+ pdfLoaded=false;
  return `<div class="case-head"><div><h2>Score a New Application</h2>
-  <div class="case-meta"><span>Upload an application PDF or key the fields in</span><span>scored live with the same engines as the portfolio</span></div></div></div>
- <div class="card" style="margin-top:18px"><h3>1 · Application PDF (optional)</h3>
-  <div class="drop-zone" id="dropZone" onclick="document.getElementById('pdfInput').click()">Click to upload an application form PDF — name, DOB, income, debt and coverage are extracted automatically</div>
+  <div class="case-meta"><span>Upload the application PDF — everything else is optional</span><span>scored live with the same engines as the portfolio</span></div></div></div>
+ <div class="card" style="margin-top:18px"><h3>1 · Application PDF (required)</h3>
+  <div class="drop-zone" id="dropZone" onclick="document.getElementById('pdfInput').click()">Click to upload the application form PDF — name, DOB, income, debt and coverage are extracted automatically. Scoring unlocks once a PDF is read.</div>
   <input type="file" id="pdfInput" accept="application/pdf" style="display:none">
  </div>
- <div class="card"><h3>2 · Applicant Inputs — confirm or complete</h3>
+ <div class="card"><h3>2 · Optional — correct or add anything the PDF didn't capture</h3>
+  <div class="note" style="margin:0 0 14px">Every field below is optional. Anything extracted from the PDF is filled in for you; anything left blank falls back to a standard assumption and is listed on the result.</div>
   <div class="form-grid">
-   <div><label>Full name</label><input id="f_name" placeholder="Jane Doe"></div>
-   <div><label>Age</label><input id="f_age" type="number" min="18" max="85" value="40"></div>
-   <div><label>Credit score</label><input id="f_credit" type="number" min="300" max="850" value="715"></div>
-   <div><label>Annual income (USD)</label><input id="f_income" type="number" value="60000"></div>
-   <div><label>Total debt (USD)</label><input id="f_debt" type="number" value="20000"></div>
-   <div><label>Coverage requested (USD)</label><input id="f_coverage" type="number" value="300000"></div>
-   <div><label>BMI</label><input id="f_bmi" type="number" step="0.1" value="25"></div>
+   <div><label>Full name</label><input id="f_name" placeholder="from PDF"></div>
+   <div><label>Age</label><input id="f_age" type="number" min="18" max="85" placeholder="from PDF (default 40)"></div>
+   <div><label>Credit score</label><input id="f_credit" type="number" min="300" max="850" placeholder="default 715"></div>
+   <div><label>Annual income (USD)</label><input id="f_income" type="number" placeholder="from PDF (default 60,000)"></div>
+   <div><label>Total debt (USD)</label><input id="f_debt" type="number" placeholder="from PDF (default 20,000)"></div>
+   <div><label>Coverage requested (USD)</label><input id="f_coverage" type="number" placeholder="from PDF (default 300,000)"></div>
+   <div><label>BMI</label><input id="f_bmi" type="number" step="0.1" placeholder="default 25"></div>
+   <div><label>Systolic blood pressure</label><input id="f_sysbp" type="number" placeholder="default 120"></div>
+   <div><label>Total cholesterol (mg/dL)</label><input id="f_chol" type="number" placeholder="default 200"></div>
    <div><label>Tobacco use</label><select id="f_smoker"><option>Non-smoker</option><option>Former smoker</option><option>Smoker</option></select></div>
    <div><label>Alcohol use</label><select id="f_alcohol"><option>None</option><option selected>Moderate</option><option>Heavy</option></select></div>
-   <div><label>Existing conditions (comma-separated)</label><input id="f_conditions" placeholder="None"></div>
+   <div><label>Existing conditions (comma-separated)</label><input id="f_conditions" placeholder="default None"></div>
    <div><label>Family history of serious illness</label><select id="f_family"><option value="0">No</option><option value="1">Yes</option></select></div>
-   <div><label>Driving violations (3 yr)</label><input id="f_violations" type="number" min="0" max="10" value="0"></div>
+   <div><label>Driving violations (3 yr)</label><input id="f_violations" type="number" min="0" max="10" placeholder="default 0"></div>
    <div><label>Hazardous activities</label><select id="f_hazard" onchange="document.getElementById('hazardWrap').style.display=this.value==='1'?'block':'none'"><option value="0">No</option><option value="1">Yes</option></select></div>
    <div class="fg-wide" id="hazardWrap" style="display:none"><label>If yes, describe the activity</label><input id="f_hazard_detail" placeholder="e.g. Skydiving, scuba diving, motorcycle racing"></div>
    <div><label>Unique circumstances to disclose?</label><select id="f_unique" onchange="document.getElementById('uniqueWrap').style.display=this.value==='1'?'block':'none'"><option value="0">No</option><option value="1">Yes</option></select></div>
    <div class="fg-wide" id="uniqueWrap" style="display:none"><label>Tell us — a human underwriter will read this</label><textarea id="f_unique_text" rows="2" placeholder="e.g. Recent job change, caregiving gap, rebuilt finances after bankruptcy…"></textarea></div>
   </div>
-  <button class="score-btn" onclick="scoreNow()">Score Application</button></div>
+  <button class="score-btn" id="scoreBtn" onclick="scoreNow()" disabled style="opacity:.45;cursor:not-allowed">Upload the application PDF to score</button></div>
  <div id="scoreResult"></div>`;
 }
 function wireScoreForm(){
@@ -410,20 +439,30 @@ function wireScoreForm(){
    const cov=grab("COVERAGE AMOUNT REQUESTED","[\\d,]{4,}");
    if(cov){document.getElementById('f_coverage').value=parseFloat(cov.replace(/,/g,''));got.push('coverage');}
    dz.className='drop-zone loaded';
-   dz.textContent=got.length?('✓ '+file.name+' — extracted '+got.join(', ')+'. Confirm the remaining fields below, then score.')
-    :('✓ '+file.name+' read, but no known fields matched — key the values in below.');
-  }catch(err){dz.textContent='Could not read PDF ('+err.message+') — enter the fields manually below.';}
+   dz.textContent=got.length?('✓ '+file.name+' — extracted '+got.join(', ')+'. Adjust anything below if needed, then score.')
+    :('✓ '+file.name+' read, but no known fields matched — fill in what you know below.');
+   pdfLoaded=true;
+   const b=document.getElementById('scoreBtn');
+   b.disabled=false;b.style.opacity='1';b.style.cursor='pointer';b.textContent='Score Application';
+  }catch(err){dz.textContent='Could not read PDF ('+err.message+') — please try another file. A PDF is required to score.';}
  });
 }
 function scoreNow(){
+ if(!pdfLoaded){document.getElementById('dropZone').scrollIntoView({behavior:'smooth'});return;}
  const v=id=>document.getElementById(id).value;
- const f={name:v('f_name')||'New Applicant',age:+v('f_age'),credit:+v('f_credit'),income:+v('f_income'),
-  debt:+v('f_debt'),coverage:+v('f_coverage'),bmi:+v('f_bmi'),smoker:v('f_smoker'),alcohol:v('f_alcohol'),
-  conditions:v('f_conditions')||'None',family:+v('f_family'),violations:+v('f_violations'),
+ const defaulted=[];
+ const num=(id,dflt,label)=>{const x=v(id);if(x===''||isNaN(+x)){defaulted.push(label+' = '+dflt);return dflt;}return +x;};
+ const f={name:v('f_name')||'New Applicant',
+  age:num('f_age',40,'age'),credit:num('f_credit',715,'credit score'),income:num('f_income',60000,'income'),
+  debt:num('f_debt',20000,'debt'),coverage:num('f_coverage',300000,'coverage'),bmi:num('f_bmi',25,'BMI'),
+  sysbp:num('f_sysbp',120,'systolic BP'),chol:num('f_chol',200,'cholesterol'),
+  smoker:v('f_smoker'),alcohol:v('f_alcohol'),
+  conditions:v('f_conditions')||'None',family:+v('f_family'),violations:num('f_violations',0,'driving violations'),
   hazard:v('f_hazard')==='1',hazardDetail:v('f_hazard_detail'),
   unique:v('f_unique')==='1'?(v('f_unique_text').trim()||'Disclosed — details pending'):null};
  const [rule,factors]=ruleScoreJS(f);
- const ml=mlScoreJS(f);
+ const prior=extPriorJS(f);
+ const ml=mlScoreJS(f,prior);
  const d=decideJS(rule,ml,f.unique);
  const esc=s=>String(s).replace(/</g,'&lt;');
  const vbSub={green:"Clear-cut acceptable risk. This applicant should be approved — every signal is clean and the score is comfortably below the approval line.",
@@ -440,12 +479,14 @@ function scoreNow(){
      <div class="sub-scores">
       <div class="sub-score"><div class="ss-l">Rule engine (50%)</div><div class="ss-v">${rule}</div><div class="bar-track"><div class="bar-fill" style="width:${rule}%;background:var(--acc)"></div></div></div>
       <div class="sub-score"><div class="ss-l">ML — logistic (50%)</div><div class="ss-v">${ml.toFixed(0)}</div><div class="bar-track"><div class="bar-fill" style="width:${ml}%;background:var(--acc)"></div></div></div>
+      <div class="sub-score"><div class="ss-l">External-data prior (${(M.risk_models.prior_export||[]).length} real datasets)</div><div class="ss-v">${(prior*100).toFixed(0)}</div><div class="bar-track"><div class="bar-fill" style="width:${prior*100}%;background:var(--mut)"></div></div></div>
      </div></div></div></div>
+  ${defaulted.length?`<div class="card"><div class="note" style="margin:0"><b>Standard assumptions used for blank fields:</b> ${defaulted.join(' · ')}. Fill them in above and re-score for a sharper read.</div></div>`:''}
   ${f.unique?`<div class="unique-banner"><b>UNIQUE CIRCUMSTANCES DISCLOSED</b><p style="margin:5px 0 0">“${esc(f.unique)}” — shown to the reviewing underwriter alongside the score.</p></div>`:''}
   ${f.hazard&&f.hazardDetail?`<div class="unique-banner"><b>HAZARDOUS ACTIVITY DETAIL</b><p style="margin:5px 0 0">“${esc(f.hazardDetail)}”</p></div>`:''}
   <div class="card"><h3>Factor Breakdown (rule engine)</h3>
    ${factors.map(x=>`<div class="factor-row"><div><div class="factor-label">${esc(x[0])}</div><div class="factor-detail">${esc(x[1])}</div></div><div class="factor-pts">${x[2]>0?'+':''}${x[2]}</div></div>`).join('')}
-   <div class="note">The ML half uses the trained logistic-regression coefficients exported from the pipeline (the browser cannot run gradient boosting; logistic is its auditable stand-in, AUC ${(M.risk_models.logistic_regression.auc*100).toFixed(1)}%). Portfolio cases are scored offline with the full dual engine.</div></div>`;
+   <div class="note">The ML half uses the trained logistic-regression coefficients exported from the pipeline (the browser cannot run gradient boosting; logistic is its auditable stand-in, AUC ${(M.risk_models.logistic_regression.auc*100).toFixed(1)}%), including the external-data prior learned from ${((M.external_learning||{}).total_rows||0).toLocaleString()} real records across ${(M.risk_models.prior_export||[]).length} public datasets. Portfolio cases are scored offline with the full dual engine.</div></div>`;
  document.getElementById('scoreResult').scrollIntoView({behavior:'smooth'});
 }
 render();

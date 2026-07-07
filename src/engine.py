@@ -68,7 +68,8 @@ def tier(score):
 # ---------------- ML engine --------------------------------------------------------
 FEATURES = ["Age", "BMI", "smoker_now", "smoker_former", "n_conditions",
             "Family History Flag", "Debt-to-Income Ratio", "Credit Score",
-            "hazardous_activity", "driving_violations", "alcohol_heavy"]
+            "hazardous_activity", "driving_violations", "alcohol_heavy",
+            "external_prior"]
 
 def featurize(df):
     X = pd.DataFrame({
@@ -82,6 +83,8 @@ def featurize(df):
         "hazardous_activity": (df["Hazardous Activities"] != "None").astype(int),
         "driving_violations": df["Driving Violations (3yr)"],
         "alcohol_heavy": (df["Alcohol Use"] == "Heavy").astype(int),
+        # blended event probability learned from 11 public real-world datasets
+        "external_prior": df["External Risk Prior"] if "External Risk Prior" in df else 0.5,
     })
     return X[FEATURES]
 

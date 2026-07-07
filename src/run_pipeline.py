@@ -13,11 +13,14 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, os.path.dirname(__file__))
-import datagen, docgen, engine
+import datagen, docgen, engine, external_data
 from extract import LocalTextExtractor
 
 OUT = os.path.join(os.path.dirname(__file__), "..", "output")
 DOCS = os.path.join(OUT, "packets")
+DATA = os.path.join(os.path.dirname(__file__), "..", "data")
+POOL = os.path.join(DATA, "training_pool.csv")
+HISTORY = os.path.join(DATA, "model_history.json")
 
 N_APPLICANTS = int(os.environ.get("N_APPLICANTS", 4000))
 N_PACKETS = int(os.environ.get("N_PACKETS", 60))
@@ -39,21 +42,50 @@ def field_match(fname, ext, truth):
 def main():
     t0 = time.time()
     os.makedirs(OUT, exist_ok=True)
+    os.makedirs(DATA, exist_ok=True)
+    history = json.load(open(HISTORY)) if os.path.exists(HISTORY) else []
+    run_no = len(history) + 1
 
-    print(f"[1/6] generating {N_APPLICANTS} synthetic applicants…")
-    df = datagen.generate(N_APPLICANTS)
+    print(f"[1/7] learning priors from {len(external_data.REGISTRY)} public real-world datasets…")
+    prior_models, ext_report = external_data.load_and_fit()
+    usable = [d for d in ext_report if "error" not in d]
+    print(f"      {len(usable)}/{len(external_data.REGISTRY)} datasets usable, "
+          f"{sum(d['rows'] for d in usable):,} real records")
+
+    print(f"[2/7] generating {N_APPLICANTS} synthetic applicants (run #{run_no}, fresh seed)…")
+    df = datagen.generate(N_APPLICANTS, seed=42 + run_no)
+    df["External Risk Prior"] = external_data.prior_scores(prior_models, df)
     df.to_csv(os.path.join(OUT, "applicants.csv"), index=False)
 
-    print("[2/6] training risk models (logistic regression + gradient boosting)…")
-    models, model_report = engine.train_models(df)
+    # continuous learning: every run adds a fresh batch to a growing training pool
+    if os.path.exists(POOL):
+        # keep_default_na=False so the literal string "None" (conditions, hazards,
+        # unique circumstances) survives the CSV round-trip instead of becoming NaN
+        prev = pd.read_csv(POOL, keep_default_na=False, na_values=[])
+        pool = pd.concat([prev, df], ignore_index=True)
+    else:
+        pool = df
+    pool.to_csv(POOL, index=False)
+
+    print(f"[3/7] training risk models on pool of {len(pool):,} records "
+          f"({len(pool) - len(df):,} accumulated from previous runs)…")
+    models, model_report = engine.train_models(pool)
     lr_scores, gb_scores = engine.ml_scores(models, df)
     df["ml_score_lr"], df["ml_score_gb"] = lr_scores, gb_scores
 
-    print(f"[3/6] generating {N_PACKETS} PDF packets (conflict rate {CONFLICT_RATE:.0%})…")
+    history.append({"run": run_no, "date": "2026-07-07", "n_train_pool": len(pool),
+                    "gb_auc": model_report["gradient_boosting"]["auc"],
+                    "lr_auc": model_report["logistic_regression"]["auc"],
+                    "external_datasets": len(usable),
+                    "external_rows": sum(d["rows"] for d in usable)})
+    with open(HISTORY, "w") as f:
+        json.dump(history, f, indent=2)
+
+    print(f"[4/7] generating {N_PACKETS} PDF packets (conflict rate {CONFLICT_RATE:.0%})…")
     doc_df = df.head(N_PACKETS)
     truth = docgen.generate_packets(doc_df, DOCS, conflict_rate=CONFLICT_RATE)
 
-    print("[4/6] extracting all packets + measuring accuracy…")
+    print("[5/7] extracting all packets + measuring accuracy…")
     ex = LocalTextExtractor()
     extractions, correct, total = {}, 0, 0
     per_field = {f: [0, 0] for f in ACC_FIELDS}
@@ -66,7 +98,7 @@ def main():
             correct += int(ok); total += 1
     extraction_accuracy = correct / total
 
-    print("[5/6] conflict detection + decisions…")
+    print("[6/7] conflict detection + decisions…")
     tp = fp = fn = 0
     portfolio = []
     for _, a in df.iterrows():
@@ -95,6 +127,7 @@ def main():
             "emp_status": a["Employment Status"], "years_emp": int(a["Years Employed"]),
             "hazard": a["Hazardous Activities"], "violations": int(a["Driving Violations (3yr)"]),
             "alcohol": a["Alcohol Use"], "unique": unique,
+            "ext_prior": round(float(a["External Risk Prior"]), 4),
             "credit": int(a["Credit Score"]), "dti": float(a["Debt-to-Income Ratio"]),
             "label": int(a["High Risk Label"]),
             "rule_score": rule_s, "rule_factors": factors, "ml_score": ml_s,
@@ -110,9 +143,14 @@ def main():
     conflict_precision = tp / max(tp + fp, 1)
     agreement = np.mean([engine.tier(p["rule_score"]) == engine.tier(p["ml_score"]) for p in portfolio])
 
-    print("[6/6] writing reports…")
+    print("[7/7] writing reports…")
+    model_report["prior_export"] = prior_models
     report = {
         "generated_at": "2026-07-07", "n_applicants": len(df), "n_packets": N_PACKETS,
+        "external_learning": {"datasets": ext_report,
+                              "n_usable": len(usable),
+                              "total_rows": sum(d["rows"] for d in usable)},
+        "model_history": history,
         "extraction": {"field_level_accuracy": round(extraction_accuracy, 4),
                         "per_field": {f: round(c / t, 4) for f, (c, t) in per_field.items()}},
         "conflict_screening": {"injected_rate": CONFLICT_RATE,
