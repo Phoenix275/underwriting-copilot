@@ -1,0 +1,5 @@
+numpy
+pandas
+scikit-learn
+reportlab
+pdfplumber

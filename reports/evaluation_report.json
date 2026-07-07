@@ -1,0 +1,68 @@
+{
+  "generated_at": "2026-07-07",
+  "n_applicants": 4000,
+  "n_packets": 60,
+  "extraction": {
+    "field_level_accuracy": 1.0,
+    "per_field": {
+      "name": 1.0,
+      "form_dob": 1.0,
+      "paramed_dob": 1.0,
+      "form_income": 1.0,
+      "payslip_income": 1.0,
+      "form_debt": 1.0,
+      "bureau_debt": 1.0,
+      "form_tobacco_yes": 1.0,
+      "cotinine": 1.0
+    }
+  },
+  "conflict_screening": {
+    "injected_rate": 0.3,
+    "detection_recall": 1.0,
+    "detection_precision": 1.0,
+    "tp": 16,
+    "fp": 0,
+    "fn": 0
+  },
+  "risk_models": {
+    "n_train": 3200,
+    "n_test": 800,
+    "positive_rate": 0.35,
+    "logistic_regression": {
+      "auc": 0.8802,
+      "accuracy": 0.805,
+      "precision": 0.7441,
+      "recall": 0.675
+    },
+    "gradient_boosting": {
+      "auc": 0.8833,
+      "accuracy": 0.8187,
+      "precision": 0.7567,
+      "recall": 0.7107
+    },
+    "gb_feature_importance": {
+      "Age": 0.3052,
+      "BMI": 0.0676,
+      "smoker_now": 0.1864,
+      "smoker_former": 0.0058,
+      "n_conditions": 0.1934,
+      "Family History Flag": 0.0079,
+      "Debt-to-Income Ratio": 0.0907,
+      "Credit Score": 0.1429
+    },
+    "lr_coefficients": {
+      "Age": 1.2071,
+      "BMI": 0.2841,
+      "smoker_now": 0.9542,
+      "smoker_former": 0.1947,
+      "n_conditions": 0.7617,
+      "Family History Flag": 0.2295,
+      "Debt-to-Income Ratio": 0.518,
+      "Credit Score": -0.7069
+    }
+  },
+  "decisioning": {
+    "straight_through_rate": 0.5078,
+    "rule_ml_tier_agreement": 0.48
+  }
+}
