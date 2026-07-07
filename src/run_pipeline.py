@@ -21,6 +21,7 @@ DOCS = os.path.join(OUT, "packets")
 DATA = os.path.join(os.path.dirname(__file__), "..", "data")
 POOL = os.path.join(DATA, "training_pool.csv")
 HISTORY = os.path.join(DATA, "model_history.json")
+OVERRIDES = os.path.join(DATA, "overrides.json")
 
 N_APPLICANTS = int(os.environ.get("N_APPLICANTS", 4000))
 N_PACKETS = int(os.environ.get("N_PACKETS", 60))
@@ -67,13 +68,26 @@ def main():
         pool = df
     pool.to_csv(POOL, index=False)
 
-    print(f"[3/7] training risk models on pool of {len(pool):,} records "
-          f"({len(pool) - len(df):,} accumulated from previous runs)…")
-    models, model_report = engine.train_models(pool)
+    # underwriter feedback: overrides exported from the dashboard become labeled
+    # training rows, so human decisions steer every retrain
+    n_overrides = 0
+    train_df = pool
+    if os.path.exists(OVERRIDES):
+        ov = json.load(open(OVERRIDES))
+        if ov:
+            ov_df = pd.DataFrame([{**o["fields"], "High Risk Label": int(o["label"])} for o in ov])
+            train_df = pd.concat([pool, ov_df], ignore_index=True)
+            n_overrides = len(ov_df)
+
+    print(f"[3/7] training risk models on pool of {len(train_df):,} records "
+          f"({len(pool) - len(df):,} accumulated from previous runs, "
+          f"{n_overrides} human underwriter overrides)…")
+    models, model_report = engine.train_models(train_df)
     lr_scores, gb_scores = engine.ml_scores(models, df)
     df["ml_score_lr"], df["ml_score_gb"] = lr_scores, gb_scores
 
-    history.append({"run": run_no, "date": "2026-07-07", "n_train_pool": len(pool),
+    history.append({"run": run_no, "date": "2026-07-07", "n_train_pool": len(train_df),
+                    "n_overrides": n_overrides,
                     "gb_auc": model_report["gradient_boosting"]["auc"],
                     "lr_auc": model_report["logistic_regression"]["auc"],
                     "external_datasets": len(usable),
@@ -138,6 +152,17 @@ def main():
             **d,
         })
 
+    # fairness slice: verdict mix by age band — the first question any
+    # insurance regulator asks of an automated decisioning system
+    fairness = []
+    for lo, hi in [(21, 30), (31, 40), (41, 50), (51, 60), (61, 70)]:
+        grp = [p for p in portfolio if lo <= p["age"] <= hi]
+        if grp:
+            fairness.append({"band": f"{lo}–{hi}", "n": len(grp),
+                             "green": round(sum(1 for p in grp if p["verdict"] == "green") / len(grp), 3),
+                             "yellow": round(sum(1 for p in grp if p["verdict"] == "yellow") / len(grp), 3),
+                             "red": round(sum(1 for p in grp if p["verdict"] == "red") / len(grp), 3)})
+
     stp = sum(1 for p in portfolio if not p["referred"]) / len(portfolio)
     conflict_recall = tp / max(tp + fn, 1)
     conflict_precision = tp / max(tp + fp, 1)
@@ -159,7 +184,9 @@ def main():
                                 "tp": tp, "fp": fp, "fn": fn},
         "risk_models": model_report,
         "decisioning": {"straight_through_rate": round(stp, 4),
-                         "rule_ml_tier_agreement": round(float(agreement), 4)},
+                         "rule_ml_tier_agreement": round(float(agreement), 4),
+                         "n_overrides_learned": n_overrides},
+        "fairness_by_age": fairness,
     }
     with open(os.path.join(OUT, "evaluation_report.json"), "w") as f:
         json.dump(report, f, indent=2)

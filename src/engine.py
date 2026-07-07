@@ -109,8 +109,21 @@ def train_models(df, seed=13):
                 "precision": round(float(precision_score(yte, pred)), 4),
                 "recall": round(float(recall_score(yte, pred)), 4)}
 
+    # calibration: does a predicted risk of X% actually mean X% of those cases are high-risk?
+    gb_proba = gb.predict_proba(Xte)[:, 1]
+    bins = np.clip((gb_proba * 10).astype(int), 0, 9)
+    calibration = []
+    for b in range(10):
+        mask = bins == b
+        if mask.sum() >= 5:
+            calibration.append({"bin": f"{b*10}–{b*10+10}%",
+                                "predicted": round(float(gb_proba[mask].mean()), 4),
+                                "actual": round(float(yte[mask].mean()), 4),
+                                "n": int(mask.sum())})
+
     report = {
         "n_train": len(Xtr), "n_test": len(Xte), "positive_rate": round(float(y.mean()), 3),
+        "calibration": calibration,
         "logistic_regression": metrics(lr, scaler.transform(Xte)),
         "gradient_boosting": metrics(gb, Xte),
         "gb_feature_importance": dict(zip(FEATURES, [round(float(v), 4) for v in gb.feature_importances_])),

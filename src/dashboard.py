@@ -232,6 +232,24 @@ function overview(){
      <div class="hist-track"><div class="hist-fill" style="width:${h.n_train_pool/histMax*100}%;background:var(--acc)"></div></div>
      <div class="hist-count" style="width:190px">${h.n_train_pool.toLocaleString()} records · GB AUC ${(h.gb_auc*100).toFixed(1)}%</div></div>`).join('')}</div>`;})()}
  </div>
+ <div class="card"><h3>Calibration — does a predicted risk of X% mean X% are actually high-risk?</h3>
+  ${(M.risk_models.calibration||[]).map(b=>`<div class="hist-bar-row"><div class="hist-label">${b.bin}</div>
+   <div class="hist-track" style="height:9px;margin-bottom:2px"><div class="hist-fill" style="width:${b.predicted*100}%;background:var(--acc)"></div></div>
+   <div class="hist-count" style="width:150px">pred ${(b.predicted*100).toFixed(0)}% · actual ${(b.actual*100).toFixed(0)}% · n=${b.n}</div></div>
+  <div class="hist-bar-row" style="margin-top:-4px"><div class="hist-label"></div>
+   <div class="hist-track" style="height:9px"><div class="hist-fill" style="width:${b.actual*100}%;background:var(--ink)"></div></div>
+   <div class="hist-count" style="width:150px"></div></div>`).join('')}
+  <div class="note"><span style="color:var(--acc)">■</span> predicted probability vs <span style="color:var(--ink)">■</span> actual high-risk rate, per prediction band on held-out test data. The closer each pair, the more a score can be read literally as a probability — this is what justifies drawing hard approve/decline lines at ${A_LINE} and ${D_LINE}.</div></div>
+ <div class="card"><h3>Fairness — verdict mix by age band</h3>
+  <table class="xt"><tr><th>Age band</th><th>Cases</th><th>Green</th><th>Yellow</th><th>Red</th></tr>
+   ${(M.fairness_by_age||[]).map(f=>`<tr><td>${f.band}</td><td class="mono">${f.n}</td>
+    <td class="mono" style="color:var(--ok)">${(f.green*100).toFixed(0)}%</td>
+    <td class="mono" style="color:var(--warn)">${(f.yellow*100).toFixed(0)}%</td>
+    <td class="mono" style="color:var(--bad)">${(f.red*100).toFixed(0)}%</td></tr>`).join('')}</table>
+  <div class="note">Age is a legitimate actuarial factor in life insurance, so approval rates are expected to fall with age — this table makes the gradient visible and reviewable instead of hidden. Any slice that looks disproportionate to the underlying mortality risk is a flag for review.</div></div>
+ <div class="card"><h3>Underwriter Feedback Loop</h3>
+  <div class="note" style="margin:0 0 12px">Overrides recorded on any case's Decision tab are stored in this browser${(M.decisioning.n_overrides_learned||0)>0?` — and <b>${M.decisioning.n_overrides_learned} human override(s) are already in the training data</b> from previous exports`:''}. Export them, save as <span class="mono">data/overrides.json</span>, and re-run the pipeline: the models retrain on the human decisions.</div>
+  <button class="ai-btn" onclick="exportOverrides()">⬇ Export underwriter overrides</button></div>
  <div class="card"><h3>Gradient Boosting — Feature Importance</h3>
   ${Object.entries(fi).sort((a,b)=>b[1]-a[1]).map(([f,v])=>`<div class="coef-bar-row"><div class="coef-label">${f}</div>
    <div class="coef-track"><div class="coef-fill" style="left:0;width:${v/mxf*100}%"></div></div><div class="coef-val">${v.toFixed(3)}</div></div>`).join('')}
@@ -313,15 +331,76 @@ function panel(c){
  }
  if(activeTab===5){
   const cls=VM[c.verdict][1];
+  const ov=getOverrides()[c.id];
   return `<div class="card"><h3>System Decision</h3><div class="decision-wrap">
    <div class="stamp ${cls}">${c.decision}</div>
    <div class="decision-detail"><h3>${c.rate_class}</h3>
     ${c.reasons.map(r=>`<p>· ${r}</p>`).join('')}
     <p class="mono" style="font-size:11px">Risk ${c.risk_score}/100 · Rule ${c.rule_score} · GB ${c.ml_score.toFixed(0)} · ${c.conflicts.length} conflict(s)</p></div></div>
    ${c.unique?`<div class="unique-banner"><b>UNIQUE CIRCUMSTANCES</b><p style="margin:5px 0 0">“${c.unique}”</p></div>`:''}</div>
+  <div class="card"><h3>Human Underwriter Review</h3>
+   ${ov?`<div class="unique-banner" style="border-left-color:var(--acc);background:var(--acc-soft)"><b>OVERRIDDEN BY UNDERWRITER → ${ov.decision}</b>
+     <p style="margin:5px 0 0">${ov.reason?'“'+ov.reason+'” — ':''}Recorded ${ov.at}. This decision is included when you export overrides, and the models learn from it on the next training run.</p></div>
+    <button class="ai-btn" onclick="clearOverride('${c.id}')" style="background:var(--mut)">Remove override</button>`
+   :`<div class="note" style="margin:0 0 12px">Disagree with the system? Record the human call — it feeds back into model training.</div>
+    <button class="ai-btn" style="background:var(--ok)" onclick="setOverride('${c.id}',0)">Override → APPROVE</button>
+    <button class="ai-btn" style="background:var(--bad);margin-left:8px" onclick="setOverride('${c.id}',1)">Override → DECLINE</button>`}
+   <button class="ai-btn" style="margin-left:8px;background:var(--acc)" onclick="downloadMemo('${c.id}')">⬇ Decision Memo</button></div>
   <div class="card"><div class="ai-head"><h3 style="margin:0">Underwriting Summary — grounded in extracted fields only</h3></div>
    <div class="ai-text">${c.ai_summary}</div></div>`;
  }
+}
+
+/* ---------- underwriter overrides: recorded locally, exported for retraining ---------- */
+function getOverrides(){try{return JSON.parse(localStorage.getItem('uw_overrides')||'{}');}catch(e){return {};}}
+function setOverride(id,label){
+ const reason=prompt(label?'Reason for DECLINE override (optional):':'Reason for APPROVE override (optional):')||'';
+ const all=getOverrides();
+ all[id]={decision:label?'DECLINE':'APPROVE',label:label,reason:reason,at:new Date().toISOString().slice(0,16).replace('T',' ')};
+ localStorage.setItem('uw_overrides',JSON.stringify(all));render();
+}
+function clearOverride(id){const all=getOverrides();delete all[id];localStorage.setItem('uw_overrides',JSON.stringify(all));render();}
+function exportOverrides(){
+ const all=getOverrides();
+ const rows=Object.entries(all).map(([id,o])=>{
+  const c=CASES.find(x=>x.id===id);if(!c)return null;
+  return {id:id,label:o.label,decision:o.decision,reason:o.reason,at:o.at,fields:{
+   "Age":c.age,"BMI":c.bmi,"Smoker Status":c.smoker,"Existing Conditions":c.conditions,
+   "Family History Flag":c.family,"Debt-to-Income Ratio":c.dti,"Credit Score":c.credit,
+   "Hazardous Activities":c.hazard,"Driving Violations (3yr)":c.violations,
+   "Alcohol Use":c.alcohol,"External Risk Prior":c.ext_prior}};}).filter(Boolean);
+ if(!rows.length){alert('No overrides recorded yet — use the Decision tab of any case.');return;}
+ const a=document.createElement('a');
+ a.href=URL.createObjectURL(new Blob([JSON.stringify(rows,null,2)],{type:'application/json'}));
+ a.download='overrides.json';a.click();
+ alert(rows.length+' override(s) exported. Save the file to data/overrides.json in the repo and re-run the pipeline — the models will train on these human decisions.');
+}
+function downloadMemo(id){
+ const c=CASES.find(x=>x.id===id);if(!c)return;
+ const vm=VM[c.verdict];const ov=getOverrides()[id];
+ const colr={ok:'#0E9F6E',warn:'#D97706',bad:'#DC2626'}[vm[1]];
+ const html=`<!doctype html><html><head><meta charset="utf-8"><title>Decision Memo — ${c.id}</title>
+<style>body{font-family:Georgia,serif;max-width:720px;margin:40px auto;color:#111;line-height:1.55}
+h1{font-size:20px;border-bottom:2px solid #111;padding-bottom:8px}h2{font-size:14px;margin:22px 0 6px;text-transform:uppercase;letter-spacing:1px;color:#555}
+.verdict{display:inline-block;border:3px solid ${colr};color:${colr};font-weight:700;padding:8px 18px;font-size:18px;letter-spacing:2px}
+td{padding:4px 14px 4px 0;font-size:14px}.mut{color:#666;font-size:12px}</style></head><body>
+<h1>Underwriting Decision Memo — ${c.name} (${c.id})</h1>
+<p class="mut">Generated ${new Date().toISOString().slice(0,10)} · Underwriting Copilot MVP · composite risk ${c.risk_score}/100</p>
+<p><span class="verdict">${ov?ov.decision+' (HUMAN OVERRIDE)':c.decision}</span></p>
+${ov&&ov.reason?`<p><b>Override reason:</b> ${ov.reason}</p>`:''}
+<h2>Rate class</h2><p>${c.rate_class}</p>
+<h2>Basis for decision</h2>${c.reasons.map(r=>`<p>· ${r}</p>`).join('')}
+${c.unique?`<h2>Unique circumstances disclosed</h2><p>“${c.unique}”</p>`:''}
+<h2>Summary</h2><p>${c.ai_summary}</p>
+<h2>Scores</h2><table><tr><td>Composite risk</td><td><b>${c.risk_score}/100</b></td></tr>
+<tr><td>Rule engine</td><td>${c.rule_score}/100</td></tr><tr><td>Gradient boosting</td><td>${c.ml_score.toFixed(0)}/100</td></tr>
+<tr><td>External-data prior</td><td>${(c.ext_prior*100).toFixed(0)}%</td></tr>
+<tr><td>Cross-document conflicts</td><td>${c.conflicts.length}</td></tr></table>
+<h2>Rule factor breakdown</h2><table>${c.rule_factors.map(f=>`<tr><td>${f[0]}</td><td>${f[1]}</td><td><b>+${f[2]}</b></td></tr>`).join('')}</table>
+</body></html>`;
+ const a=document.createElement('a');
+ a.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));
+ a.download='decision_memo_'+c.id+'.html';a.click();
 }
 
 /* ---------- live scoring: same rule engine + trained logistic model, in-browser ---------- */
@@ -426,18 +505,31 @@ function wireScoreForm(){
    for(let i=1;i<=pdf.numPages;i++){const pg=await pdf.getPage(i);const tc=await pg.getTextContent();
     text+=tc.items.map(it=>it.str).join('\n')+'\n';}
    const got=[];
-   const grab=(label,re)=>{const m=text.match(new RegExp(label+"[\\s\\S]{0,60}?("+re+")","i"));return m?m[1]:null;};
-   const name=grab("FULL NAME","[A-Z][a-zA-Z'’-]+(?:\\s+[A-Z][a-zA-Z'’-]+)+");
+   // each field tries multiple label synonyms so forms from other carriers still auto-fill
+   const grab=(labels,re)=>{for(const label of labels){
+    const m=text.match(new RegExp(label+"[\\s\\S]{0,60}?("+re+")","i"));if(m)return m[1];}return null;};
+   const name=grab(["FULL NAME","APPLICANT NAME","NAME OF APPLICANT","INSURED NAME","\\bNAME\\b"],"[A-Z][a-zA-Z'’-]+(?:\\s+[A-Z][a-zA-Z'’-]+)+");
    if(name){document.getElementById('f_name').value=name;got.push('name');}
-   const dob=grab("DATE OF BIRTH","\\d{4}-\\d{2}-\\d{2}");
+   const dob=grab(["DATE OF BIRTH","\\bDOB\\b","BIRTH DATE"],"\\d{4}-\\d{2}-\\d{2}")
+    ||grab(["DATE OF BIRTH","\\bDOB\\b","BIRTH DATE"],"\\d{1,2}/\\d{1,2}/\\d{4}");
    if(dob){const age=Math.floor((Date.now()-new Date(dob))/31557600000);
     if(age>0&&age<110){document.getElementById('f_age').value=age;got.push('age (from DOB '+dob+')');}}
-   const inc=grab("DECLARED ANNUAL INCOME","[\\d,]{4,}");
+   const inc=grab(["DECLARED ANNUAL INCOME","ANNUAL INCOME","GROSS ANNUAL INCOME","ANNUALIZED GROSS INCOME","YEARLY INCOME","SALARY"],"[\\d,]{4,}");
    if(inc){document.getElementById('f_income').value=parseFloat(inc.replace(/,/g,''));got.push('income');}
-   const debt=grab("DECLARED TOTAL DEBT","[\\d,]{3,}");
+   const debt=grab(["DECLARED TOTAL DEBT","TOTAL DEBT","EXISTING DEBT","OUTSTANDING DEBT","TOTAL LIABILITIES"],"[\\d,]{3,}");
    if(debt){document.getElementById('f_debt').value=parseFloat(debt.replace(/,/g,''));got.push('debt');}
-   const cov=grab("COVERAGE AMOUNT REQUESTED","[\\d,]{4,}");
+   const cov=grab(["COVERAGE AMOUNT REQUESTED","COVERAGE AMOUNT","FACE AMOUNT","SUM ASSURED","BENEFIT AMOUNT"],"[\\d,]{4,}");
    if(cov){document.getElementById('f_coverage').value=parseFloat(cov.replace(/,/g,''));got.push('coverage');}
+   const ht=grab(["HEIGHT / WEIGHT","HEIGHT"],"[\\d.]+\\s*cm\\s*/\\s*[\\d.]+\\s*kg");
+   if(ht){const hm=ht.match(/([\d.]+)\s*cm\s*\/\s*([\d.]+)\s*kg/);
+    if(hm){const bmi=parseFloat(hm[2])/Math.pow(parseFloat(hm[1])/100,2);
+     if(bmi>10&&bmi<70){document.getElementById('f_bmi').value=bmi.toFixed(1);got.push('BMI (from height/weight)');}}}
+   const bp=grab(["BLOOD PRESSURE","\\bBP\\b"],"\\d{2,3}/\\d{2,3}");
+   if(bp){document.getElementById('f_sysbp').value=parseInt(bp);got.push('blood pressure');}
+   const ch=grab(["TOTAL CHOLESTEROL","CHOLESTEROL"],"\\d{3}");
+   if(ch){document.getElementById('f_chol').value=parseInt(ch);got.push('cholesterol');}
+   const smokeYes=/TOBACCO[\s\S]{0,120}?YES|SMOKER\s*STATUS[\s\S]{0,40}?(CURRENT\s+)?SMOKER\b/i.test(text)&&!/NON-?SMOKER/i.test(text);
+   if(smokeYes){document.getElementById('f_smoker').value='Smoker';got.push('tobacco (flagged — confirm)');}
    dz.className='drop-zone loaded';
    dz.textContent=got.length?('✓ '+file.name+' — extracted '+got.join(', ')+'. Adjust anything below if needed, then score.')
     :('✓ '+file.name+' read, but no known fields matched — fill in what you know below.');
