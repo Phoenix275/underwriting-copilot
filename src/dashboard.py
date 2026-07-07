@@ -166,10 +166,23 @@ function overview(){
 }
 function panel(c){
  if(activeTab===1){
-  return `<div class="grid2">
-   ${[["Full Name",c.name],["Date of Birth",c.dob+" (age "+c.age+")"],["Occupation",c.occupation],["Employer",c.employer],
-     ["Declared Annual Income",fmt$(c.income)],["Location",c.city+", "+c.state],["Policy Requested",c.policy],["Coverage Requested",fmt$(c.coverage)]]
-   .map(f=>`<div class="field"><label>${f[0]}</label><div class="val">${f[1]}</div></div>`).join('')}</div>`;
+  const sec=(title,fields)=>`<div class="section-h">${title}</div><div class="grid2" style="margin-bottom:14px">
+   ${fields.map(f=>`<div class="field"><label>${f[0]}</label><div class="val">${f[1]??'—'}</div></div>`).join('')}</div>`;
+  return sec("Section 1 — Applicant Information",[
+    ["Full Name",c.name],["Date of Birth",c.dob+" (age "+c.age+")"],
+    ["Occupation",c.occupation],["Employer",c.employer],
+    ["Employment Status",c.emp_status],["Years Employed",c.years_emp+" yrs"],
+    ["Location",c.city+", "+c.state],["Policy Requested",c.policy]])
+   +sec("Section 2 — Financial Declaration",[
+    ["Declared Annual Income",fmt$(c.income)],["Coverage Requested",fmt$(c.coverage)],
+    ["Monthly Expenses",fmt$(c.expenses)],["Existing Debt",fmt$(c.debt)],
+    ["Avg Bank Balance",fmt$(c.bank)],["Credit Score",c.credit],
+    ["Debt-to-Income Ratio",(c.dti*100).toFixed(1)+"%"],["Coverage-to-Income Multiple",(c.coverage/c.income).toFixed(1)+"×"]])
+   +sec("Section 3 — Medical & Lifestyle",[
+    ["Height / Weight",c.height+" cm / "+c.weight+" kg"],["BMI",c.bmi.toFixed(1)],
+    ["Tobacco Use",c.smoker],["Existing Conditions",c.conditions],
+    ["Family History Flag",c.family?"Yes":"No"],["Hazardous Activities","No"],
+    ["Blood Pressure",c.bp],["Cholesterol",c.chol+" mg/dL"]]);
  }
  if(activeTab===2){
   const docs=c.has_docs?[["Application Form (Parts A–B, health questionnaire)","Parsed"],["Payslip / Earnings Statement","Parsed"],["Paramedical Exam Report + consumer report","Parsed"]]

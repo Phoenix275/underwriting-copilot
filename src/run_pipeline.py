@@ -90,6 +90,8 @@ def main():
             "smoker": a["Smoker Status"], "conditions": a["Existing Conditions"],
             "family": int(a["Family History Flag"]), "bp": a["Blood Pressure"],
             "chol": int(a["Cholesterol (mg/dL)"]), "debt": float(a["Existing Debt (USD)"]),
+            "expenses": float(a["Monthly Expenses (USD)"]), "bank": float(a["Avg Bank Balance (USD)"]),
+            "emp_status": a["Employment Status"], "years_emp": int(a["Years Employed"]),
             "credit": int(a["Credit Score"]), "dti": float(a["Debt-to-Income Ratio"]),
             "label": int(a["High Risk Label"]),
             "rule_score": rule_s, "rule_factors": factors, "ml_score": ml_s,
