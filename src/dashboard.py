@@ -187,7 +187,7 @@ function panel(c){
    ["Height / Weight",e.height_cm+" cm / "+e.weight_kg+" kg"],["Blood pressure",e.blood_pressure],["Cholesterol",e.cholesterol+" mg/dL"]];
   const confl=c.conflicts.length?c.conflicts.map(k=>`<div class="conflict-card ${k.severity==='minor'?'minor':''}">
    <b>${k.severity.toUpperCase()} · ${k.type.replace(/_/g,' ').toUpperCase()}</b><p>${k.description}</p></div>`).join('')
-   :'<p class="metric-note">No cross-document conflicts detected. All ${''} checks passed — every applicant runs through the identical checklist.</p>';
+   :'<p class="metric-note">No cross-document conflicts detected. All four checks passed — every applicant runs through the identical checklist.</p>';
   return `<table class="xt"><tr><th>Extracted Field</th><th>Value</th></tr>
    ${rows.map(r=>`<tr><td>${r[0]}</td><td class="mono">${r[1]??'—'}</td></tr>`).join('')}</table>
    <div class="section-h">Cross-Document Conflict Screen (4 checks, equal for every applicant)</div>${confl}`;
