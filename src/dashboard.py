@@ -32,7 +32,7 @@ TEMPLATE = r"""
 .ci-name{font-size:13px;font-weight:600;color:#E9EDF4}.ci-id{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#7C8AA5;margin-top:2px}
 .doctag{color:#8FA6E8}
 .score-chip{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px;min-width:34px;text-align:center}
-.sc-ok{background:rgba(14,159,110,.18);color:#4ADE9E}.sc-bad{background:rgba(220,38,38,.2);color:#F87F7F}
+.sc-ok{background:rgba(14,159,110,.18);color:#4ADE9E}.sc-bad{background:rgba(220,38,38,.2);color:#F87F7F}.sc-warn{background:rgba(217,119,6,.2);color:#FBBF6E}
 .pagination{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-top:1px solid rgba(255,255,255,.08);font-family:'JetBrains Mono',monospace;font-size:10px;color:#7C8AA5}
 .pagination button{font-family:inherit;font-size:11px;background:var(--rail-2);border:none;border-radius:6px;padding:5px 11px;cursor:pointer;color:#C7D0E0}
 .pagination button:disabled{opacity:.35;cursor:default}
@@ -43,7 +43,7 @@ TEMPLATE = r"""
 .headline-score{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 20px;display:flex;align-items:center;gap:16px;box-shadow:0 1px 2px rgba(14,21,38,.05)}
 .hs-num{font-family:'Space Grotesk',sans-serif;font-size:34px;font-weight:700;line-height:1}
 .hs-lab{font-size:11px;color:var(--mut)}.hs-class{font-size:12px;font-weight:700;padding:5px 12px;border-radius:99px}
-.cls-ok{background:var(--ok-soft);color:var(--ok)}.cls-bad{background:var(--bad-soft);color:var(--bad)}
+.cls-ok{background:var(--ok-soft);color:var(--ok)}.cls-bad{background:var(--bad-soft);color:var(--bad)}.cls-warn{background:var(--warn-soft);color:var(--warn)}
 .tabs{display:flex;gap:6px;margin:22px 0 18px;flex-wrap:wrap}
 .tab{font-size:12.5px;font-weight:600;padding:8px 14px;cursor:pointer;color:var(--mut);border-radius:99px;border:1px solid transparent}
 .tab:hover{background:var(--card)}.tab.active{background:var(--card);color:var(--ink);border-color:var(--line);box-shadow:0 1px 2px rgba(14,21,38,.05)}
@@ -98,12 +98,34 @@ table.xt td{padding:10px 10px 10px 0;border-bottom:1px solid var(--line);font-si
 .coef-track{flex:1;height:12px;background:var(--bg);border-radius:6px;position:relative}.coef-fill{position:absolute;top:0;bottom:0;border-radius:6px;background:var(--acc)}
 .coef-val{width:56px;font-family:'JetBrains Mono',monospace;font-size:11px;text-align:right;color:var(--mut)}
 .note{font-size:12px;color:var(--mut);line-height:1.65;margin-top:12px}
-@media(max-width:900px){#app{flex-direction:column}.rail{width:100%}.grid2,.grid3{grid-template-columns:1fr}.main{padding:20px}}
+.unique-banner{border-left:4px solid var(--warn);background:var(--warn-soft);border-radius:0 10px 10px 0;padding:12px 16px;margin:12px 0;font-size:13px}
+.unique-banner b{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.6px}
+.verdict-banner{border-radius:14px;padding:22px 26px;margin-bottom:16px;border:2px solid}
+.verdict-banner.v-green{background:var(--ok-soft);border-color:var(--ok)}
+.verdict-banner.v-yellow{background:var(--warn-soft);border-color:var(--warn)}
+.verdict-banner.v-red{background:var(--bad-soft);border-color:var(--bad)}
+.verdict-banner .vb-word{font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:700;letter-spacing:1px}
+.v-green .vb-word{color:var(--ok)}.v-yellow .vb-word{color:var(--warn)}.v-red .vb-word{color:var(--bad)}
+.verdict-banner .vb-sub{font-size:13px;color:var(--ink);margin-top:6px;line-height:1.55}
+.form-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px 16px}
+.form-grid label{display:block;font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--mut);margin-bottom:4px}
+.form-grid input,.form-grid select,.fg-wide textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font:13px Inter,sans-serif;background:var(--bg);color:var(--ink);outline:none}
+.form-grid input:focus,.form-grid select:focus,.fg-wide textarea:focus{border-color:var(--acc)}
+.fg-wide{grid-column:1/-1}
+.drop-zone{border:2px dashed var(--line);border-radius:12px;padding:26px;text-align:center;cursor:pointer;color:var(--mut);font-size:13.5px;margin-bottom:16px}
+.drop-zone:hover{border-color:var(--acc);color:var(--acc)}
+.drop-zone.loaded{border-color:var(--ok);color:var(--ok);border-style:solid}
+.score-btn{font-family:Inter,sans-serif;font-size:14px;font-weight:700;background:var(--acc);color:#fff;border:none;padding:12px 26px;border-radius:10px;cursor:pointer;margin-top:16px}
+.legend-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.legend-chip{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;padding:8px 14px;border-radius:10px}
+.legend-chip .swatch{width:12px;height:12px;border-radius:50%}
+@media(max-width:900px){#app{flex-direction:column}.rail{width:100%}.grid2,.grid3,.form-grid{grid-template-columns:1fr}.main{padding:20px}}
 </style>
 <div id="app">
  <div class="rail">
   <div class="rail-brand"><h1>Underwriting Copilot</h1><p>Extraction · Conflict Screen · Risk Score · Decision</p></div>
   <div class="overview-link" id="overviewLink" onclick="goOverview()">⌂ &nbsp;Portfolio & Model Card</div>
+  <div class="overview-link" id="scoreLink" onclick="goScore()">＋ &nbsp;Score New Application</div>
   <div class="rail-sub"><span>Case Queue</span><span id="queueCount"></span></div>
   <input class="search-box" id="searchBox" placeholder="Search name or ID…" oninput="onSearch(this.value)">
   <div class="case-list" id="caseList"></div>
@@ -111,30 +133,33 @@ table.xt td{padding:10px 10px 10px 0;border-bottom:1px solid var(--line);font-si
  </div>
  <div class="main"><div id="mainContent"></div></div>
 </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
 const DATA = /*__DATA__*/;
 const M = DATA.metrics, CASES = DATA.cases;
-CASES.forEach(c=>{c.risk_score=Math.round(0.5*c.rule_score+0.5*c.ml_score);});
-const THRESH = 50;
-const riskClass=s=>s>=THRESH?["HIGH RISK","bad"]:["ACCEPTABLE RISK","ok"];
-const band=s=>s<=25?["Low","var(--ok)"]:s<THRESH?["Moderate","var(--ok)"]:s<=70?["Elevated","var(--warn)"]:["High","var(--bad)"];
+const A_LINE = 40, D_LINE = 70;  // <40 approve · 40–69 manual review · ≥70 decline
+const VM={green:["APPROVE","ok"],yellow:["MANUAL REVIEW","warn"],red:["DECLINE","bad"]};
+const bandOf=s=>s<A_LINE?"green":s<D_LINE?"yellow":"red";
+const band=s=>s<=25?["Low","var(--ok)"]:s<A_LINE?["Moderate","var(--ok)"]:s<D_LINE?["Elevated","var(--warn)"]:["High","var(--bad)"];
 let filtered=CASES.slice(),page=0,activeId=CASES[0].id,view="case",activeTab=4;const PAGE=20;
 const fmt$=n=>n==null?"—":"$"+Math.round(n).toLocaleString();
 function onSearch(q){q=q.trim().toLowerCase();filtered=q?CASES.filter(c=>c.name.toLowerCase().includes(q)||c.id.toLowerCase().includes(q)):CASES.slice();page=0;rail();}
 function pg(d){const mx=Math.max(0,Math.ceil(filtered.length/PAGE)-1);page=Math.min(mx,Math.max(0,page+d));rail();}
 function goOverview(){view="overview";render();}
+function goScore(){view="score";render();}
 function sel(id){activeId=id;view="case";activeTab=4;render();}
 function selTab(n){activeTab=n;render();}
 function render(){rail();main();}
 function rail(){
  document.getElementById('overviewLink').className="overview-link"+(view==="overview"?" active":"");
+ document.getElementById('scoreLink').className="overview-link"+(view==="score"?" active":"");
  document.getElementById('queueCount').textContent=filtered.length+" cases";
  const items=filtered.slice(page*PAGE,page*PAGE+PAGE);
  document.getElementById('caseList').innerHTML=items.map(c=>{
-  const risky=c.risk_score>=THRESH;
+  const sc=c.verdict==='red'?'sc-bad':c.verdict==='yellow'?'sc-warn':'sc-ok';
   return `<div class="case-item ${c.id===activeId&&view==='case'?'active':''}" onclick="sel('${c.id}')">
    <div><div class="ci-name">${c.name}</div><div class="ci-id">${c.id}${c.has_docs?' <span class="doctag">· PDF</span>':''}</div></div>
-   <div class="score-chip ${risky?'sc-bad':'sc-ok'}">${c.risk_score}</div></div>`;}).join('');
+   <div class="score-chip ${sc}">${c.risk_score}</div></div>`;}).join('');
  const mx=Math.max(0,Math.ceil(filtered.length/PAGE)-1);
  document.getElementById('pageLabel').textContent=(page+1)+" / "+(mx+1);
  document.getElementById('prevBtn').disabled=page<=0;document.getElementById('nextBtn').disabled=page>=mx;
@@ -142,41 +167,47 @@ function rail(){
 function main(){
  const el=document.getElementById('mainContent');
  if(view==="overview"){el.innerHTML=overview();return;}
+ if(view==="score"){el.innerHTML=scoreView();wireScoreForm();return;}
  const c=CASES.find(x=>x.id===activeId);if(!c){el.innerHTML=overview();return;}
- const rc=riskClass(c.risk_score);
+ const vm=VM[c.verdict];
  el.innerHTML=`<div class="case-head">
    <div><h2>${c.name}</h2>
     <div class="case-meta"><span>${c.id}</span><span>${c.occupation}</span><span>${c.city}, ${c.state}</span><span>${c.policy}</span></div></div>
    <div class="headline-score">
-    <div><div class="hs-num" style="color:var(--${rc[1]})">${c.risk_score}<span style="font-size:16px;color:var(--mut)">/100</span></div>
+    <div><div class="hs-num" style="color:var(--${vm[1]})">${c.risk_score}<span style="font-size:16px;color:var(--mut)">/100</span></div>
      <div class="hs-lab">Composite Risk Score</div></div>
-    <div class="hs-class cls-${rc[1]}">${rc[0]}</div></div></div>
+    <div class="hs-class cls-${vm[1]}">${vm[0]}</div></div></div>
   <div class="tabs">${[[1,'Application'],[2,'Documents'],[3,'Extraction & Conflicts'],[4,'Risk Score'],[5,'Decision']]
    .map(t=>`<div class="tab ${t[0]===activeTab?'active':''}" onclick="selTab(${t[0]})">${t[1]}</div>`).join('')}</div>
   ${panel(c)}`;
 }
 function gauge(score){
  const L=251.33, off=L*(1-score/100);
- const col=score>=THRESH?(score>70?'var(--bad)':'var(--warn)'):'var(--ok)';
- const tickA=Math.PI*(1-THRESH/100), tx=100+86*Math.cos(tickA), ty=100-86*Math.sin(tickA), tx2=100+72*Math.cos(tickA), ty2=100-72*Math.sin(tickA);
+ const col='var(--'+VM[bandOf(score)][1]+')';
+ const tick=v=>{const a=Math.PI*(1-v/100);return `<line x1="${100+86*Math.cos(a)}" y1="${100-86*Math.sin(a)}" x2="${100+72*Math.cos(a)}" y2="${100-72*Math.sin(a)}" stroke="var(--ink)" stroke-width="2.5" stroke-dasharray="3 3"/>`;};
  return `<svg class="gauge" viewBox="0 0 200 112">
   <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="var(--line)" stroke-width="15" stroke-linecap="round"/>
   <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="${col}" stroke-width="15" stroke-linecap="round"
    stroke-dasharray="${L}" stroke-dashoffset="${off}"/>
-  <line x1="${tx}" y1="${ty}" x2="${tx2}" y2="${ty2}" stroke="var(--ink)" stroke-width="2.5" stroke-dasharray="3 3"/>
+  ${tick(A_LINE)}${tick(D_LINE)}
   <text x="100" y="88" text-anchor="middle" font-family="Space Grotesk" font-size="30" font-weight="700" fill="var(--ink)">${score}</text>
-  <text x="100" y="104" text-anchor="middle" font-family="Inter" font-size="9" fill="var(--mut)">threshold at ${THRESH}</text></svg>`;
+  <text x="100" y="104" text-anchor="middle" font-family="Inter" font-size="9" fill="var(--mut)">approve &lt;${A_LINE} · decline ≥${D_LINE}</text></svg>`;
 }
 function overview(){
- const tc={"Low (0–25)":0,"Moderate (26–49)":0,"Elevated (50–70)":0,"High (71–100)":0};
- CASES.forEach(c=>{const s=c.risk_score;if(s<=25)tc["Low (0–25)"]++;else if(s<THRESH)tc["Moderate (26–49)"]++;else if(s<=70)tc["Elevated (50–70)"]++;else tc["High (71–100)"]++;});
- const risky=CASES.filter(c=>c.risk_score>=THRESH).length;
+ const vc={green:0,yellow:0,red:0};CASES.forEach(c=>vc[c.verdict]++);
+ const tc={"Low (0–25)":0,"Moderate (26–39)":0,"Elevated (40–69)":0,"High (70–100)":0};
+ CASES.forEach(c=>{const s=c.risk_score;if(s<=25)tc["Low (0–25)"]++;else if(s<A_LINE)tc["Moderate (26–39)"]++;else if(s<D_LINE)tc["Elevated (40–69)"]++;else tc["High (70–100)"]++;});
  const mx=Math.max(...Object.values(tc),1);const cols=["var(--ok)","var(--ok)","var(--warn)","var(--bad)"];
  const gb=M.risk_models.gradient_boosting,lr=M.risk_models.logistic_regression;
  const fi=M.risk_models.gb_feature_importance;const mxf=Math.max(...Object.values(fi));
  return `<div class="case-head"><div><h2>Portfolio & Model Card</h2>
-  <div class="case-meta"><span>${M.n_applicants.toLocaleString()} applicants scored</span><span>${M.n_packets} PDF packets</span><span>${risky} of ${CASES.length} shown cases ≥ ${THRESH}</span></div></div></div>
- <div class="tabs"></div>
+  <div class="case-meta"><span>${M.n_applicants.toLocaleString()} applicants scored</span><span>${M.n_packets} PDF packets</span></div></div></div>
+ <div class="card" style="margin-top:18px"><h3>Verdicts — Traffic-Light Decisioning</h3>
+  <div class="legend-row">
+   <div class="legend-chip cls-ok"><span class="swatch" style="background:var(--ok)"></span>APPROVE · ${vc.green} — clear-cut acceptable risk, auto-approved</div>
+   <div class="legend-chip cls-warn"><span class="swatch" style="background:var(--warn)"></span>MANUAL REVIEW · ${vc.yellow} — a human underwriter looks at the person as a whole</div>
+   <div class="legend-chip cls-bad"><span class="swatch" style="background:var(--bad)"></span>DECLINE · ${vc.red} — application contradicts evidence or risk exceeds appetite</div>
+  </div></div>
  <div class="grid3">
   <div class="stat"><div class="sv">${(M.extraction.field_level_accuracy*100).toFixed(1)}%</div><div class="sl">Extraction accuracy — field level vs ground truth</div></div>
   <div class="stat"><div class="sv">${(M.conflict_screening.detection_recall*100).toFixed(0)}%</div><div class="sl">Injected-conflict detection recall (${M.conflict_screening.tp}/${M.conflict_screening.tp+M.conflict_screening.fn} caught, ${M.conflict_screening.fp} false alarms)</div></div>
@@ -188,7 +219,7 @@ function overview(){
  <div class="card" style="margin-top:16px"><h3>Composite Risk Score Distribution</h3>
   ${Object.entries(tc).map(([t,n],i)=>`<div class="hist-bar-row"><div class="hist-label">${t}</div>
    <div class="hist-track"><div class="hist-fill" style="width:${n/mx*100}%;background:${cols[i]}"></div></div><div class="hist-count">${n}</div></div>`).join('')}
-  <div class="note">Scores at or above ${THRESH} are classified HIGH RISK and cannot be auto-approved.</div></div>
+  <div class="note">Below ${A_LINE} with clean signals → green auto-approve. ${A_LINE}–${D_LINE-1}, any major conflict, model disagreement, or disclosed unique circumstances → yellow manual review. At or above ${D_LINE}, or material misrepresentation → red decline.</div></div>
  <div class="card"><h3>Gradient Boosting — Feature Importance</h3>
   ${Object.entries(fi).sort((a,b)=>b[1]-a[1]).map(([f,v])=>`<div class="coef-bar-row"><div class="coef-label">${f}</div>
    <div class="coef-track"><div class="coef-fill" style="left:0;width:${v/mxf*100}%"></div></div><div class="coef-val">${v.toFixed(3)}</div></div>`).join('')}
@@ -211,8 +242,10 @@ function panel(c){
   +sec("Section 3 — Medical & Lifestyle Profile",[
     ["Height / Weight",c.height+" cm / "+c.weight+" kg"],["BMI",c.bmi],
     ["Tobacco Use (4a)",c.smoker],["Chronic Conditions (4b)",c.conditions],
-    ["Family History (4c)",c.family?"Yes — parent, see attending records":"None disclosed"],["Hazardous Activities (4d)","No"],
-    ["Blood Pressure",c.bp],["Total Cholesterol",c.chol+" mg/dL"]]);
+    ["Family History (4c)",c.family?"Yes — parent, see attending records":"None disclosed"],["Hazardous Activities (4d)",c.hazard&&c.hazard!=="None"?"Yes — "+c.hazard:"No"],
+    ["Driving Violations, 3yr (4e)",c.violations!=null?c.violations:"—"],["Alcohol Use (4f)",c.alcohol||"—"],
+    ["Blood Pressure",c.bp],["Total Cholesterol",c.chol+" mg/dL"]])
+  +(c.unique?`<div class="unique-banner"><b>UNIQUE CIRCUMSTANCES DISCLOSED (Q5)</b><p style="margin:5px 0 0">“${c.unique}” — this disclosure automatically routes the file to a human underwriter so the person is assessed as a whole, not just by the score.</p></div>`:'');
  }
  if(activeTab===2){
   const docs=c.has_docs?[["Application Form (Parts A–B, health questionnaire)","Parsed ✓"],["Payslip / Earnings Statement","Parsed ✓"],["Paramedical Exam Report + consumer report","Parsed ✓"]]
@@ -236,16 +269,18 @@ function panel(c){
    <div class="card"><h3>Cross-Document Conflict Screen</h3>${confl}</div>`;
  }
  if(activeTab===4){
-  const rc=riskClass(c.risk_score);const b=band(c.risk_score);
+  const vm=VM[c.verdict];const b=band(c.risk_score);
   const sub=(l,v,col)=>`<div class="sub-score"><div class="ss-l">${l}</div><div class="ss-v">${v}</div>
    <div class="bar-track"><div class="bar-fill" style="width:${v}%;background:${col}"></div></div></div>`;
   return `<div class="card"><h3>Composite Risk Score</h3>
    <div class="gauge-wrap">${gauge(c.risk_score)}
     <div class="gauge-info">
-     <div class="g-band cls-${rc[1]}">${rc[0]} · ${b[0]} band</div>
-     <div class="g-note">${c.risk_score>=THRESH
-       ?`This case scores at or above the ${THRESH}-point risk line, so it cannot be auto-approved — it routes to a human underwriter regardless of any other signal.`
-       :`This case scores below the ${THRESH}-point risk line and is eligible for straight-through approval, provided no major data conflicts are found.`}</div>
+     <div class="g-band cls-${vm[1]}">${vm[0]} · ${b[0]} band</div>
+     <div class="g-note">${c.verdict==='red'
+       ?`This case is in the red band — either the score is at or above the ${D_LINE}-point decline line, or the application materially contradicts the evidence.`
+       :c.verdict==='yellow'
+       ?`This case is yellow — a human underwriter must review the application and the person as a whole before any decision is issued.`
+       :`This case is green — it scores below the ${A_LINE}-point approval line with clean signals and is eligible for straight-through approval.`}</div>
      <div class="sub-scores">
       ${sub("Rule engine (50%)",c.rule_score,"var(--acc)")}
       ${sub("ML — gradient boosting (50%)",Math.round(c.ml_score),"var(--acc)")}
@@ -253,12 +288,11 @@ function panel(c){
      </div></div></div></div>
   <div class="card explain"><h3>How this score works</h3>
    <p><b>Formula:</b> Risk Score = 50% × Rule Engine score + 50% × ML probability. The rule engine is fully auditable — every point traces to a documented factor weight below. The ML component is a gradient-boosting model trained on ${M.risk_models.n_train.toLocaleString()} records (AUC ${(M.risk_models.gradient_boosting.auc*100).toFixed(1)}% on ${M.risk_models.n_test.toLocaleString()} held-out cases), which captures factor interactions the rules miss. Blending them means one bad model can never single-handedly approve a risky case.</p>
-   <p><b>The ${THRESH}-point line:</b> at or above ${THRESH} the case is classified HIGH RISK and always goes to a human. Below ${THRESH} it may be auto-approved — unless the conflict screen found a major cross-document discrepancy, which overrides everything.</p>
+   <p><b>The traffic light:</b> below ${A_LINE} with clean signals the case is <b style="color:var(--ok)">GREEN — APPROVE</b>, clear-cut and auto-approved. From ${A_LINE} to ${D_LINE-1}, or whenever there is a major data conflict, model disagreement, or the applicant disclosed unique circumstances, the case is <b style="color:var(--warn)">YELLOW — MANUAL REVIEW</b>: a human underwriter must look at the application and the person as a whole. At ${D_LINE} or above, or when the application materially contradicts the medical/identity evidence, the case is <b style="color:var(--bad)">RED — DECLINE</b>.</p>
    <div class="bands">
-    <span class="band-chip" style="background:var(--ok-soft);color:var(--ok)">0–25 Low</span>
-    <span class="band-chip" style="background:var(--ok-soft);color:var(--ok)">26–49 Moderate</span>
-    <span class="band-chip" style="background:var(--warn-soft);color:var(--warn)">50–70 Elevated</span>
-    <span class="band-chip" style="background:var(--bad-soft);color:var(--bad)">71–100 High</span>
+    <span class="band-chip" style="background:var(--ok-soft);color:var(--ok)">0–${A_LINE-1} Approve</span>
+    <span class="band-chip" style="background:var(--warn-soft);color:var(--warn)">${A_LINE}–${D_LINE-1} Manual Review</span>
+    <span class="band-chip" style="background:var(--bad-soft);color:var(--bad)">${D_LINE}–100 Decline</span>
    </div></div>
   <div class="card"><h3>Rule Engine — Factor Breakdown</h3>
    ${c.rule_factors.map(f=>`<div class="factor-row"><div><div class="factor-label">${f[0]}</div><div class="factor-detail">${f[1]}</div></div>
@@ -266,44 +300,195 @@ function panel(c){
    ${c.label!=null?`<div class="note">Ground-truth label: <b>${c.label==1?'High Risk':'Not High Risk'}</b> — synthetic data lets every score be verified against a known answer.</div>`:''}</div>`;
  }
  if(activeTab===5){
-  const cls=c.decision.startsWith("APPROVED")?"ok":c.tier==="high"?"bad":"warn";
+  const cls=VM[c.verdict][1];
   return `<div class="card"><h3>System Decision</h3><div class="decision-wrap">
    <div class="stamp ${cls}">${c.decision}</div>
    <div class="decision-detail"><h3>${c.rate_class}</h3>
     ${c.reasons.map(r=>`<p>· ${r}</p>`).join('')}
-    <p class="mono" style="font-size:11px">Risk ${c.risk_score}/100 · Rule ${c.rule_score} · GB ${c.ml_score.toFixed(0)} · ${c.conflicts.length} conflict(s)</p></div></div></div>
+    <p class="mono" style="font-size:11px">Risk ${c.risk_score}/100 · Rule ${c.rule_score} · GB ${c.ml_score.toFixed(0)} · ${c.conflicts.length} conflict(s)</p></div></div>
+   ${c.unique?`<div class="unique-banner"><b>UNIQUE CIRCUMSTANCES</b><p style="margin:5px 0 0">“${c.unique}”</p></div>`:''}</div>
   <div class="card"><div class="ai-head"><h3 style="margin:0">Underwriting Summary — grounded in extracted fields only</h3></div>
    <div class="ai-text">${c.ai_summary}</div></div>`;
  }
+}
+
+/* ---------- live scoring: same rule engine + trained logistic model, in-browser ---------- */
+function ruleScoreJS(f){
+ const factors=[];
+ let p=f.age<30?0:f.age<=45?5:f.age<=55?10:18;factors.push(["Applicant age",f.age+" years",p]);
+ p=f.smoker==="Smoker"?25:f.smoker==="Former smoker"?8:0;factors.push(["Tobacco use",f.smoker,p]);
+ p=(f.bmi<18.5||f.bmi>=35)?15:f.bmi>=30?8:f.bmi>=25?3:0;factors.push(["Body mass index",f.bmi.toFixed(1)+" BMI",p]);
+ const conds=f.conditions.trim()&&f.conditions.trim().toLowerCase()!=="none"?f.conditions.split(",").map(s=>s.trim()).filter(Boolean):[];
+ p=conds.reduce((s,c)=>s+(c.toLowerCase().includes("diabetes")?15:8),0);factors.push(["Medical conditions",conds.join(", ")||"None",p]);
+ p=f.family?6:0;factors.push(["Family medical history",f.family?"Notable":"None disclosed",p]);
+ const dti=f.income>0?f.debt/f.income:0;
+ p=dti<0.2?0:dti<0.35?5:dti<0.5?12:20;factors.push(["Debt-to-income ratio",(dti*100).toFixed(1)+"%",p]);
+ p=f.credit>750?0:f.credit>=700?3:f.credit>=650?8:15;factors.push(["Credit score",String(f.credit),p]);
+ p=f.hazard?10:0;factors.push(["Hazardous activities",f.hazard?(f.hazardDetail||"Yes"):"None disclosed",p]);
+ p=f.violations===0?0:f.violations<=2?4:10;factors.push(["Driving record",f.violations+" violation(s) in 3 years",p]);
+ p=f.alcohol==="Heavy"?12:f.alcohol==="Moderate"?2:0;factors.push(["Alcohol use",f.alcohol,p]);
+ return [Math.min(factors.reduce((s,x)=>s+x[2],0),100),factors];
+}
+function mlScoreJS(f){
+ const ex=M.risk_models.lr_export;
+ const conds=f.conditions.trim()&&f.conditions.trim().toLowerCase()!=="none"?f.conditions.split(",").filter(s=>s.trim()).length:0;
+ const dti=Math.min(Math.max(f.income>0?f.debt/f.income:0,0),3);
+ const x={Age:f.age,BMI:f.bmi,smoker_now:f.smoker==="Smoker"?1:0,smoker_former:f.smoker==="Former smoker"?1:0,
+  n_conditions:conds,"Family History Flag":f.family?1:0,"Debt-to-Income Ratio":dti,"Credit Score":f.credit,
+  hazardous_activity:f.hazard?1:0,driving_violations:f.violations,alcohol_heavy:f.alcohol==="Heavy"?1:0};
+ let z=ex.intercept;
+ ex.features.forEach((name,i)=>{z+=ex.coef[i]*((x[name]-ex.scaler_mean[i])/ex.scaler_std[i]);});
+ return 100/(1+Math.exp(-z));
+}
+function decideJS(rule,ml,unique){
+ const comp=Math.round(0.5*rule+0.5*ml);const reasons=[];
+ let verdict,decision,rate;
+ if(comp>=D_LINE){verdict="red";decision="DECLINE";rate="Declined — Risk Exceeds Appetite";
+  reasons.push(`Composite risk score ${comp}/100 is in the ${D_LINE}+ decline band`);}
+ else if(unique||comp>=A_LINE||Math.abs(rule-ml)>20){verdict="yellow";decision="MANUAL REVIEW";
+  rate=unique?"Referred — Unique Circumstances Disclosed":"Referred — Senior Underwriter Review";
+  if(unique)reasons.push("Applicant disclosed unique circumstances: "+unique);
+  if(comp>=A_LINE)reasons.push(`Composite score ${comp} sits in the ${A_LINE}–${D_LINE-1} referral band`);
+  if(Math.abs(rule-ml)>20)reasons.push(`Rule engine (${rule}) and ML model (${ml.toFixed(0)}) disagree materially`);}
+ else{verdict="green";decision="APPROVE";rate=comp<=25?"Preferred Rate Class":"Standard Rate Class";
+  reasons.push(`Composite score ${comp} is below the ${A_LINE}-point approval line; engines agree and no special circumstances were disclosed`);}
+ return {verdict,decision,rate,comp,reasons};
+}
+function scoreView(){
+ return `<div class="case-head"><div><h2>Score a New Application</h2>
+  <div class="case-meta"><span>Upload an application PDF or key the fields in</span><span>scored live with the same engines as the portfolio</span></div></div></div>
+ <div class="card" style="margin-top:18px"><h3>1 · Application PDF (optional)</h3>
+  <div class="drop-zone" id="dropZone" onclick="document.getElementById('pdfInput').click()">Click to upload an application form PDF — name, DOB, income, debt and coverage are extracted automatically</div>
+  <input type="file" id="pdfInput" accept="application/pdf" style="display:none">
+ </div>
+ <div class="card"><h3>2 · Applicant Inputs — confirm or complete</h3>
+  <div class="form-grid">
+   <div><label>Full name</label><input id="f_name" placeholder="Jane Doe"></div>
+   <div><label>Age</label><input id="f_age" type="number" min="18" max="85" value="40"></div>
+   <div><label>Credit score</label><input id="f_credit" type="number" min="300" max="850" value="715"></div>
+   <div><label>Annual income (USD)</label><input id="f_income" type="number" value="60000"></div>
+   <div><label>Total debt (USD)</label><input id="f_debt" type="number" value="20000"></div>
+   <div><label>Coverage requested (USD)</label><input id="f_coverage" type="number" value="300000"></div>
+   <div><label>BMI</label><input id="f_bmi" type="number" step="0.1" value="25"></div>
+   <div><label>Tobacco use</label><select id="f_smoker"><option>Non-smoker</option><option>Former smoker</option><option>Smoker</option></select></div>
+   <div><label>Alcohol use</label><select id="f_alcohol"><option>None</option><option selected>Moderate</option><option>Heavy</option></select></div>
+   <div><label>Existing conditions (comma-separated)</label><input id="f_conditions" placeholder="None"></div>
+   <div><label>Family history of serious illness</label><select id="f_family"><option value="0">No</option><option value="1">Yes</option></select></div>
+   <div><label>Driving violations (3 yr)</label><input id="f_violations" type="number" min="0" max="10" value="0"></div>
+   <div><label>Hazardous activities</label><select id="f_hazard" onchange="document.getElementById('hazardWrap').style.display=this.value==='1'?'block':'none'"><option value="0">No</option><option value="1">Yes</option></select></div>
+   <div class="fg-wide" id="hazardWrap" style="display:none"><label>If yes, describe the activity</label><input id="f_hazard_detail" placeholder="e.g. Skydiving, scuba diving, motorcycle racing"></div>
+   <div><label>Unique circumstances to disclose?</label><select id="f_unique" onchange="document.getElementById('uniqueWrap').style.display=this.value==='1'?'block':'none'"><option value="0">No</option><option value="1">Yes</option></select></div>
+   <div class="fg-wide" id="uniqueWrap" style="display:none"><label>Tell us — a human underwriter will read this</label><textarea id="f_unique_text" rows="2" placeholder="e.g. Recent job change, caregiving gap, rebuilt finances after bankruptcy…"></textarea></div>
+  </div>
+  <button class="score-btn" onclick="scoreNow()">Score Application</button></div>
+ <div id="scoreResult"></div>`;
+}
+function wireScoreForm(){
+ const inp=document.getElementById('pdfInput');if(!inp)return;
+ inp.addEventListener('change',async ev=>{
+  const file=ev.target.files[0];if(!file)return;
+  const dz=document.getElementById('dropZone');dz.textContent='Reading '+file.name+'…';
+  try{
+   if(typeof pdfjsLib==='undefined')throw new Error('pdf.js unavailable (offline?)');
+   pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+   const buf=await file.arrayBuffer();
+   const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+   let text='';
+   for(let i=1;i<=pdf.numPages;i++){const pg=await pdf.getPage(i);const tc=await pg.getTextContent();
+    text+=tc.items.map(it=>it.str).join('\n')+'\n';}
+   const got=[];
+   const grab=(label,re)=>{const m=text.match(new RegExp(label+"[\\s\\S]{0,60}?("+re+")","i"));return m?m[1]:null;};
+   const name=grab("FULL NAME","[A-Z][a-zA-Z'’-]+(?:\\s+[A-Z][a-zA-Z'’-]+)+");
+   if(name){document.getElementById('f_name').value=name;got.push('name');}
+   const dob=grab("DATE OF BIRTH","\\d{4}-\\d{2}-\\d{2}");
+   if(dob){const age=Math.floor((Date.now()-new Date(dob))/31557600000);
+    if(age>0&&age<110){document.getElementById('f_age').value=age;got.push('age (from DOB '+dob+')');}}
+   const inc=grab("DECLARED ANNUAL INCOME","[\\d,]{4,}");
+   if(inc){document.getElementById('f_income').value=parseFloat(inc.replace(/,/g,''));got.push('income');}
+   const debt=grab("DECLARED TOTAL DEBT","[\\d,]{3,}");
+   if(debt){document.getElementById('f_debt').value=parseFloat(debt.replace(/,/g,''));got.push('debt');}
+   const cov=grab("COVERAGE AMOUNT REQUESTED","[\\d,]{4,}");
+   if(cov){document.getElementById('f_coverage').value=parseFloat(cov.replace(/,/g,''));got.push('coverage');}
+   dz.className='drop-zone loaded';
+   dz.textContent=got.length?('✓ '+file.name+' — extracted '+got.join(', ')+'. Confirm the remaining fields below, then score.')
+    :('✓ '+file.name+' read, but no known fields matched — key the values in below.');
+  }catch(err){dz.textContent='Could not read PDF ('+err.message+') — enter the fields manually below.';}
+ });
+}
+function scoreNow(){
+ const v=id=>document.getElementById(id).value;
+ const f={name:v('f_name')||'New Applicant',age:+v('f_age'),credit:+v('f_credit'),income:+v('f_income'),
+  debt:+v('f_debt'),coverage:+v('f_coverage'),bmi:+v('f_bmi'),smoker:v('f_smoker'),alcohol:v('f_alcohol'),
+  conditions:v('f_conditions')||'None',family:+v('f_family'),violations:+v('f_violations'),
+  hazard:v('f_hazard')==='1',hazardDetail:v('f_hazard_detail'),
+  unique:v('f_unique')==='1'?(v('f_unique_text').trim()||'Disclosed — details pending'):null};
+ const [rule,factors]=ruleScoreJS(f);
+ const ml=mlScoreJS(f);
+ const d=decideJS(rule,ml,f.unique);
+ const esc=s=>String(s).replace(/</g,'&lt;');
+ const vbSub={green:"Clear-cut acceptable risk. This applicant should be approved — every signal is clean and the score is comfortably below the approval line.",
+  yellow:"A human underwriter needs to review this application and the person as a whole before a decision is issued.",
+  red:"This application should be declined — the risk clearly exceeds appetite at the disclosed values."};
+ document.getElementById('scoreResult').innerHTML=`
+  <div class="verdict-banner v-${d.verdict}"><div class="vb-word">${d.decision} — ${esc(f.name)}</div>
+   <div class="vb-sub"><b>${d.rate}.</b> ${vbSub[d.verdict]}</div></div>
+  <div class="card"><h3>Live Composite Score</h3>
+   <div class="gauge-wrap">${gauge(d.comp)}
+    <div class="gauge-info">
+     <div class="g-band cls-${VM[d.verdict][1]}">${VM[d.verdict][0]}</div>
+     ${d.reasons.map(r=>`<div class="g-note">· ${esc(r)}</div>`).join('')}
+     <div class="sub-scores">
+      <div class="sub-score"><div class="ss-l">Rule engine (50%)</div><div class="ss-v">${rule}</div><div class="bar-track"><div class="bar-fill" style="width:${rule}%;background:var(--acc)"></div></div></div>
+      <div class="sub-score"><div class="ss-l">ML — logistic (50%)</div><div class="ss-v">${ml.toFixed(0)}</div><div class="bar-track"><div class="bar-fill" style="width:${ml}%;background:var(--acc)"></div></div></div>
+     </div></div></div></div>
+  ${f.unique?`<div class="unique-banner"><b>UNIQUE CIRCUMSTANCES DISCLOSED</b><p style="margin:5px 0 0">“${esc(f.unique)}” — shown to the reviewing underwriter alongside the score.</p></div>`:''}
+  ${f.hazard&&f.hazardDetail?`<div class="unique-banner"><b>HAZARDOUS ACTIVITY DETAIL</b><p style="margin:5px 0 0">“${esc(f.hazardDetail)}”</p></div>`:''}
+  <div class="card"><h3>Factor Breakdown (rule engine)</h3>
+   ${factors.map(x=>`<div class="factor-row"><div><div class="factor-label">${esc(x[0])}</div><div class="factor-detail">${esc(x[1])}</div></div><div class="factor-pts">${x[2]>0?'+':''}${x[2]}</div></div>`).join('')}
+   <div class="note">The ML half uses the trained logistic-regression coefficients exported from the pipeline (the browser cannot run gradient boosting; logistic is its auditable stand-in, AUC ${(M.risk_models.logistic_regression.auc*100).toFixed(1)}%). Portfolio cases are scored offline with the full dual engine.</div></div>`;
+ document.getElementById('scoreResult').scrollIntoView({behavior:'smooth'});
 }
 render();
 </script>
 """
 
-THRESH = 50
+APPROVE_LINE, DECLINE_LINE = 40, 70
 
 def _money(n):
     return "$" + format(int(round(n)), ",")
 
 def case_summary(c):
     """Pre-generated underwriter narrative, grounded strictly in case fields."""
-    risk = round(0.5 * c["rule_score"] + 0.5 * c["ml_score"])
+    risk = c["risk_score"]
     smoker = c["smoker"].lower()
     smoke_txt = ("a current smoker" if smoker == "smoker"
                  else "a former smoker" if "former" in smoker else "a non-smoker")
     cond = c["conditions"]
     cond_txt = ("no declared medical conditions" if str(cond).strip().lower() in ("none", "nan", "")
                 else f"declared conditions of {cond}")
+    band = ("green approval band" if risk < APPROVE_LINE
+            else "yellow manual-review band" if risk < DECLINE_LINE else "red decline band")
+    life = []
+    if c.get("hazard") and c["hazard"] != "None":
+        life.append(f"participates in {c['hazard'].lower()}")
+    if c.get("violations"):
+        life.append(f"has {c['violations']} driving violation(s) in the last three years")
+    if c.get("alcohol") == "Heavy":
+        life.append("reports heavy alcohol use")
     s = [
         f"{c['name']} is a {c['age']}-year-old {c['occupation']} applying for a "
         f"{c['policy']} policy with {_money(c['coverage'])} in requested coverage.",
-        f"The applicant is {smoke_txt} with a BMI of {c['bmi']:.1f} and {cond_txt}.",
+        f"The applicant is {smoke_txt} with a BMI of {c['bmi']:.1f} and {cond_txt}"
+        + (", and " + "; ".join(life) if life else "") + ".",
         f"Financially, the file shows a credit score of {c['credit']} and a "
         f"debt-to-income ratio of {c['dti'] * 100:.1f}%.",
-        f"The composite risk score is {risk}/100 against the {THRESH}-point threshold "
+        f"The composite risk score is {risk}/100 "
         f"(rule engine {c['rule_score']}, gradient boosting {c['ml_score']:.0f}), "
-        f"placing the case {'above' if risk >= THRESH else 'below'} the high-risk line.",
+        f"placing the case in the {band}.",
     ]
+    if c.get("unique"):
+        s.append(f"The applicant disclosed unique circumstances — “{c['unique']}” — "
+                 f"which routes the file to a human underwriter for whole-person review.")
     if c["conflicts"]:
         det = "; ".join(f"{k['severity']} {k['type'].replace('_', ' ')} — {k['description']}"
                         for k in c["conflicts"])

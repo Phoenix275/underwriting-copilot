@@ -50,6 +50,15 @@ def rule_score(a):
     factors.append(("Debt-to-income ratio", f"{dti*100:.1f}%", p))
     p = 0 if credit > 750 else 3 if credit >= 700 else 8 if credit >= 650 else 15
     factors.append(("Credit score", str(credit), p))
+    hazard = a.get("Hazardous Activities", "None") if hasattr(a, "get") else a["Hazardous Activities"]
+    p = 10 if hazard != "None" else 0
+    factors.append(("Hazardous activities", hazard if p else "None disclosed", p))
+    viol = int(a["Driving Violations (3yr)"])
+    p = 0 if viol == 0 else 4 if viol <= 2 else 10
+    factors.append(("Driving record", f"{viol} violation(s) in 3 years", p))
+    alcohol = a["Alcohol Use"]
+    p = 12 if alcohol == "Heavy" else 2 if alcohol == "Moderate" else 0
+    factors.append(("Alcohol use", alcohol, p))
     total = min(sum(f[2] for f in factors), 100)
     return total, factors
 
@@ -58,7 +67,8 @@ def tier(score):
 
 # ---------------- ML engine --------------------------------------------------------
 FEATURES = ["Age", "BMI", "smoker_now", "smoker_former", "n_conditions",
-            "Family History Flag", "Debt-to-Income Ratio", "Credit Score"]
+            "Family History Flag", "Debt-to-Income Ratio", "Credit Score",
+            "hazardous_activity", "driving_violations", "alcohol_heavy"]
 
 def featurize(df):
     X = pd.DataFrame({
@@ -69,6 +79,9 @@ def featurize(df):
         "Family History Flag": df["Family History Flag"],
         "Debt-to-Income Ratio": df["Debt-to-Income Ratio"].clip(0, 3),
         "Credit Score": df["Credit Score"],
+        "hazardous_activity": (df["Hazardous Activities"] != "None").astype(int),
+        "driving_violations": df["Driving Violations (3yr)"],
+        "alcohol_heavy": (df["Alcohol Use"] == "Heavy").astype(int),
     })
     return X[FEATURES]
 
@@ -99,6 +112,12 @@ def train_models(df, seed=13):
         "gradient_boosting": metrics(gb, Xte),
         "gb_feature_importance": dict(zip(FEATURES, [round(float(v), 4) for v in gb.feature_importances_])),
         "lr_coefficients": dict(zip(FEATURES, [round(float(v), 4) for v in lr.coef_[0]])),
+        # exported so the dashboard can score new applications live in the browser
+        "lr_export": {"features": FEATURES,
+                      "coef": [round(float(v), 6) for v in lr.coef_[0]],
+                      "intercept": round(float(lr.intercept_[0]), 6),
+                      "scaler_mean": [round(float(v), 6) for v in scaler.mean_],
+                      "scaler_std": [round(float(v), 6) for v in scaler.scale_]},
     }
     return {"lr": lr, "gb": gb, "scaler": scaler}, report
 
@@ -108,27 +127,45 @@ def ml_scores(models, df):
     gb_p = models["gb"].predict_proba(X)[:, 1]
     return (lr_p * 100).round(1), (gb_p * 100).round(1)
 
-# ---------------- decision logic ---------------------------------------------------
-TIER_META = {
-    "low":      ("APPROVED", "Preferred Rate Class"),
-    "moderate": ("APPROVED", "Standard Rate Class"),
-    "elevated": ("REFERRED", "Substandard — Senior Underwriter Review"),
-    "high":     ("REFER — APS REQUIRED", "Rated / Decline Pending Evidence"),
-}
+# ---------------- decision logic (three-verdict traffic light) ---------------------
+# green  = APPROVE        — clear-cut acceptable risk, auto-approve
+# yellow = MANUAL REVIEW  — a human underwriter must look at the whole person
+# red    = DECLINE        — application contradicts evidence, or risk clearly exceeds appetite
+APPROVE_LINE = 40   # composite below this (with clean signals) auto-approves
+DECLINE_LINE = 70   # composite at/above this declines
 
-def decide(rule_s, ml_s, conflicts):
-    t_rule, t_ml = tier(rule_s), tier(ml_s)
-    reasons = []
+MISREP_TYPES = {"smoker_nondisclosure", "dob_mismatch"}
+
+def decide(rule_s, ml_s, conflicts, unique=None):
+    composite = int(round(0.5 * rule_s + 0.5 * ml_s))
     majors = [c for c in conflicts if c["severity"] == "major"]
-    final_tier = t_ml
-    decision, rate = TIER_META[final_tier]
-    if majors:
-        decision, rate = "REFERRED", "Manual Review — Data Conflict"
-        reasons.append(f"{len(majors)} major data conflict(s): " + "; ".join(c["type"] for c in majors))
-    if t_rule != t_ml and abs(rule_s - ml_s) > 20 and decision.startswith("APPROVED"):
-        decision, rate = "REFERRED", "Manual Review — Model Disagreement"
-        reasons.append(f"Rule tier '{t_rule}' vs ML tier '{t_ml}' disagree materially")
-    if not reasons:
-        reasons.append(f"Rule and ML tiers consistent ({t_ml}); no major conflicts detected")
-    return {"decision": decision, "rate_class": rate, "tier": final_tier, "reasons": reasons,
-            "referred": not decision.startswith("APPROVED")}
+    misrep = [c for c in majors if c["type"] in MISREP_TYPES]
+    reasons = []
+    if misrep:
+        verdict, decision = "red", "DECLINE"
+        rate = "Declined — Material Misrepresentation"
+        reasons.append("Application contradicts medical/identity evidence: "
+                       + "; ".join(c["type"].replace("_", " ") for c in misrep))
+    elif composite >= DECLINE_LINE:
+        verdict, decision = "red", "DECLINE"
+        rate = "Declined — Risk Exceeds Appetite"
+        reasons.append(f"Composite risk score {composite}/100 is in the {DECLINE_LINE}+ decline band")
+    elif majors or unique or composite >= APPROVE_LINE or abs(rule_s - ml_s) > 20:
+        verdict, decision = "yellow", "MANUAL REVIEW"
+        rate = "Referred — Senior Underwriter Review"
+        if majors:
+            reasons.append(f"{len(majors)} major data conflict(s): " + "; ".join(c["type"] for c in majors))
+        if unique:
+            rate = "Referred — Unique Circumstances Disclosed"
+            reasons.append(f"Applicant disclosed unique circumstances: {unique}")
+        if composite >= APPROVE_LINE:
+            reasons.append(f"Composite score {composite} sits in the {APPROVE_LINE}–{DECLINE_LINE - 1} referral band")
+        if abs(rule_s - ml_s) > 20:
+            reasons.append(f"Rule engine ({rule_s}) and ML model ({ml_s:.0f}) disagree materially")
+    else:
+        verdict, decision = "green", "APPROVE"
+        rate = "Preferred Rate Class" if composite <= 25 else "Standard Rate Class"
+        reasons.append(f"Composite score {composite} is below the {APPROVE_LINE}-point approval line; "
+                       f"engines agree and no conflicts or special circumstances were found")
+    return {"decision": decision, "rate_class": rate, "verdict": verdict, "risk_score": composite,
+            "tier": tier(composite), "reasons": reasons, "referred": verdict != "green"}

@@ -80,7 +80,8 @@ def main():
             tp += len(inj & det); fp += len(det - inj); fn += len(inj - det)
         else:
             conflicts = []
-        d = engine.decide(rule_s, ml_s, conflicts)
+        unique = None if a["Unique Circumstances"] == "None" else a["Unique Circumstances"]
+        d = engine.decide(rule_s, ml_s, conflicts, unique=unique)
         portfolio.append({
             "id": aid, "name": a["Full Name"], "age": int(a["Age"]), "dob": a["Date of Birth"],
             "city": a["City"], "state": a["State"], "occupation": a["Occupation"], "employer": a["Employer"],
@@ -92,6 +93,8 @@ def main():
             "chol": int(a["Cholesterol (mg/dL)"]), "debt": float(a["Existing Debt (USD)"]),
             "expenses": float(a["Monthly Expenses (USD)"]), "bank": float(a["Avg Bank Balance (USD)"]),
             "emp_status": a["Employment Status"], "years_emp": int(a["Years Employed"]),
+            "hazard": a["Hazardous Activities"], "violations": int(a["Driving Violations (3yr)"]),
+            "alcohol": a["Alcohol Use"], "unique": unique,
             "credit": int(a["Credit Score"]), "dti": float(a["Debt-to-Income Ratio"]),
             "label": int(a["High Risk Label"]),
             "rule_score": rule_s, "rule_factors": factors, "ml_score": ml_s,

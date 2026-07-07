@@ -27,6 +27,11 @@ OCCUPATIONS = [("Marketing Coordinator","office",52000),("Construction Foreman",
 CONDITIONS = ["Hypertension","Type 2 Diabetes","High Cholesterol","Asthma","Hypothyroidism",
               "Sleep Apnea","Anxiety Disorder","GERD"]
 POLICIES = ["Term Life - 20yr","Term Life - 30yr","Whole Life","Universal Life"]
+HAZARDS = ["Scuba Diving","Rock Climbing","Skydiving","Motorcycle Racing","Private Aviation"]
+CIRCUMSTANCES = ["Recent job change — income in transition","Primary caregiver for elderly parent",
+                 "Bankruptcy discharged 3 years ago — finances rebuilt","Recent immigrant — thin US credit file",
+                 "Employment gap for family caregiving","Seasonal income — agricultural work",
+                 "Recently widowed — sole household earner","Active-duty military deployment pending"]
 
 
 def generate(n: int, seed: int = 42) -> pd.DataFrame:
@@ -63,11 +68,19 @@ def generate(n: int, seed: int = 42) -> pd.DataFrame:
         dob = f"{birth_year}-{rng.integers(1,13):02d}-{rng.integers(1,29):02d}"
         name = f"{FIRST[rng.integers(len(FIRST))]} {LAST[rng.integers(len(LAST))]}"
         city, state = CITIES[rng.integers(len(CITIES))]
+        # lifestyle rating factors (standard avocation / MVR / alcohol questions)
+        hazard = HAZARDS[rng.integers(len(HAZARDS))] if rng.random() < (0.11 if occ_type == "manual" else 0.07) else "None"
+        violations = int(min(rng.poisson(0.35 + 0.25 * (occ_type == "manual")), 4))
+        ra = rng.random()
+        alcohol = "Heavy" if ra < 0.07 else ("Moderate" if ra < 0.55 else "None")
+        unique = CIRCUMSTANCES[rng.integers(len(CIRCUMSTANCES))] if rng.random() < 0.12 else "None"
 
         # latent ground-truth risk (what a mortality/lapse outcome would correlate with)
         z = (0.055 * (age - 42) + (1.35 if smoker == "Smoker" else 0.35 if smoker == "Former smoker" else 0)
              + 0.09 * max(bmi - 27, 0) + 0.10 * max(18.5 - bmi, 0) * 2
              + 0.55 * n_cond + 0.30 * fam + 1.1 * min(dti, 2.0) - 0.006 * (credit - 700)
+             + (0.55 if hazard != "None" else 0) + 0.22 * violations
+             + (0.65 if alcohol == "Heavy" else 0)
              + rng.normal(0, 0.9))
         rows.append({
             "Applicant ID": f"APP-{1001 + i}", "Full Name": name, "Age": age, "Date of Birth": dob,
@@ -80,7 +93,9 @@ def generate(n: int, seed: int = 42) -> pd.DataFrame:
             "Smoker Status": smoker, "Existing Conditions": ", ".join(conds) if conds else "None",
             "Family History Flag": fam, "Blood Pressure": f"{sys_bp}/{dia_bp}", "Cholesterol (mg/dL)": chol,
             "Existing Debt (USD)": debt, "Avg Bank Balance (USD)": bank_bal, "Credit Score": credit,
-            "Debt-to-Income Ratio": dti, "_z": z,
+            "Debt-to-Income Ratio": dti,
+            "Hazardous Activities": hazard, "Driving Violations (3yr)": violations,
+            "Alcohol Use": alcohol, "Unique Circumstances": unique, "_z": z,
         })
     df = pd.DataFrame(rows)
     thresh = df["_z"].quantile(0.65)  # top 35% flagged high-risk
