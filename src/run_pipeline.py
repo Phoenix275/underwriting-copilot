@@ -63,7 +63,11 @@ def main():
         # keep_default_na=False so the literal string "None" (conditions, hazards,
         # unique circumstances) survives the CSV round-trip instead of becoming NaN
         prev = pd.read_csv(POOL, keep_default_na=False, na_values=[])
-        pool = pd.concat([prev, df], ignore_index=True)
+        if set(df.columns) - set(prev.columns):
+            print("      applicant schema changed — starting a fresh training pool")
+            pool = df
+        else:
+            pool = pd.concat([prev, df], ignore_index=True)
     else:
         pool = df
     pool.to_csv(POOL, index=False)
@@ -129,7 +133,16 @@ def main():
         unique = None if a["Unique Circumstances"] == "None" else a["Unique Circumstances"]
         d = engine.decide(rule_s, ml_s, conflicts, unique=unique)
         portfolio.append({
-            "id": aid, "name": a["Full Name"], "age": int(a["Age"]), "dob": a["Date of Birth"],
+            "id": aid, "name": a["Full Name"], "sex": a["Sex"], "age": int(a["Age"]), "dob": a["Date of Birth"],
+            "net_worth": float(a["Net Worth (USD)"]), "existing_cov": float(a["Existing Coverage (USD)"]),
+            "replacing": int(a["Replacing Coverage"]),
+            "decl": {"prior_decline": int(a["Prior Application Declined"]),
+                      "dangerous_driving": int(a["Dangerous Driving (5yr)"]),
+                      "foreign_travel": int(a["Foreign Travel Planned"]),
+                      "drug_use": int(a["Drug/Alcohol Counselling (5yr)"]),
+                      "criminal": int(a["Criminal Record"]),
+                      "bankruptcy": int(a["Bankruptcy Declared"]),
+                      "weight_change": int(a["Weight Change 10lb (12mo)"])},
             "city": a["City"], "state": a["State"], "occupation": a["Occupation"], "employer": a["Employer"],
             "income": float(a["Annual Income (USD)"]), "policy": a["Policy Type Requested"],
             "coverage": float(a["Coverage Amount Requested (USD)"]),

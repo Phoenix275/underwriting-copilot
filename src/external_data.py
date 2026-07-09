@@ -17,7 +17,7 @@ import pandas as pd
 CACHE = os.path.join(os.path.dirname(__file__), "..", "data", "external")
 
 # canonical factor names shared between our applicants and the external datasets
-CANON = ["age", "bmi", "smoker", "diabetes", "sys_bp", "chol"]
+CANON = ["age", "bmi", "smoker", "diabetes", "sys_bp", "chol", "sex"]  # sex: 1 = male
 
 
 def _num(s):
@@ -31,15 +31,57 @@ def _load_insurance(p):
 def _load_framingham(p):
     d = pd.read_csv(p)
     X = pd.DataFrame({"age": d.age, "bmi": _num(d.BMI), "smoker": d.currentSmoker,
-                      "diabetes": d.diabetes, "sys_bp": _num(d.sysBP), "chol": _num(d.totChol)})
+                      "diabetes": d.diabetes, "sys_bp": _num(d.sysBP), "chol": _num(d.totChol),
+                      "sex": d.male})
     return X, d.TenYearCHD
 
+HEART_COLS = ["age","sex","cp","trestbps","chol","fbs","restecg","thalach","exang",
+              "oldpeak","slope","ca","thal","num"]
+
 def _load_cleveland(p):
-    cols = ["age","sex","cp","trestbps","chol","fbs","restecg","thalach","exang",
-            "oldpeak","slope","ca","thal","num"]
-    d = pd.read_csv(p, header=None, names=cols, na_values="?")
-    X = pd.DataFrame({"age": d.age, "sys_bp": d.trestbps, "chol": d.chol})
+    d = pd.read_csv(p, header=None, names=HEART_COLS, na_values="?")
+    X = pd.DataFrame({"age": d.age, "sex": d.sex, "sys_bp": d.trestbps, "chol": d.chol})
     return X, (d.num > 0).astype(int)
+
+def _load_hungarian(p):
+    d = pd.read_csv(p, header=None, names=HEART_COLS, na_values="?")
+    X = pd.DataFrame({"age": d.age, "sex": d.sex, "sys_bp": _num(d.trestbps), "chol": _num(d.chol)})
+    return X, (d.num > 0).astype(int)
+
+def _load_va(p):
+    d = pd.read_csv(p, header=None, names=HEART_COLS, na_values="?")
+    X = pd.DataFrame({"age": d.age, "sex": d.sex,
+                      "sys_bp": _num(d.trestbps).replace(0, np.nan)})
+    return X, (d.num > 0).astype(int)
+
+def _load_statlog_heart(p):
+    d = pd.read_csv(p, sep=r"\s+", header=None)
+    X = pd.DataFrame({"age": d[0], "sex": d[1], "sys_bp": d[3], "chol": d[4]})
+    return X, (d[13] == 2).astype(int)
+
+def _load_mammographic(p):
+    d = pd.read_csv(p, header=None, na_values="?",
+                    names=["birads", "age", "shape", "margin", "density", "severity"])
+    return pd.DataFrame({"age": _num(d.age)}), _num(d.severity)
+
+def _load_hcv(p):
+    d = pd.read_csv(p)
+    X = pd.DataFrame({"age": d.Age, "sex": (d.Sex == "m").astype(int)})
+    return X, (~d.Category.str.contains("Blood Donor")).astype(int)
+
+def _load_thoracic(p):
+    rows = []
+    with open(p) as f:
+        in_data = False
+        for line in f:
+            line = line.strip()
+            if in_data and line:
+                rows.append(line.split(","))
+            elif line.lower().startswith("@data"):
+                in_data = True
+    d = pd.DataFrame(rows)
+    X = pd.DataFrame({"age": _num(d[15]), "smoker": (d[13] == "T").astype(int)})
+    return X, (d[16] == "T").astype(int)
 
 def _load_pima(p):
     d = pd.read_csv(p, header=None)
@@ -48,7 +90,7 @@ def _load_pima(p):
 
 def _load_heart_failure(p):
     d = pd.read_csv(p)
-    X = pd.DataFrame({"age": d.age, "smoker": d.smoking, "diabetes": d.diabetes})
+    X = pd.DataFrame({"age": d.age, "smoker": d.smoking, "diabetes": d.diabetes, "sex": d.sex})
     return X, d.DEATH_EVENT
 
 def _load_haberman(p):
@@ -100,6 +142,18 @@ REGISTRY = [
      "https://archive.ics.uci.edu/ml/machine-learning-databases/hepatitis/hepatitis.data", _load_hepatitis),
     ("Indian Liver Patient Dataset", "ilpd.csv",
      "https://archive.ics.uci.edu/ml/machine-learning-databases/00225/Indian%20Liver%20Patient%20Dataset%20(ILPD).csv", _load_ilpd),
+    ("Statlog Heart Disease", "statlog_heart.csv",
+     "https://archive.ics.uci.edu/ml/machine-learning-databases/statlog/heart/heart.dat", _load_statlog_heart),
+    ("UCI Heart Disease (Hungarian)", "hungarian.csv",
+     "https://archive.ics.uci.edu/ml/machine-learning-databases/heart-disease/processed.hungarian.data", _load_hungarian),
+    ("UCI Heart Disease (VA Long Beach)", "va.csv",
+     "https://archive.ics.uci.edu/ml/machine-learning-databases/heart-disease/processed.va.data", _load_va),
+    ("UCI Mammographic Mass — malignancy", "mammographic.csv",
+     "https://archive.ics.uci.edu/ml/machine-learning-databases/mammographic-masses/mammographic_masses.data", _load_mammographic),
+    ("UCI Hepatitis C Virus (HCV) panel", "hcv.csv",
+     "https://archive.ics.uci.edu/ml/machine-learning-databases/00571/hcvdat0.csv", _load_hcv),
+    ("UCI Thoracic Surgery — 1yr mortality", "thoracic.arff",
+     "https://archive.ics.uci.edu/ml/machine-learning-databases/00277/ThoraricSurgery.arff", _load_thoracic),
 ]
 
 
@@ -162,6 +216,7 @@ def _canon_frame(df):
         "smoker": (df["Smoker Status"] == "Smoker").astype(float),
         "diabetes": df["Existing Conditions"].astype(str).str.lower().str.contains("diabetes").astype(float),
         "sys_bp": sys_bp, "chol": df["Cholesterol (mg/dL)"].astype(float),
+        "sex": (df["Sex"] == "M").astype(float) if "Sex" in df else 0.5,
     })
 
 

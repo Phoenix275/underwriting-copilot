@@ -60,36 +60,73 @@ def _yesno(c, y, qnum, question, answer_yes, detail=None):
     return y - 6
 
 def application_form(path, a, printed):
+    """Two-page application modeled on the Manulife OTIP term-life form:
+    S1 applicant info, S2 insurance amount + financials, S4 health questions,
+    page 2: S5 personal declarations (Manulife Section 6) + weight change."""
     c = canvas.Canvas(path, pagesize=LETTER)
-    _header(c, "LIFE INSURANCE APPLICATION — PART A & B", f"Application ID {a['Applicant ID']}  ·  Confidential")
+    _header(c, "APPLICATION FOR TERM LIFE INSURANCE", f"Application ID {a['Applicant ID']}  ·  Confidential  ·  Page 1 of 2")
     y = H - 1.45 * inch
     c.setFont("Helvetica-Bold", 9); c.setFillColorRGB(*INK)
     c.drawString(0.8 * inch, y, "SECTION 1 — APPLICANT INFORMATION"); y -= 24
     y = _kv(c, y, "Full Name", printed["name"]);            y2 = y + 34
     _kv(c, y2, "Date of Birth", printed["form_dob"], x=4.2)
+    y = _kv(c, y, "Sex", {"M": "Male", "F": "Female"}.get(a.get("Sex", ""), "—")); y2 = y + 34
+    _kv(c, y2, "Smoker Status (last 12 months)", "Smoker" if printed["form_tobacco_yes"] else "Non-Smoker", x=4.2)
     y = _kv(c, y, "Occupation", a["Occupation"]);           y2 = y + 34
     _kv(c, y2, "Employer", a["Employer"], x=4.2)
     y = _kv(c, y, "City / State", f"{a['City']}, {a['State']}"); y2 = y + 34
     _kv(c, y2, "Policy Requested", a["Policy Type Requested"], x=4.2)
 
     c.setFont("Helvetica-Bold", 9)
-    c.drawString(0.8 * inch, y, "SECTION 2 — FINANCIAL DECLARATION"); y -= 24
+    c.drawString(0.8 * inch, y, "SECTION 2 — AMOUNT OF INSURANCE & FINANCIAL DECLARATION"); y -= 24
     y = _kv(c, y, "Declared Annual Income (USD)", f"{printed['form_income']:,.0f}"); y2 = y + 34
     _kv(c, y2, "Coverage Amount Requested (USD)", f"{a['Coverage Amount Requested (USD)']:,.0f}", x=4.2)
     y = _kv(c, y, "Declared Total Debt (USD)", f"{printed['form_debt']:,.0f}"); y2 = y + 34
     _kv(c, y2, "Avg Bank Balance (USD)", f"{a['Avg Bank Balance (USD)']:,.0f}", x=4.2)
+    y = _kv(c, y, "Personal Net Worth (USD)", f"{a.get('Net Worth (USD)', 0):,.0f}"); y2 = y + 34
+    exist = a.get("Existing Coverage (USD)", 0)
+    _kv(c, y2, "Existing Coverage With Another Carrier",
+        f"${exist:,.0f}" + (" — intends to replace" if a.get("Replacing Coverage") else "") if exist else "None", x=4.2)
 
-    c.setFont("Helvetica-Bold", 9)
+    c.setFont("Helvetica-Bold", 9); c.setFillColorRGB(*INK)
     c.drawString(0.8 * inch, y, "SECTION 4 — HEALTH & LIFESTYLE QUESTIONNAIRE"); y -= 22
     conds = a["Existing Conditions"]
-    y = _yesno(c, y, "4a", "Have you used tobacco or nicotine products in the last 5 years?",
+    y = _yesno(c, y, "4a", "Have you used tobacco or tobacco cessation products in the past 12 months?",
                printed["form_tobacco_yes"],
                "Cigarettes, approx. half pack daily" if printed["form_tobacco_yes"] else None)
     y = _yesno(c, y, "4b", "Have you ever been diagnosed with or treated for any chronic medical condition?",
                conds != "None", conds if conds != "None" else None)
-    y = _yesno(c, y, "4c", "Is there a history of heart disease, cancer, or diabetes in your immediate family?",
+    y = _yesno(c, y, "4c", "Have any parents or siblings been diagnosed before age 60 with heart disease, stroke or cancer?",
                bool(a["Family History Flag"]), "Parent — see attending records" if a["Family History Flag"] else None)
-    y = _yesno(c, y, "4d", "Do you participate in hazardous activities (aviation, diving, motorsport)?", False)
+    hazard = a.get("Hazardous Activities", "None")
+    y = _yesno(c, y, "4d", "Any intention of piloting aircraft, scuba diving, parachuting, racing, climbing or other hazardous activity?",
+               hazard != "None", hazard if hazard != "None" else None)
+    c.setFont("Helvetica-Oblique", 7.5); c.setFillColorRGB(*MUTE)
+    c.drawString(0.8 * inch, 0.7 * inch, "Synthetic document generated for prototype evaluation — not a real application.")
+    c.showPage()
+
+    _header(c, "APPLICATION FOR TERM LIFE INSURANCE", f"Application ID {a['Applicant ID']}  ·  Confidential  ·  Page 2 of 2")
+    y = H - 1.45 * inch
+    c.setFont("Helvetica-Bold", 9); c.setFillColorRGB(*INK)
+    c.drawString(0.8 * inch, y, "SECTION 5 — PERSONAL DECLARATIONS"); y -= 22
+    g = lambda col: bool(a.get(col, 0))
+    y = _yesno(c, y, "5a", "Ever applied for insurance that was declined, modified or rated?",
+               g("Prior Application Declined"), "Prior application — see remarks" if g("Prior Application Declined") else None)
+    y = _yesno(c, y, "5b", "In the past 5 years, charged with careless/dangerous driving or had your licence suspended?",
+               g("Dangerous Driving (5yr)"), "See motor vehicle record" if g("Dangerous Driving (5yr)") else None)
+    viol = int(a.get("Driving Violations (3yr)", 0))
+    y = _yesno(c, y, "5c", "Within the past 2 years, charged with 2 or more moving or traffic violations?",
+               viol >= 2, f"{viol} violations on record" if viol >= 2 else None)
+    y = _yesno(c, y, "5d", "Within the next 12 months, any expectation to travel or reside outside the country?",
+               g("Foreign Travel Planned"), "Travel planned — details on file" if g("Foreign Travel Planned") else None)
+    y = _yesno(c, y, "5e", "In the past 5 years, used drugs other than medically, or been counselled for alcohol or drug use?",
+               g("Drug/Alcohol Counselling (5yr)"), "See remarks" if g("Drug/Alcohol Counselling (5yr)") else None)
+    y = _yesno(c, y, "5f", "Been convicted of a criminal offence, or currently charged with one?",
+               g("Criminal Record"), "See remarks" if g("Criminal Record") else None)
+    y = _yesno(c, y, "5g", "Declared, or currently contemplating, personal or business bankruptcy?",
+               g("Bankruptcy Declared"), "Discharged — see remarks" if g("Bankruptcy Declared") else None)
+    y = _yesno(c, y, "5h", "Has your weight changed by more than 10 lbs (4.5 kg) in the past 12 months?",
+               g("Weight Change 10lb (12mo)"), "See health declaration" if g("Weight Change 10lb (12mo)") else None)
     c.setFont("Helvetica-Oblique", 7.5); c.setFillColorRGB(*MUTE)
     c.drawString(0.8 * inch, 0.7 * inch, "Synthetic document generated for prototype evaluation — not a real application.")
     c.save()

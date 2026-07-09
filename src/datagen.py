@@ -63,7 +63,8 @@ def generate(n: int, seed: int = 42) -> pd.DataFrame:
         years_emp = int(np.clip(rng.normal(min(age - 22, 15), 5), 0, age - 20))
         credit = int(np.clip(rng.normal(715 - 40 * (debt / max(income, 1)) + 15 * (years_emp > 5), 55), 480, 850))
         dti = round(debt / income, 3)
-        coverage = int(np.round(income * rng.uniform(3, 8), -4))
+        # coverage in $25k increments, $25k–$1M (per Manulife OTIP application)
+        coverage = int(np.clip(round(income * rng.uniform(3, 8) / 25000) * 25000, 25000, 1000000))
         birth_year = 2026 - age
         dob = f"{birth_year}-{rng.integers(1,13):02d}-{rng.integers(1,29):02d}"
         name = f"{FIRST[rng.integers(len(FIRST))]} {LAST[rng.integers(len(LAST))]}"
@@ -74,6 +75,19 @@ def generate(n: int, seed: int = 42) -> pd.DataFrame:
         ra = rng.random()
         alcohol = "Heavy" if ra < 0.07 else ("Moderate" if ra < 0.55 else "None")
         unique = CIRCUMSTANCES[rng.integers(len(CIRCUMSTANCES))] if rng.random() < 0.12 else "None"
+        # Section 6 personal declarations (per Manulife OTIP term-life application)
+        sex = "M" if rng.random() < 0.5 else "F"
+        prior_decline = int(rng.random() < 0.05)
+        dangerous_driving = int(rng.random() < (0.10 if violations >= 2 else 0.03))
+        foreign_travel = int(rng.random() < 0.14)
+        drug_use = int(rng.random() < (0.18 if alcohol == "Heavy" else 0.03))
+        criminal_record = int(rng.random() < 0.035)
+        bankruptcy = int(rng.random() < (0.09 if credit < 600 else 0.03))
+        weight_change = int(rng.random() < 0.12)
+        # Section 2: existing/pending coverage with another carrier
+        existing_cov = int(np.round(income * rng.uniform(1, 4), -4)) if rng.random() < 0.25 else 0
+        replacing = int(existing_cov > 0 and rng.random() < 0.30)
+        net_worth = float(np.round(bank_bal + income * rng.uniform(0.5, 4.0) - debt, -2))
 
         # latent ground-truth risk (what a mortality/lapse outcome would correlate with)
         z = (0.055 * (age - 42) + (1.35 if smoker == "Smoker" else 0.35 if smoker == "Former smoker" else 0)
@@ -81,9 +95,13 @@ def generate(n: int, seed: int = 42) -> pd.DataFrame:
              + 0.55 * n_cond + 0.30 * fam + 1.1 * min(dti, 2.0) - 0.006 * (credit - 700)
              + (0.55 if hazard != "None" else 0) + 0.22 * violations
              + (0.65 if alcohol == "Heavy" else 0)
+             + (0.25 if sex == "M" else 0)
+             + 0.50 * prior_decline + 0.35 * dangerous_driving + 0.70 * drug_use
+             + 0.25 * criminal_record + 0.45 * bankruptcy
+             + 0.15 * weight_change + 0.05 * foreign_travel
              + rng.normal(0, 0.9))
         rows.append({
-            "Applicant ID": f"APP-{1001 + i}", "Full Name": name, "Age": age, "Date of Birth": dob,
+            "Applicant ID": f"APP-{1001 + i}", "Full Name": name, "Sex": sex, "Age": age, "Date of Birth": dob,
             "City": city, "State": state, "Occupation": occ, "Employer": ("Self-Employed" if occ_type == "self" else f"{city} {occ.split()[0]} Group"),
             "Employment Status": emp_status, "Years Employed": years_emp,
             "Annual Income (USD)": income, "Monthly Expenses (USD)": monthly_exp,
@@ -95,7 +113,13 @@ def generate(n: int, seed: int = 42) -> pd.DataFrame:
             "Existing Debt (USD)": debt, "Avg Bank Balance (USD)": bank_bal, "Credit Score": credit,
             "Debt-to-Income Ratio": dti,
             "Hazardous Activities": hazard, "Driving Violations (3yr)": violations,
-            "Alcohol Use": alcohol, "Unique Circumstances": unique, "_z": z,
+            "Alcohol Use": alcohol, "Unique Circumstances": unique,
+            "Net Worth (USD)": net_worth, "Existing Coverage (USD)": existing_cov,
+            "Replacing Coverage": replacing,
+            "Prior Application Declined": prior_decline, "Dangerous Driving (5yr)": dangerous_driving,
+            "Foreign Travel Planned": foreign_travel, "Drug/Alcohol Counselling (5yr)": drug_use,
+            "Criminal Record": criminal_record, "Bankruptcy Declared": bankruptcy,
+            "Weight Change 10lb (12mo)": weight_change, "_z": z,
         })
     df = pd.DataFrame(rows)
     thresh = df["_z"].quantile(0.65)  # top 35% flagged high-risk

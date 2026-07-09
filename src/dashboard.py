@@ -259,23 +259,34 @@ function panel(c){
  if(activeTab===1){
   const sec=(title,fields)=>`<div class="card"><h3>${title}</h3><div class="grid2">
    ${fields.map(f=>`<div class="field"><label>${f[0]}</label><div class="val">${f[1]}</div></div>`).join('')}</div></div>`;
+  const yn=v=>v?'<b style="color:var(--warn)">Yes</b>':'No';
+  const d=c.decl||{};
   return sec("Section 1 — Applicant Information",[
-    ["Full Name",c.name],["Date of Birth",c.dob+" (age "+c.age+")"],
+    ["Full Name",c.name],["Sex",c.sex==="M"?"Male":"Female"],
+    ["Date of Birth",c.dob+" (age "+c.age+")"],["Smoker Status (last 12 months)",c.smoker],
     ["Occupation",c.occupation],["Employer",c.employer],
     ["Employment Status",c.emp_status||"—"],["Years Employed",(c.years_emp!=null?c.years_emp+" years":"—")],
-    ["Location",c.city+", "+c.state],["Policy Requested",c.policy]])
-  +sec("Section 2 — Financial Declaration",[
-    ["Declared Annual Income",fmt$(c.income)],["Coverage Requested",fmt$(c.coverage)],
+    ["Location",c.city+", "+c.state],["Preferred Policy",c.policy]])
+  +sec("Section 2 — Amount of Insurance Applying For",[
+    ["Coverage Requested ($25k increments)",fmt$(c.coverage)],["Coverage-to-Income Multiple",(c.coverage/c.income).toFixed(1)+"×"],
+    ["Existing Coverage (other carrier)",c.existing_cov?fmt$(c.existing_cov):"None"],["Intends to Replace Existing Coverage",c.existing_cov?(c.replacing?"Yes":"No"):"—"]])
+  +sec("Section 4 — Financial Information",[
+    ["Annual Net Earned Income",fmt$(c.income)],["Personal Net Worth (assets − liabilities)",fmt$(c.net_worth)],
     ["Monthly Expenses",fmt$(c.expenses)],["Existing Debt",fmt$(c.debt)],
     ["Avg Bank Balance",fmt$(c.bank)],["Credit Score",c.credit],
-    ["Debt-to-Income Ratio",(c.dti*100).toFixed(1)+"%"],["Coverage-to-Income Multiple",(c.coverage/c.income).toFixed(1)+"×"]])
-  +sec("Section 3 — Medical & Lifestyle Profile",[
+    ["Debt-to-Income Ratio",(c.dti*100).toFixed(1)+"%"],["Employment Status",c.emp_status||"—"]])
+  +sec("Section 6 — Personal Declarations",[
+    ["Insurance declined / modified / rated (6-1)",yn(d.prior_decline)],["Careless or dangerous driving, 5 yr (6-2a)",yn(d.dangerous_driving)],
+    ["2+ moving violations, 2 yr (6-2b)",c.violations>=2?yn(1)+" — "+c.violations+" on record":"No"],["Hazardous activities (6-3)",c.hazard&&c.hazard!=="None"?yn(1)+" — "+c.hazard:"No"],
+    ["Foreign travel planned, 12 mo (6-4a)",yn(d.foreign_travel)],["Drug use / alcohol-drug counselling, 5 yr (6-5a)",yn(d.drug_use)],
+    ["Criminal offence (6-5b)",yn(d.criminal)],["Bankruptcy declared or contemplated (6-5c)",yn(d.bankruptcy)]])
+  +sec("Sections 7–8 — Health Declaration & Medical Information",[
     ["Height / Weight",c.height+" cm / "+c.weight+" kg"],["BMI",c.bmi],
-    ["Tobacco Use (4a)",c.smoker],["Chronic Conditions (4b)",c.conditions],
-    ["Family History (4c)",c.family?"Yes — parent, see attending records":"None disclosed"],["Hazardous Activities (4d)",c.hazard&&c.hazard!=="None"?"Yes — "+c.hazard:"No"],
-    ["Driving Violations, 3yr (4e)",c.violations!=null?c.violations:"—"],["Alcohol Use (4f)",c.alcohol||"—"],
-    ["Blood Pressure",c.bp],["Total Cholesterol",c.chol+" mg/dL"]])
-  +(c.unique?`<div class="unique-banner"><b>UNIQUE CIRCUMSTANCES DISCLOSED (Q5)</b><p style="margin:5px 0 0">“${c.unique}” — this disclosure automatically routes the file to a human underwriter so the person is assessed as a whole, not just by the score.</p></div>`:'');
+    ["Weight change >10 lb, past 12 mo (S7)",yn(d.weight_change)],["Alcohol Use",c.alcohol||"—"],
+    ["Tobacco / cotinine-verified (8-1)",c.smoker],["Medical conditions by body system (8-1)",c.conditions],
+    ["Family: parent/sibling diagnosed before 60 (8-4)",c.family?"Yes — heart disease/stroke/cancer, see records":"No"],["Blood Pressure",c.bp],
+    ["Total Cholesterol",c.chol+" mg/dL",],["Attending physician on file","Yes — see health declaration"]])
+  +(c.unique?`<div class="unique-banner"><b>UNIQUE CIRCUMSTANCES DISCLOSED</b><p style="margin:5px 0 0">“${c.unique}” — this disclosure automatically routes the file to a human underwriter so the person is assessed as a whole, not just by the score.</p></div>`:'');
  }
  if(activeTab===2){
   const docs=c.has_docs?[["Application Form (Parts A–B, health questionnaire)","Parsed ✓"],["Payslip / Earnings Statement","Parsed ✓"],["Paramedical Exam Report + consumer report","Parsed ✓"]]
@@ -364,11 +375,16 @@ function exportOverrides(){
  const all=getOverrides();
  const rows=Object.entries(all).map(([id,o])=>{
   const c=CASES.find(x=>x.id===id);if(!c)return null;
+  const d=c.decl||{};
   return {id:id,label:o.label,decision:o.decision,reason:o.reason,at:o.at,fields:{
    "Age":c.age,"BMI":c.bmi,"Smoker Status":c.smoker,"Existing Conditions":c.conditions,
    "Family History Flag":c.family,"Debt-to-Income Ratio":c.dti,"Credit Score":c.credit,
    "Hazardous Activities":c.hazard,"Driving Violations (3yr)":c.violations,
-   "Alcohol Use":c.alcohol,"External Risk Prior":c.ext_prior}};}).filter(Boolean);
+   "Alcohol Use":c.alcohol,"External Risk Prior":c.ext_prior,
+   "Prior Application Declined":d.prior_decline||0,"Dangerous Driving (5yr)":d.dangerous_driving||0,
+   "Drug/Alcohol Counselling (5yr)":d.drug_use||0,"Criminal Record":d.criminal||0,
+   "Bankruptcy Declared":d.bankruptcy||0,"Foreign Travel Planned":d.foreign_travel||0,
+   "Weight Change 10lb (12mo)":d.weight_change||0}};}).filter(Boolean);
  if(!rows.length){alert('No overrides recorded yet — use the Decision tab of any case.');return;}
  const a=document.createElement('a');
  a.href=URL.createObjectURL(new Blob([JSON.stringify(rows,null,2)],{type:'application/json'}));
@@ -418,13 +434,19 @@ function ruleScoreJS(f){
  p=f.hazard?10:0;factors.push(["Hazardous activities",f.hazard?(f.hazardDetail||"Yes"):"None disclosed",p]);
  p=f.violations===0?0:f.violations<=2?4:10;factors.push(["Driving record",f.violations+" violation(s) in 3 years",p]);
  p=f.alcohol==="Heavy"?12:f.alcohol==="Moderate"?2:0;factors.push(["Alcohol use",f.alcohol,p]);
+ [["priorDecline","Prior insurance declined/modified/rated",8],["dangerousDriving","Careless/dangerous driving or licence suspension",12],
+  ["drugUse","Drug use or alcohol/drug counselling",15],["criminal","Criminal offence charged or convicted",8],
+  ["bankruptcy","Personal/business bankruptcy",10],["foreignTravel","Foreign travel planned, next 12 months",3],
+  ["weightChange","Weight change >10 lb in past 12 months",4]]
+  .forEach(([k,label,pts])=>{factors.push([label,f[k]?"Yes":"No",f[k]?pts:0]);});
  return [Math.min(factors.reduce((s,x)=>s+x[2],0),100),factors];
 }
 function extPriorJS(f){
  // identical computation to external_data.prior_scores(), using the exported dataset models
  const pm=M.risk_models.prior_export||[];if(!pm.length)return 0.5;
  const cx={age:f.age,bmi:f.bmi,smoker:f.smoker==="Smoker"?1:0,
-  diabetes:f.conditions.toLowerCase().includes("diabetes")?1:0,sys_bp:f.sysbp,chol:f.chol};
+  diabetes:f.conditions.toLowerCase().includes("diabetes")?1:0,sys_bp:f.sysbp,chol:f.chol,
+  sex:f.sex==="M"?1:f.sex==="F"?0:0.5};
  let s=0;
  pm.forEach(m=>{let z=m.intercept;
   m.features.forEach((n,i)=>{z+=m.coef[i]*((cx[n]-m.mean[i])/m.std[i]);});
@@ -438,6 +460,9 @@ function mlScoreJS(f,prior){
  const x={Age:f.age,BMI:f.bmi,smoker_now:f.smoker==="Smoker"?1:0,smoker_former:f.smoker==="Former smoker"?1:0,
   n_conditions:conds,"Family History Flag":f.family?1:0,"Debt-to-Income Ratio":dti,"Credit Score":f.credit,
   hazardous_activity:f.hazard?1:0,driving_violations:f.violations,alcohol_heavy:f.alcohol==="Heavy"?1:0,
+  prior_decline:f.priorDecline?1:0,dangerous_driving:f.dangerousDriving?1:0,drug_use:f.drugUse?1:0,
+  criminal_record:f.criminal?1:0,bankruptcy:f.bankruptcy?1:0,foreign_travel:f.foreignTravel?1:0,
+  weight_change:f.weightChange?1:0,
   external_prior:prior};
  let z=ex.intercept;
  ex.features.forEach((name,i)=>{z+=ex.coef[i]*((x[name]-ex.scaler_mean[i])/ex.scaler_std[i]);});
@@ -470,6 +495,7 @@ function scoreView(){
   <div class="note" style="margin:0 0 14px">Every field below is optional. Anything extracted from the PDF is filled in for you; anything left blank falls back to a standard assumption and is listed on the result.</div>
   <div class="form-grid">
    <div><label>Full name</label><input id="f_name" placeholder="from PDF"></div>
+   <div><label>Sex</label><select id="f_sex"><option value="">Unspecified</option><option value="M">Male</option><option value="F">Female</option></select></div>
    <div><label>Age</label><input id="f_age" type="number" min="18" max="85" placeholder="from PDF (default 40)"></div>
    <div><label>Credit score</label><input id="f_credit" type="number" min="300" max="850" placeholder="default 715"></div>
    <div><label>Annual income (USD)</label><input id="f_income" type="number" placeholder="from PDF (default 60,000)"></div>
@@ -487,6 +513,17 @@ function scoreView(){
    <div class="fg-wide" id="hazardWrap" style="display:none"><label>If yes, describe the activity</label><input id="f_hazard_detail" placeholder="e.g. Skydiving, scuba diving, motorcycle racing"></div>
    <div><label>Unique circumstances to disclose?</label><select id="f_unique" onchange="document.getElementById('uniqueWrap').style.display=this.value==='1'?'block':'none'"><option value="0">No</option><option value="1">Yes</option></select></div>
    <div class="fg-wide" id="uniqueWrap" style="display:none"><label>Tell us — a human underwriter will read this</label><textarea id="f_unique_text" rows="2" placeholder="e.g. Recent job change, caregiving gap, rebuilt finances after bankruptcy…"></textarea></div>
+  </div>
+  <h3 style="margin-top:22px">Section 6 — Personal Declarations <span style="font-weight:400;text-transform:none;letter-spacing:0">(per the term-life application; answer what applies)</span></h3>
+  <div class="form-grid">
+   <div><label>Insurance ever declined / modified / rated?</label><select id="f_priorDecline"><option value="0">No</option><option value="1">Yes</option></select></div>
+   <div><label>Careless/dangerous driving or suspension, 5 yr?</label><select id="f_dangerousDriving"><option value="0">No</option><option value="1">Yes</option></select></div>
+   <div><label>Foreign travel planned, next 12 months?</label><select id="f_foreignTravel"><option value="0">No</option><option value="1">Yes</option></select></div>
+   <div><label>Drug use or alcohol/drug counselling, 5 yr?</label><select id="f_drugUse"><option value="0">No</option><option value="1">Yes</option></select></div>
+   <div><label>Criminal offence, charged or convicted?</label><select id="f_criminal"><option value="0">No</option><option value="1">Yes</option></select></div>
+   <div><label>Bankruptcy declared or contemplated?</label><select id="f_bankruptcy"><option value="0">No</option><option value="1">Yes</option></select></div>
+   <div><label>Weight changed >10 lb in past 12 months?</label><select id="f_weightChange"><option value="0">No</option><option value="1">Yes</option></select></div>
+   <div class="fg-wide"><label>Details for any “Yes” above (shown to the underwriter)</label><textarea id="f_decl_text" rows="2" placeholder="e.g. Licence suspended 2023, reinstated; bankruptcy discharged 2022…"></textarea></div>
   </div>
   <button class="score-btn" id="scoreBtn" onclick="scoreNow()" disabled style="opacity:.45;cursor:not-allowed">Upload the application PDF to score</button></div>
  <div id="scoreResult"></div>`;
@@ -548,9 +585,13 @@ function scoreNow(){
   age:num('f_age',40,'age'),credit:num('f_credit',715,'credit score'),income:num('f_income',60000,'income'),
   debt:num('f_debt',20000,'debt'),coverage:num('f_coverage',300000,'coverage'),bmi:num('f_bmi',25,'BMI'),
   sysbp:num('f_sysbp',120,'systolic BP'),chol:num('f_chol',200,'cholesterol'),
-  smoker:v('f_smoker'),alcohol:v('f_alcohol'),
+  smoker:v('f_smoker'),alcohol:v('f_alcohol'),sex:v('f_sex'),
   conditions:v('f_conditions')||'None',family:+v('f_family'),violations:num('f_violations',0,'driving violations'),
   hazard:v('f_hazard')==='1',hazardDetail:v('f_hazard_detail'),
+  priorDecline:v('f_priorDecline')==='1',dangerousDriving:v('f_dangerousDriving')==='1',
+  foreignTravel:v('f_foreignTravel')==='1',drugUse:v('f_drugUse')==='1',
+  criminal:v('f_criminal')==='1',bankruptcy:v('f_bankruptcy')==='1',weightChange:v('f_weightChange')==='1',
+  declText:v('f_decl_text').trim(),
   unique:v('f_unique')==='1'?(v('f_unique_text').trim()||'Disclosed — details pending'):null};
  const [rule,factors]=ruleScoreJS(f);
  const prior=extPriorJS(f);
@@ -576,6 +617,12 @@ function scoreNow(){
   ${defaulted.length?`<div class="card"><div class="note" style="margin:0"><b>Standard assumptions used for blank fields:</b> ${defaulted.join(' · ')}. Fill them in above and re-score for a sharper read.</div></div>`:''}
   ${f.unique?`<div class="unique-banner"><b>UNIQUE CIRCUMSTANCES DISCLOSED</b><p style="margin:5px 0 0">“${esc(f.unique)}” — shown to the reviewing underwriter alongside the score.</p></div>`:''}
   ${f.hazard&&f.hazardDetail?`<div class="unique-banner"><b>HAZARDOUS ACTIVITY DETAIL</b><p style="margin:5px 0 0">“${esc(f.hazardDetail)}”</p></div>`:''}
+  ${(()=>{const yes=[["priorDecline","prior insurance declined/modified/rated"],["dangerousDriving","careless/dangerous driving or licence suspension"],
+    ["foreignTravel","foreign travel planned"],["drugUse","drug use or alcohol/drug counselling"],
+    ["criminal","criminal offence"],["bankruptcy","bankruptcy declared or contemplated"],["weightChange","weight change >10 lb"]]
+    .filter(([k])=>f[k]).map(([,l])=>l);
+   return yes.length?`<div class="unique-banner"><b>SECTION 6 DECLARATIONS — ANSWERED YES</b>
+    <p style="margin:5px 0 0">${yes.join(' · ')}${f.declText?` — “${esc(f.declText)}”`:''}</p></div>`:'';})()}
   <div class="card"><h3>Factor Breakdown (rule engine)</h3>
    ${factors.map(x=>`<div class="factor-row"><div><div class="factor-label">${esc(x[0])}</div><div class="factor-detail">${esc(x[1])}</div></div><div class="factor-pts">${x[2]>0?'+':''}${x[2]}</div></div>`).join('')}
    <div class="note">The ML half uses the trained logistic-regression coefficients exported from the pipeline (the browser cannot run gradient boosting; logistic is its auditable stand-in, AUC ${(M.risk_models.logistic_regression.auc*100).toFixed(1)}%), including the external-data prior learned from ${((M.external_learning||{}).total_rows||0).toLocaleString()} real records across ${(M.risk_models.prior_export||[]).length} public datasets. Portfolio cases are scored offline with the full dual engine.</div></div>`;
@@ -608,6 +655,15 @@ def case_summary(c):
         life.append(f"has {c['violations']} driving violation(s) in the last three years")
     if c.get("alcohol") == "Heavy":
         life.append("reports heavy alcohol use")
+    decl = c.get("decl") or {}
+    decl_names = {"prior_decline": "a previously declined/rated insurance application",
+                  "dangerous_driving": "careless or dangerous driving within five years",
+                  "drug_use": "drug use or alcohol/drug counselling",
+                  "criminal": "a criminal offence", "bankruptcy": "a declared bankruptcy",
+                  "foreign_travel": "planned foreign travel", "weight_change": "a >10 lb weight change this year"}
+    yes = [decl_names[k] for k, v in decl.items() if v and k in decl_names]
+    if yes:
+        life.append("answered Yes on the Section 6 declarations to " + ", ".join(yes))
     s = [
         f"{c['name']} is a {c['age']}-year-old {c['occupation']} applying for a "
         f"{c['policy']} policy with {_money(c['coverage'])} in requested coverage.",

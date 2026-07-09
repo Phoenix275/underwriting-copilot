@@ -59,6 +59,18 @@ def rule_score(a):
     alcohol = a["Alcohol Use"]
     p = 12 if alcohol == "Heavy" else 2 if alcohol == "Moderate" else 0
     factors.append(("Alcohol use", alcohol, p))
+    # Section 6 personal declarations (per Manulife OTIP application)
+    for col, label, pts in [
+        ("Prior Application Declined", "Prior insurance declined/modified/rated (Q6-1)", 8),
+        ("Dangerous Driving (5yr)", "Careless/dangerous driving or licence suspension (Q6-2a)", 12),
+        ("Drug/Alcohol Counselling (5yr)", "Drug use or alcohol/drug counselling (Q6-5a)", 15),
+        ("Criminal Record", "Criminal offence charged or convicted (Q6-5b)", 8),
+        ("Bankruptcy Declared", "Personal/business bankruptcy (Q6-5c)", 10),
+        ("Foreign Travel Planned", "Foreign travel planned, next 12 months (Q6-4a)", 3),
+        ("Weight Change 10lb (12mo)", "Weight change >10 lb in past 12 months (Q7)", 4),
+    ]:
+        flag = int(a[col])
+        factors.append((label, "Yes" if flag else "No", pts if flag else 0))
     total = min(sum(f[2] for f in factors), 100)
     return total, factors
 
@@ -69,6 +81,8 @@ def tier(score):
 FEATURES = ["Age", "BMI", "smoker_now", "smoker_former", "n_conditions",
             "Family History Flag", "Debt-to-Income Ratio", "Credit Score",
             "hazardous_activity", "driving_violations", "alcohol_heavy",
+            "prior_decline", "dangerous_driving", "drug_use", "criminal_record",
+            "bankruptcy", "foreign_travel", "weight_change",
             "external_prior"]
 
 def featurize(df):
@@ -83,7 +97,14 @@ def featurize(df):
         "hazardous_activity": (df["Hazardous Activities"] != "None").astype(int),
         "driving_violations": df["Driving Violations (3yr)"],
         "alcohol_heavy": (df["Alcohol Use"] == "Heavy").astype(int),
-        # blended event probability learned from 11 public real-world datasets
+        "prior_decline": df["Prior Application Declined"].astype(int),
+        "dangerous_driving": df["Dangerous Driving (5yr)"].astype(int),
+        "drug_use": df["Drug/Alcohol Counselling (5yr)"].astype(int),
+        "criminal_record": df["Criminal Record"].astype(int),
+        "bankruptcy": df["Bankruptcy Declared"].astype(int),
+        "foreign_travel": df["Foreign Travel Planned"].astype(int),
+        "weight_change": df["Weight Change 10lb (12mo)"].astype(int),
+        # blended event probability learned from public real-world datasets
         "external_prior": df["External Risk Prior"] if "External Risk Prior" in df else 0.5,
     })
     return X[FEATURES]
