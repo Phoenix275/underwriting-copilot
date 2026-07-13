@@ -3,6 +3,13 @@
 AI-assisted financial viability assessment for life insurance underwriting.
 Pipeline: **PDF packet → extraction → conflict screen → dual risk engine → decision → grounded AI summary.**
 
+> **Tech Mahindra — Global Learning Program (GLP) Internship · Finance Project 1**
+> *AI-Powered Financial Viability Assessment Copilot.* Built during the Tech Mahindra GLP
+> internship under managers **Rashmi Kubusada** and **Vasu Bheema Rao**. The applicant schema
+> mirrors the real Manulife OTIP term-life application form; models learn from 17 public
+> real-world datasets. Private prototype — not a production system and not affiliated with
+> any insurer.
+
 ## Results (this build, seed-reproducible)
 
 | Stage | Metric | Result |
