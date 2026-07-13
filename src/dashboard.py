@@ -126,6 +126,7 @@ table.xt td{padding:10px 10px 10px 0;border-bottom:1px solid var(--line);font-si
  <div class="rail">
   <div class="rail-brand"><h1>Underwriting Copilot</h1><p>Extraction · Conflict Screen · Risk Score · Decision</p></div>
   <div class="overview-link" id="overviewLink" onclick="goOverview()">⌂ &nbsp;Portfolio & Model Card</div>
+  <div class="overview-link" id="managerLink" onclick="goManager()">▦ &nbsp;Manager Overview</div>
   <div class="overview-link" id="scoreLink" onclick="goScore()">＋ &nbsp;Score New Application</div>
   <div class="rail-sub"><span>Case Queue</span><span id="queueCount"></span></div>
   <input class="search-box" id="searchBox" placeholder="Search name or ID…" oninput="onSearch(this.value)">
@@ -147,12 +148,14 @@ const fmt$=n=>n==null?"—":"$"+Math.round(n).toLocaleString();
 function onSearch(q){q=q.trim().toLowerCase();filtered=q?CASES.filter(c=>c.name.toLowerCase().includes(q)||c.id.toLowerCase().includes(q)):CASES.slice();page=0;rail();}
 function pg(d){const mx=Math.max(0,Math.ceil(filtered.length/PAGE)-1);page=Math.min(mx,Math.max(0,page+d));rail();}
 function goOverview(){view="overview";render();}
+function goManager(){view="manager";render();}
 function goScore(){view="score";render();}
 function sel(id){activeId=id;view="case";activeTab=4;render();}
 function selTab(n){activeTab=n;render();}
 function render(){rail();main();}
 function rail(){
  document.getElementById('overviewLink').className="overview-link"+(view==="overview"?" active":"");
+ document.getElementById('managerLink').className="overview-link"+(view==="manager"?" active":"");
  document.getElementById('scoreLink').className="overview-link"+(view==="score"?" active":"");
  document.getElementById('queueCount').textContent=filtered.length+" cases";
  const items=filtered.slice(page*PAGE,page*PAGE+PAGE);
@@ -168,6 +171,7 @@ function rail(){
 function main(){
  const el=document.getElementById('mainContent');
  if(view==="overview"){el.innerHTML=overview();return;}
+ if(view==="manager"){el.innerHTML=managerView();return;}
  if(view==="score"){el.innerHTML=scoreView();wireScoreForm();return;}
  const c=CASES.find(x=>x.id===activeId);if(!c){el.innerHTML=overview();return;}
  const vm=VM[c.verdict];
@@ -255,6 +259,58 @@ function overview(){
   ${Object.entries(fi).sort((a,b)=>b[1]-a[1]).map(([f,v])=>`<div class="coef-bar-row"><div class="coef-label">${f}</div>
    <div class="coef-track"><div class="coef-fill" style="left:0;width:${v/mxf*100}%"></div></div><div class="coef-val">${v.toFixed(3)}</div></div>`).join('')}
   <div class="note">Extraction accuracy is measured on machine-generated text PDFs; on scanned documents it will drop — that is the gap Google Document AI closes in the GCP deployment. Because the data is synthetic with a known ground-truth label, every number above is verifiable, and model performance represents an upper bound rather than a production guarantee.</div></div>`;
+}
+function managerView(){
+ const n=CASES.length;
+ const by=v=>CASES.filter(c=>c.verdict===v);
+ const G=by('green'),Y=by('yellow'),R=by('red');
+ const pct=k=>(k.length/n*100).toFixed(0)+"%";
+ const sum=(arr,f)=>arr.reduce((s,c)=>s+f(c),0);
+ const avg=(arr,f)=>arr.length?sum(arr,f)/arr.length:0;
+ const covAll=sum(CASES,c=>c.coverage), covG=sum(G,c=>c.coverage), covY=sum(Y,c=>c.coverage), covR=sum(R,c=>c.coverage);
+ const fmtM=v=>"$"+(v>=1e6?(v/1e6).toFixed(1)+"M":Math.round(v/1e3)+"k");
+ const conflicts=CASES.filter(c=>c.conflicts.length), majors=CASES.filter(c=>c.conflicts.some(k=>k.severity==='major'));
+ const uniques=CASES.filter(c=>c.unique);
+ const ov=getOverrides(); const ovList=Object.entries(ov).filter(([id])=>CASES.some(c=>c.id===id));
+ // manual-review queue, biggest exposure first — where senior time goes
+ const queue=Y.slice().sort((a,b)=>b.coverage-a.coverage).slice(0,8);
+ // verdict mix by policy type
+ const pols={};CASES.forEach(c=>{(pols[c.policy]=pols[c.policy]||{g:0,y:0,r:0,n:0});pols[c.policy][c.verdict[0]]++;pols[c.policy].n++;});
+ const hist=M.model_history||[]; const lastRun=hist[hist.length-1]||{};
+ return `<div class="case-head"><div><h2>Manager Overview</h2>
+  <div class="case-meta"><span>${n} cases in queue</span><span>${M.n_applicants.toLocaleString()} scored pipeline-wide</span><span>evaluated ${M.generated_at}</span></div></div></div>
+ <div class="grid3" style="margin-top:18px">
+  <div class="stat" style="border-top:4px solid var(--ok)"><div class="sv" style="color:var(--ok)">${G.length}</div><div class="sl"><b>APPROVED</b> · ${pct(G)} of queue · no human touch needed</div></div>
+  <div class="stat" style="border-top:4px solid var(--warn)"><div class="sv" style="color:var(--warn)">${Y.length}</div><div class="sl"><b>MANUAL REVIEW</b> · ${pct(Y)} · awaiting an underwriter</div></div>
+  <div class="stat" style="border-top:4px solid var(--bad)"><div class="sv" style="color:var(--bad)">${R.length}</div><div class="sl"><b>DECLINED</b> · ${pct(R)} · ${majors.length} tied to major conflicts</div></div>
+ </div>
+ <div class="grid3" style="margin-top:14px">
+  <div class="stat"><div class="sv">${(M.decisioning.straight_through_rate*100).toFixed(0)}%</div><div class="sl">Straight-through rate — decided with zero human minutes</div></div>
+  <div class="stat"><div class="sv">${fmtM(covAll)}</div><div class="sl">Total coverage requested · <span style="color:var(--ok)">${fmtM(covG)} auto-approved</span> · <span style="color:var(--warn)">${fmtM(covY)} pending</span> · <span style="color:var(--bad)">${fmtM(covR)} declined</span></div></div>
+  <div class="stat"><div class="sv">${avg(CASES,c=>c.risk_score).toFixed(0)}</div><div class="sl">Avg composite risk — green ${avg(G,c=>c.risk_score).toFixed(0)} · yellow ${avg(Y,c=>c.risk_score).toFixed(0)} · red ${avg(R,c=>c.risk_score).toFixed(0)}</div></div>
+  <div class="stat"><div class="sv">${conflicts.length}</div><div class="sl">Cases with cross-document conflicts (${majors.length} major) — recall ${(M.conflict_screening.detection_recall*100).toFixed(0)}%, ${M.conflict_screening.fp} false alarms</div></div>
+  <div class="stat"><div class="sv">${uniques.length}</div><div class="sl">Unique-circumstances disclosures — every one routed to a human</div></div>
+  <div class="stat"><div class="sv">${ovList.length}</div><div class="sl">Underwriter overrides recorded in this browser${(M.decisioning.n_overrides_learned||0)>0?` · ${M.decisioning.n_overrides_learned} already trained on`:''} — export from the Model Card</div></div>
+ </div>
+ <div class="card" style="margin-top:16px"><h3>Review Queue — largest exposure first (where senior time should go)</h3>
+  <table class="xt"><tr><th>Case</th><th>Applicant</th><th>Coverage</th><th>Risk</th><th>Why it's here</th></tr>
+   ${queue.map(c=>`<tr style="cursor:pointer" onclick="sel('${c.id}')"><td class="mono">${c.id}</td><td><b>${c.name}</b>, ${c.age} · ${c.occupation}</td>
+    <td class="mono">${fmt$(c.coverage)}</td><td><span class="score-chip sc-warn" style="color:var(--warn);background:var(--warn-soft)">${c.risk_score}</span></td>
+    <td style="font-size:12px;color:var(--mut)">${ov[c.id]?'<b style="color:var(--acc)">OVERRIDDEN → '+ov[c.id].decision+'</b>':(c.reasons[0]||'')}</td></tr>`).join('')}</table>
+  <div class="note">Click any row to open the full case file. ${Y.length-queue.length>0?`${Y.length-queue.length} more manual-review cases in the queue at left.`:''}</div></div>
+ <div class="card"><h3>Verdict Mix by Policy Type</h3>
+  <table class="xt"><tr><th>Policy</th><th>Cases</th><th>Approve</th><th>Manual review</th><th>Decline</th></tr>
+   ${Object.entries(pols).sort((a,b)=>b[1].n-a[1].n).map(([p,v])=>`<tr><td>${p}</td><td class="mono">${v.n}</td>
+    <td class="mono" style="color:var(--ok)">${(v.g/v.n*100).toFixed(0)}%</td><td class="mono" style="color:var(--warn)">${(v.y/v.n*100).toFixed(0)}%</td><td class="mono" style="color:var(--bad)">${(v.r/v.n*100).toFixed(0)}%</td></tr>`).join('')}</table></div>
+ <div class="card"><h3>System Health</h3>
+  <div class="legend-row">
+   <div class="legend-chip cls-ok"><span class="swatch" style="background:var(--ok)"></span>Extraction ${(M.extraction.field_level_accuracy*100).toFixed(0)}% field accuracy</div>
+   <div class="legend-chip cls-ok"><span class="swatch" style="background:var(--ok)"></span>Conflict recall ${(M.conflict_screening.detection_recall*100).toFixed(0)}%</div>
+   <div class="legend-chip cls-ok"><span class="swatch" style="background:var(--ok)"></span>GB model AUC ${(M.risk_models.gradient_boosting.auc*100).toFixed(1)}%</div>
+   <div class="legend-chip" style="background:var(--acc-soft);color:var(--acc)"><span class="swatch" style="background:var(--acc)"></span>Trained on ${(lastRun.n_train_pool||M.risk_models.n_train).toLocaleString()} records · run #${lastRun.run||'—'}</div>
+   <div class="legend-chip" style="background:var(--acc-soft);color:var(--acc)"><span class="swatch" style="background:var(--acc)"></span>${(M.external_learning||{}).n_usable||0} real-world datasets in the prior</div>
+  </div>
+  <div class="note">Full evidence — calibration, fairness by age band, feature importance, and dataset provenance — lives on the Portfolio &amp; Model Card page.</div></div>`;
 }
 function panel(c){
  if(activeTab===1){
