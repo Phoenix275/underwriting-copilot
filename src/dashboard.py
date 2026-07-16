@@ -12,10 +12,10 @@ OUT = os.path.join(os.path.dirname(__file__), "..", "output")
 TEMPLATE = r"""
 <meta charset="utf-8">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#F4F6F9;--card:#FFFFFF;--ink:#0E1526;--mut:#66738A;--line:#E4E8EF;--rail:#0E1526;--rail-2:#1A2336;
---ok:#0E9F6E;--ok-soft:#E3F5EE;--warn:#D97706;--warn-soft:#FBF0DD;--bad:#DC2626;--bad-soft:#FBE7E7;--acc:#3B5BDB;--acc-soft:#E8EDFB}
+:root{--bg:#3B3A78;--card:#161619;--ink:#FFFFFF;--mut:#9A9AA5;--line:#2A2A31;--rail:#0D0D0F;--rail-2:#1D1D22;
+--ok:#35C77F;--ok-soft:rgba(53,199,127,.16);--warn:#F5B24A;--warn-soft:rgba(245,178,74,.16);--bad:#F2585B;--bad-soft:rgba(242,88,91,.16);--acc:#6A67F7;--acc-soft:rgba(106,103,247,.18)}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;font-size:14px}
 #app{display:flex;min-height:100vh;max-width:1400px;margin:0 auto;box-shadow:0 0 40px rgba(14,21,38,.08)}
 .rail{width:300px;background:var(--rail);color:#fff;flex-shrink:0;display:flex;flex-direction:column}
@@ -121,14 +121,205 @@ table.xt td{padding:10px 10px 10px 0;border-bottom:1px solid var(--line);font-si
 .legend-chip{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;padding:8px 14px;border-radius:10px}
 .legend-chip .swatch{width:12px;height:12px;border-radius:50%}
 @media(max-width:900px){#app{flex-direction:column}.rail{width:100%}.grid2,.grid3,.form-grid{grid-template-columns:1fr}.main{padding:20px}}
+/* ---- login screen (demo role select) ---- */
+#login{position:fixed;inset:0;z-index:1000;background:linear-gradient(135deg,#0E1526,#1A2336);display:flex;align-items:center;justify-content:center;font-family:Inter,system-ui,sans-serif;padding:20px}
+.login-card{background:var(--card);border-radius:18px;padding:34px 34px 28px;width:400px;max-width:94vw;box-shadow:0 24px 70px rgba(0,0,0,.45)}
+.login-card .brandmark{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--acc);font-weight:600}
+.login-card h1{font-family:'Space Grotesk',sans-serif;font-size:23px;margin:8px 0 4px;color:var(--ink)}
+.login-card .sub{font-size:12.5px;color:var(--mut);margin:0 0 22px;line-height:1.5}
+.login-card label{display:block;font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--mut);margin:0 0 7px}
+.login-card input{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:9px;font:14px Inter,sans-serif;background:var(--bg);color:var(--ink);outline:none;margin-bottom:20px}
+.login-card input:focus{border-color:var(--acc)}
+.role-opts{display:flex;gap:11px;margin-bottom:22px}
+.role-opt{flex:1;border:1.5px solid var(--line);border-radius:12px;padding:15px 12px;cursor:pointer;text-align:center;transition:border-color .15s,background .15s}
+.role-opt:hover{border-color:var(--acc)}
+.role-opt.sel{border-color:var(--acc);background:var(--acc-soft)}
+.role-opt .ic{font-size:24px;line-height:1}
+.role-opt .rn{font-weight:700;font-size:14px;margin-top:8px;color:var(--ink)}
+.role-opt .rd{font-size:10.5px;color:var(--mut);margin-top:4px;line-height:1.4}
+.login-btn{width:100%;font:700 15px Inter,sans-serif;background:var(--acc);color:#fff;border:none;padding:13px;border-radius:10px;cursor:pointer}
+.login-btn:disabled{opacity:.4;cursor:not-allowed}
+.login-foot{font-size:11px;color:var(--mut);text-align:center;margin-top:16px;line-height:1.5}
+.role-badge{margin:12px 12px 2px;padding:9px 12px;border-radius:9px;background:var(--rail-2);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.role-badge .rb-name{font-size:12.5px;font-weight:600;color:#E9EDF4}
+.role-badge .rb-role{font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:.7px;text-transform:uppercase;color:#7C8AA5;margin-top:2px}
+.role-badge .signout{cursor:pointer;color:#8FA6E8;font-size:11px;font-weight:600;white-space:nowrap}
+.role-badge .signout:hover{color:#fff}
+/* ---- "why this decision" bullet list ---- */
+.why-head{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:var(--mut);margin:2px 0 4px}
+.why-list{list-style:none;margin:2px 0 0;padding:0}
+.why-list li{position:relative;padding:8px 0 8px 22px;font-size:13px;line-height:1.5;color:var(--ink);border-bottom:1px solid var(--line)}
+.why-list li:last-child{border-bottom:none}
+.why-list li::before{content:"";position:absolute;left:3px;top:14px;width:7px;height:7px;border-radius:50%;background:var(--acc)}
+/* =================== NEO-BRUTALIST EDITORIAL THEME (redesign) =================== */
+body{background:var(--bg);background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:22px 22px}
+#app{max-width:1460px;box-shadow:none;border-left:2px solid var(--ink);border-right:2px solid var(--ink);background:var(--bg)}
+h1,h2,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-detail h3{font-family:'Fraunces',Georgia,serif !important;letter-spacing:-.015em;font-weight:600}
+.card,.stat,.headline-score,.explain,.login-card,.verdict-banner{border-radius:0 !important;border:2px solid var(--ink) !important;box-shadow:5px 5px 0 var(--ink) !important}
+.card h3{color:var(--ink);border-bottom:2px solid var(--ink);padding-bottom:9px;margin-bottom:14px}
+.doc-row,.sub-score,.drop-zone,.conflict-card,.unique-banner,.role-badge,.search-box,.form-grid input,.form-grid select,.fg-wide textarea,.legend-chip,.score-chip,.hs-class,.g-band,.band-chip,.stamp,.tab,.ai-btn,.score-btn,.login-btn,.overview-link,.status-chip,.wf-chip,.pagination button{border-radius:0 !important}
+.doc-row,.sub-score{border:1.5px solid var(--ink) !important;box-shadow:none}
+.stamp{box-shadow:4px 4px 0 var(--ink)}
+.tab{border:1.5px solid var(--ink) !important;background:var(--card);color:var(--ink);text-transform:uppercase;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.5px}
+.tab.active{background:var(--acc);color:#fff;border-color:var(--ink);box-shadow:3px 3px 0 var(--ink)}
+.ai-btn,.score-btn,.login-btn{border:2px solid var(--ink) !important;box-shadow:3px 3px 0 var(--ink);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.ai-btn:active,.score-btn:active,.login-btn:active{box-shadow:0 0 0 var(--ink);transform:translate(3px,3px)}
+.rail{border-right:2px solid var(--ink)}
+.rail-brand h1{font-family:'Fraunces',serif !important;color:#fff}
+.overview-link{border:1.5px solid transparent}
+.overview-link.active{background:var(--acc);color:#fff}
+.headline-score{background:var(--card)}
+.hs-class,.g-band,.score-chip,.band-chip{border:1.5px solid var(--ink)}
+.verdict-banner{box-shadow:6px 6px 0 var(--ink) !important}
+.stat .sv,.g-num,.hs-num{font-weight:700}
+/* login extras */
+.login-error{color:var(--bad);font-size:12px;font-weight:600;margin:-8px 0 12px;min-height:15px}
+.login-card .login-foot .mono{font-family:'JetBrains Mono',monospace;color:var(--ink);font-weight:600}
+/* =================== underwriter case-desk workflow =================== */
+.status-chip,.wf-chip{display:inline-block;font-family:'JetBrains Mono',monospace;font-weight:600;text-transform:uppercase;letter-spacing:.4px;border:1.5px solid var(--ink)}
+.status-chip{font-size:10px;padding:3px 8px}
+.wf-chip{font-size:8px;padding:1px 4px;margin-left:6px;vertical-align:middle}
+.wf-new{background:#E7DECB;color:#6E6553}
+.wf-in_review{background:var(--acc-soft);color:var(--acc)}
+.wf-info_requested{background:var(--warn-soft);color:var(--warn)}
+.wf-referred{background:#DDE4F3;color:#2F49A8}
+.wf-approved{background:var(--ok-soft);color:var(--ok)}
+.wf-declined{background:var(--bad-soft);color:var(--bad)}
+.desk-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}
+.desk-l{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.6px;text-transform:uppercase;color:var(--mut)}
+.desk-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.trail-row{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:12.5px;align-items:baseline}
+.trail-row:last-child{border-bottom:none}
+.trail-when{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--mut);white-space:nowrap;min-width:98px}
+.trail-what{flex:1;line-height:1.5}.trail-who{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--acc);white-space:nowrap}
+.wf-filter{margin:4px 12px 8px;padding:8px 10px;width:calc(100% - 24px);border:1.5px solid rgba(255,255,255,.2);background:var(--rail-2);color:#fff;font:11px 'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.5px;outline:none}
+/* nav spaces + auto-decision banners */
+.nav-head{font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:1.2px;text-transform:uppercase;color:#7C8AA5;padding:14px 16px 4px}
+.overview-link{justify-content:space-between}
+.overview-link>span{display:flex;align-items:center}
+.nav-badge{background:var(--acc);color:#fff;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;padding:1px 8px;border:1.5px solid var(--ink)}
+.nav-count{font-family:'JetBrains Mono',monospace;font-size:10px;color:#7C8AA5}
+.overview-link.active .nav-badge{background:#fff;color:var(--acc)}.overview-link.active .nav-count{color:#fff}
+.auto-banner{border:2px solid var(--ink);padding:14px 16px;margin-bottom:14px;box-shadow:3px 3px 0 var(--ink)}
+.auto-banner.ok{background:var(--ok-soft)}.auto-banner.bad{background:var(--bad-soft)}.auto-banner.warn{background:var(--warn-soft)}
+.auto-banner .ab-word{font-family:'Fraunces',serif;font-weight:700;font-size:21px;letter-spacing:.4px}
+.auto-banner.ok .ab-word{color:var(--ok)}.auto-banner.bad .ab-word{color:var(--bad)}.auto-banner.warn .ab-word{color:var(--warn)}
+.auto-banner .ab-sub{font-size:12.5px;color:var(--ink);margin-top:6px;line-height:1.55}
+.xt tr[onclick]:hover td{background:var(--acc-soft)}
+/* =================== MEDIFLOW — DARK / INDIGO / POPPINS THEME =================== */
+*{font-family:'Poppins',system-ui,sans-serif}
+body{background:var(--bg) !important;background-image:none !important;color:var(--ink);font-family:'Poppins',sans-serif}
+#app{max-width:1440px;margin:18px auto;min-height:calc(100vh - 36px);background:#0A0A0C !important;border:none !important;border-radius:30px !important;overflow:hidden;box-shadow:0 30px 90px rgba(0,0,0,.55)}
+h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-detail h3,.rail-brand h1,.auto-banner .ab-word,.vb-word,.sl-word{font-family:'Poppins',sans-serif !important;letter-spacing:0;font-weight:700}
+.case-head h2,.login-card h1{text-transform:none;letter-spacing:0;font-weight:700}
+.card,.stat,.headline-score,.explain,.login-card{border:1px solid var(--line) !important;box-shadow:none !important;border-radius:22px !important;background:var(--card) !important;color:var(--ink)}
+.card h3{color:var(--mut);border-bottom:none;padding-bottom:0;margin-bottom:14px;text-transform:none;letter-spacing:.2px;font-family:'Poppins',sans-serif !important;font-size:15px;font-weight:600}
+.explain{background:var(--card) !important}.explain p{color:#C8C8D0}
+.note,.g-note,.hs-lab,.case-meta,.field label,.factor-detail,.ss-l,.rail-sub,.ci-id,.dstatus{color:var(--mut) !important}
+.doc-row,.sub-score,.drop-zone,.role-badge,.form-grid input,.form-grid select,.fg-wide textarea{border:1px solid var(--line) !important;border-radius:14px !important;box-shadow:none !important;background:#1C1C21 !important;color:var(--ink)}
+.form-grid input::placeholder,.fg-wide textarea::placeholder{color:#6B6B76}
+.conflict-card,.unique-banner{border-radius:14px !important;box-shadow:none !important}
+.search-box{border:1px solid var(--line) !important;background:#1C1C21 !important;color:var(--ink) !important;border-radius:999px !important;padding-left:16px}
+.search-box::placeholder{color:#6B6B76 !important}
+.tab{border:none !important;background:#1C1C21 !important;color:var(--mut) !important;box-shadow:none !important;border-radius:999px !important;text-transform:none;font-family:'Poppins',sans-serif !important;font-size:13px;letter-spacing:0;font-weight:500;padding:8px 16px}
+.tab.active{background:#fff !important;color:#0A0A0C !important}
+.ai-btn,.score-btn,.login-btn{border:none !important;box-shadow:none !important;border-radius:999px !important;color:#fff !important;font-family:'Poppins',sans-serif !important;text-transform:none;letter-spacing:0;font-weight:600;font-size:12.5px;padding:9px 18px;background:#26262E}
+.ai-btn:hover,.score-btn:hover,.login-btn:hover{filter:brightness(1.1)}
+.ai-btn:active,.score-btn:active,.login-btn:active{transform:translateY(1px);filter:brightness(.92)}
+.login-btn,.score-btn{background:var(--acc) !important;color:#fff !important}
+.stamp{box-shadow:none !important;border-radius:14px !important;border-width:2px}
+/* left rail (dark) */
+.rail{border-right:1px solid var(--line) !important;background:var(--rail)}
+.rail-brand{background:transparent !important;border-bottom:1px solid var(--line)}
+.rail-brand h1{color:#fff !important;font-weight:700}.rail-brand p{color:#7C7C88 !important}
+.role-badge{background:#1C1C21 !important;border:1px solid var(--line) !important;border-radius:14px}
+.role-badge .rb-name{color:#fff}.role-badge .rb-role{color:var(--mut)}.role-badge .signout{color:var(--acc)}
+.rail-sub{color:#7C7C88 !important}
+.overview-link{border:none;border-radius:12px !important;color:#C3C3CC !important;margin:3px 12px}
+.overview-link:hover{background:#1C1C21 !important}
+.overview-link.active{background:var(--acc) !important;color:#fff !important}
+.overview-link.active .nav-badge{background:#fff !important;color:var(--acc) !important;border:none !important}
+.overview-link.active .nav-count{color:#fff !important}
+.nav-head{color:#63636E !important}
+.case-item{border-radius:14px !important}
+.case-item:hover{background:#1C1C21 !important}
+.case-item.active{background:#1C1C21 !important;outline:1.5px solid var(--acc) !important}
+.ci-name{color:#fff !important}.doctag{color:var(--acc) !important}
+.pagination{color:var(--mut) !important;border-top:1px solid var(--line)}
+.pagination button{background:#1C1C21 !important;color:#fff !important;border:none !important;border-radius:999px}
+.headline-score{background:#141417 !important;border:1px solid var(--line) !important;border-radius:20px}
+.headline-score .hs-lab{color:var(--mut) !important}
+.hs-class,.g-band,.score-chip,.band-chip,.status-chip,.wf-chip,.pri-chip,.sla-chip{border:none !important;border-radius:999px !important;font-weight:600}
+.score-chip{background:#1C1C21}
+.verdict-banner{box-shadow:none !important;border-radius:18px !important;border-width:1px !important}
+.auto-banner{box-shadow:none !important;border:1px solid var(--line) !important;border-radius:18px !important}
+.auto-banner .ab-word{font-family:'Poppins',sans-serif !important}
+/* status chips on dark (soft tints) */
+.status-chip,.wf-chip{background:#1C1C21 !important}
+.wf-new{background:#232329 !important;color:#9A9AA5 !important}
+.wf-in_review{background:var(--acc-soft) !important;color:#A9A7FF !important}
+.wf-info_requested{background:var(--warn-soft) !important;color:var(--warn) !important}
+.wf-referred{background:rgba(106,103,247,.16) !important;color:#A9A7FF !important}
+.wf-approved{background:var(--ok-soft) !important;color:var(--ok) !important}
+.wf-declined{background:var(--bad-soft) !important;color:#FF8A8C !important}
+.nav-badge{background:var(--acc) !important;color:#fff !important;border:none !important;border-radius:999px}
+.sc-ok{background:var(--ok-soft) !important;color:var(--ok) !important}
+.sc-warn{background:var(--warn-soft) !important;color:var(--warn) !important}
+.sc-bad{background:var(--bad-soft) !important;color:#FF8A8C !important}
+/* priority + SLA + tier (pills, Poppins) */
+.pri-chip{display:inline-block;font-family:'Poppins',sans-serif;font-size:9.5px;font-weight:700;letter-spacing:.3px;padding:3px 9px;text-transform:uppercase;color:#fff}
+.sla-chip{display:inline-block;font-family:'Poppins',sans-serif;font-size:10px;font-weight:600;letter-spacing:0;padding:3px 9px;white-space:nowrap}
+.sla-ok{background:#232329;color:#9A9AA5}
+.sla-warn{background:var(--warn-soft);color:var(--warn)}
+.sla-breach{background:var(--bad);color:#fff}
+.tier-tag{font-family:'Poppins',sans-serif;font-size:10px;letter-spacing:0;text-transform:none;color:#8A8A95}
+.ci-meta{display:flex;gap:6px;align-items:center;margin-top:5px;flex-wrap:wrap}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:#1C1C21;padding:3px}
+.seg button{font-family:'Poppins',sans-serif;font-size:11px;font-weight:600;text-transform:none;letter-spacing:0;padding:6px 15px;border:none;background:transparent;color:var(--mut);cursor:pointer;border-radius:999px}
+.seg button.on{background:#fff;color:#0A0A0C}
+.rank-num{font-family:'Poppins',sans-serif;font-size:12px;font-weight:700;color:var(--mut);min-width:20px;text-align:right}
+/* score band scale */
+.scale-wrap{margin:14px 0 4px}
+.scale-ticks{position:relative;height:20px;font-family:'Poppins',sans-serif;font-weight:700;font-size:14px;color:var(--ink)}
+.scale-ticks span{position:absolute;transform:translateX(-50%)}
+.scale-ticks span:first-child{transform:none}.scale-ticks span:last-child{transform:translateX(-100%)}
+.scale-track{display:flex;height:30px;border:none;border-radius:999px;overflow:hidden}
+.scale-seg{height:100%}.scale-seg+.scale-seg{border-left:2px solid #0A0A0C}
+.scale-labels{display:flex;margin-top:12px}
+.slab{text-align:center;padding:0 4px}
+.sl-word{font-family:'Poppins',sans-serif;font-weight:700;letter-spacing:0;font-size:15px}
+.sl-sub{font-size:11px;color:var(--mut);font-style:normal;margin-top:2px;line-height:1.3}
+.override-note{display:flex;gap:12px;align-items:flex-start;background:var(--warn-soft);border:none;border-radius:16px;padding:14px 16px;margin-top:18px}
+.override-note .on-ic{font-size:18px;color:var(--warn);flex-shrink:0}
+.override-note b{color:var(--warn)}
+/* login (dark indigo) */
+#login{background:linear-gradient(160deg,#3B3A78,#0A0A0C) !important}
+.login-card input{background:#1C1C21 !important;color:#fff !important;border:1px solid var(--line) !important;border-radius:12px !important}
+.login-card .sub,.login-foot{color:var(--mut)}.brandmark{color:var(--acc)}
+.hist-track,.coef-track{background:#1C1C21 !important}
+.legend-chip{border-radius:12px}
+.stat{border-radius:18px !important}
 </style>
+<div id="login">
+ <div class="login-card">
+  <div class="brandmark">◆ UNDERWRITING COPILOT</div>
+  <h1>Sign in to the workbench</h1>
+  <p class="sub">Secure access. Underwriters work their assigned case queue; managers get portfolio oversight and the fairness view.</p>
+  <label>Username</label>
+  <input id="loginUser" placeholder="username" autocomplete="off" oninput="loginErr('')" onkeydown="if(event.key==='Enter')doLogin()">
+  <label>Password</label>
+  <input id="loginPass" type="password" placeholder="password" onkeydown="if(event.key==='Enter')doLogin()">
+  <div id="loginError" class="login-error"></div>
+  <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign in →</button>
+  <div class="login-foot"><b>Demo accounts</b><br>Senior underwriter — <span class="mono">mrivera / senior</span><br>Mid-tier underwriter — <span class="mono">ewong / review</span><br>New analyst — <span class="mono">dpark / analyst</span><br>Manager — <span class="mono">rkubusada / oversight</span></div>
+ </div>
+</div>
 <div id="app">
  <div class="rail">
   <div class="rail-brand"><h1>Underwriting Copilot</h1><p>Extraction · Conflict Screen · Risk Score · Decision</p></div>
-  <div class="overview-link" id="overviewLink" onclick="goOverview()">⌂ &nbsp;Portfolio & Model Card</div>
-  <div class="overview-link" id="managerLink" onclick="goManager()">▦ &nbsp;Manager Overview</div>
-  <div class="overview-link" id="scoreLink" onclick="goScore()">＋ &nbsp;Score New Application</div>
-  <div class="rail-sub"><span>Case Queue</span><span id="queueCount"></span></div>
+  <div class="role-badge" id="roleBadge"></div>
+  <div id="navLinks"></div>
+  <div class="rail-sub"><span id="listTitle">Review Queue</span><span id="queueCount"></span></div>
   <input class="search-box" id="searchBox" placeholder="Search name or ID…" oninput="onSearch(this.value)">
   <div class="case-list" id="caseList"></div>
   <div class="pagination"><button id="prevBtn" onclick="pg(-1)">‹ Prev</button><span id="pageLabel"></span><button id="nextBtn" onclick="pg(1)">Next ›</button></div>
@@ -139,41 +330,301 @@ table.xt td{padding:10px 10px 10px 0;border-bottom:1px solid var(--line);font-si
 <script>
 const DATA = /*__DATA__*/;
 const M = DATA.metrics, CASES = DATA.cases;
-const A_LINE = 40, D_LINE = 70;  // <40 approve · 40–69 manual review · ≥70 decline
+const A_LINE = 50, D_LINE = 90;  // <50 approve · 50–89 manual review · ≥90 decline
 const VM={green:["APPROVE","ok"],yellow:["MANUAL REVIEW","warn"],red:["DECLINE","bad"]};
 const bandOf=s=>s<A_LINE?"green":s<D_LINE?"yellow":"red";
 const band=s=>s<=25?["Low","var(--ok)"]:s<A_LINE?["Moderate","var(--ok)"]:s<D_LINE?["Elevated","var(--warn)"]:["High","var(--bad)"];
+// thresholds moved to 50/90 — recompute every case's verdict client-side so the whole app is consistent (no pipeline rerun)
+const MISREP=new Set(['smoker_nondisclosure','dob_mismatch']);
+function recomputeVerdicts(){
+ CASES.forEach(c=>{
+  const comp=c.risk_score,conf=c.conflicts||[];
+  const majors=conf.filter(k=>k.severity==='major');
+  const misrep=majors.filter(k=>MISREP.has(k.type));
+  const reasons=[];let verdict,decision,rate;
+  if(misrep.length){verdict='red';decision='DECLINE';rate='Declined — Material Misrepresentation';
+    reasons.push('Application contradicts medical/identity evidence: '+misrep.map(k=>k.type.replace(/_/g,' ')).join('; '));}
+  else if(comp>=D_LINE){verdict='red';decision='DECLINE';rate='Declined — Risk Exceeds Appetite';
+    reasons.push(`Composite risk score ${comp}/100 is in the ${D_LINE}+ decline band`);}
+  else if(majors.length||c.unique||comp>=A_LINE||Math.abs(c.rule_score-c.ml_score)>20){verdict='yellow';decision='MANUAL REVIEW';rate='Referred — Senior Underwriter Review';
+    if(majors.length)reasons.push(`${majors.length} major data conflict(s): `+majors.map(k=>k.type.replace(/_/g,' ')).join('; '));
+    if(c.unique){rate='Referred — Unique Circumstances Disclosed';reasons.push('Applicant disclosed unique circumstances: '+c.unique);}
+    if(comp>=A_LINE)reasons.push(`Composite score ${comp} sits in the ${A_LINE}–${D_LINE-1} referral band`);
+    if(Math.abs(c.rule_score-c.ml_score)>20)reasons.push(`Rule engine (${c.rule_score}) and ML model (${Math.round(c.ml_score)}) disagree materially`);}
+  else{verdict='green';decision='APPROVE';rate=comp<=25?'Preferred Rate Class':'Standard Rate Class';
+    reasons.push(`Composite score ${comp} is below the ${A_LINE}-point approval line; engines agree and no conflicts or special circumstances were found`);}
+  c.verdict=verdict;c.decision=decision;c.rate_class=rate;c.reasons=reasons;c.referred=verdict!=='green';
+ });
+}
+recomputeVerdicts();
 let filtered=CASES.slice(),page=0,activeId=CASES[0].id,view="case",activeTab=4;const PAGE=20;
 const fmt$=n=>n==null?"—":"$"+Math.round(n).toLocaleString();
-function onSearch(q){q=q.trim().toLowerCase();filtered=q?CASES.filter(c=>c.name.toLowerCase().includes(q)||c.id.toLowerCase().includes(q)):CASES.slice();page=0;rail();}
-function pg(d){const mx=Math.max(0,Math.ceil(filtered.length/PAGE)-1);page=Math.min(mx,Math.max(0,page+d));rail();}
+/* ---------- workbench login (credential auth) ---------- */
+const ACCOUNTS={
+ dpark:{pw:"analyst",name:"Dana Park",role:"underwriter",tier:"analyst"},
+ ewong:{pw:"review",name:"Erin Wong",role:"underwriter",tier:"mid"},
+ mrivera:{pw:"senior",name:"Marcus Rivera",role:"underwriter",tier:"senior"},
+ rkubusada:{pw:"oversight",name:"R. Kubusada",role:"manager"}
+};
+// the three underwriters cases get routed to, by experience tier
+const UWS={senior:{uid:"mrivera",name:"Marcus Rivera",label:"Senior"},
+          mid:{uid:"ewong",name:"Erin Wong",label:"Mid-tier"},
+          analyst:{uid:"dpark",name:"Dana Park",label:"New Analyst"}};
+let CURRENT_ROLE=null, CURRENT_USER="", CURRENT_UID="", CURRENT_TIER="";
+function loginErr(m){const e=document.getElementById('loginError');if(e)e.textContent=m;}
+function doLogin(){
+ const u=(document.getElementById('loginUser').value||'').trim().toLowerCase();
+ const p=document.getElementById('loginPass').value||'';
+ const acct=ACCOUNTS[u];
+ if(!acct||acct.pw!==p){loginErr('Incorrect username or password.');return;}
+ CURRENT_UID=u;CURRENT_USER=acct.name;CURRENT_ROLE=acct.role;CURRENT_TIER=acct.tier||"";
+ seedReview();
+ document.getElementById('login').style.display='none';
+ applyRole();
+ if(CURRENT_ROLE==='manager'){queueScope='team';view='manager';}else{queueScope='mine';space='review';view='space';}
+ render();}
+function applyRole(){
+ // nav (buildNav) shows the oversight links only for managers
+ const badge=document.getElementById('roleBadge');
+ const sub=CURRENT_ROLE==='underwriter'?((UWS[CURRENT_TIER]||{}).label||'Underwriter'):'Manager';
+ badge.innerHTML=`<div><div class="rb-name">${CURRENT_USER}</div><div class="rb-role">${sub}</div></div><span class="signout" onclick="signOut()">Sign out</span>`;}
+function signOut(){CURRENT_ROLE=null;CURRENT_USER="";CURRENT_UID="";
+ document.getElementById('loginUser').value='';document.getElementById('loginPass').value='';loginErr('');
+ document.getElementById('login').style.display='flex';}
+/* ---------- underwriter case desk: status, assignment, notes, decision log (localStorage) ---------- */
+const WF_STATUSES=[["new","New"],["in_review","In Review"],["info_requested","Info Requested"],["referred","Referred"],["approved","Approved"],["declined","Declined"]];
+const WF_LABEL=Object.fromEntries(WF_STATUSES);
+let wfFilterVal="";
+const nowStr=()=>new Date().toISOString().slice(0,16).replace('T',' ');
+function wfAll(){try{return JSON.parse(localStorage.getItem('uw_workbench')||'{}');}catch(e){return {};}}
+function wfGet(id){const a=wfAll();return a[id]||{status:'new',assignee:null,notes:[],history:[],decision:null};}
+function wfSave(id,st){const a=wfAll();a[id]=st;localStorage.setItem('uw_workbench',JSON.stringify(a));}
+function wfChip(id){const s=wfGet(id).status;return `<span class="wf-chip wf-${s}">${WF_LABEL[s]}</span>`;}
+/* ---------- priority ranking, tier assignment, SLA timer ---------- */
+let queueScope='mine';   // 'mine' = cases assigned to me · 'team' = all
+function idHash(id){let h=2166136261;for(let i=0;i<id.length;i++){h^=id.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+function ageHours(c){const st=wfGet(c.id);const r=(st.receivedAt!=null)?st.receivedAt:(Date.now()-(idHash(c.id)%17)*3600000);return (Date.now()-r)/3600000;}
+function priorityScore(c){
+ let p=0;
+ p+=Math.min((c.coverage||0)/1000000,1)*32;              // exposure / face amount
+ p+=(c.risk_score/100)*34;                                 // risk severity
+ const conf=c.conflicts||[];
+ p+=conf.filter(k=>k.severity==='major').length*12;        // hard conflicts
+ p+=conf.filter(k=>k.severity==='minor').length*4;
+ if(c.unique)p+=8;                                          // disclosed circumstances
+ p+=Math.min(ageHours(c)/8,1)*12;                          // ageing in the queue
+ return Math.round(Math.min(p,100));
+}
+function priorityBand(p){return p>=68?['CRITICAL','var(--bad)']:p>=46?['HIGH','var(--warn)']:p>=26?['MEDIUM','var(--acc)']:['LOW','var(--mut)'];}
+function assignTier(c){
+ const majors=(c.conflicts||[]).filter(k=>k.severity==='major').length;const p=priorityScore(c);
+ if(p>=64||majors>=1||(c.coverage||0)>=750000)return 'senior';   // complex/high-exposure → experienced
+ if(p>=34)return 'mid';
+ return 'analyst';                                                // simplest → new analyst
+}
+function seedReview(){
+ // once per case: stamp a clock-start and route to an underwriter by experience tier
+ const all=wfAll();let changed=false;
+ CASES.forEach(c=>{if(c.verdict!=='yellow')return;
+   const st=all[c.id]||{status:'new',assignee:null,notes:[],history:[],decision:null};
+   if(st.receivedAt==null){st.receivedAt=Date.now()-(idHash(c.id)%17)*3600000;changed=true;}
+   if(!st.assigneeUid){const t=assignTier(c);const uw=UWS[t];st.assigneeUid=uw.uid;st.assignee=uw.name;st.tier=t;
+     if(st.status==='new')st.status='in_review';changed=true;}
+   all[c.id]=st;});
+ if(changed)localStorage.setItem('uw_workbench',JSON.stringify(all));
+}
+function fmtAge(h){const H=Math.floor(h);const M=Math.floor((h-H)*60);return H+'h '+String(M).padStart(2,'0')+'m';}
+function slaChip(c){const h=ageHours(c);const cls=h>=8?'sla-breach':h>=6?'sla-warn':'sla-ok';
+ return `<span class="sla-chip ${cls}">${h>=8?'⚠ SLA · ':''}${fmtAge(h)}</span>`;}
+function tierTag(st){const t=UWS[st.tier];return t?`<span class="tier-tag">${st.assignee} · ${t.label}</span>`:'';}
+function wfClaim(id){const st=wfGet(id);st.assignee=CURRENT_USER;if(st.status==='new')st.status='in_review';
+ st.history.push({by:CURRENT_USER,role:CURRENT_ROLE,at:nowStr(),action:'Claimed case → In Review'});wfSave(id,st);render();}
+function wfSetStatus(id,s){const st=wfGet(id);st.status=s;
+ st.history.push({by:CURRENT_USER||'system',role:CURRENT_ROLE||'',at:nowStr(),action:'Status set → '+WF_LABEL[s]});wfSave(id,st);render();}
+function wfNote(id){const t=(prompt('Add a case note (written to the audit trail):')||'').trim();if(!t)return;
+ const st=wfGet(id);st.notes.push({by:CURRENT_USER||'?',at:nowStr(),text:t});
+ st.history.push({by:CURRENT_USER,role:CURRENT_ROLE,at:nowStr(),action:'Note added'});wfSave(id,st);render();}
+function wfRequestInfo(id){const t=(prompt('What information is outstanding? (NIGO — sent back for completion):')||'').trim();if(!t)return;
+ const st=wfGet(id);st.status='info_requested';
+ st.notes.push({by:CURRENT_USER||'?',at:nowStr(),text:'INFO REQUESTED: '+t});
+ st.history.push({by:CURRENT_USER,role:CURRENT_ROLE,at:nowStr(),action:'Requested info (NIGO) — “'+t+'”'});wfSave(id,st);render();}
+function wfDecide(id,kind){
+ const labels={approve:'APPROVED',decline:'DECLINED'};
+ const rationale=(prompt('Rationale for '+labels[kind]+' — required (logged to the case history):')||'').trim();
+ if(!rationale){alert('A rationale is required to record a decision.');return;}
+ const st=wfGet(id);st.status=kind==='approve'?'approved':'declined';
+ st.decision={action:labels[kind],by:CURRENT_USER,role:CURRENT_ROLE,at:nowStr(),rationale:rationale};
+ st.history.push({by:CURRENT_USER,role:CURRENT_ROLE,at:nowStr(),action:labels[kind]+' — “'+rationale+'”'});
+ wfSave(id,st);
+ // the human call also feeds the model-training override store (+ manager counts)
+ const ov=getOverrides();ov[id]={decision:labels[kind],label:kind==='decline'?1:0,reason:rationale,at:st.decision.at};
+ localStorage.setItem('uw_overrides',JSON.stringify(ov));
+ render();}
+function wfPull(id){const st=wfGet(id);st.pulled=true;st.status='in_review';
+ st.assignee=CURRENT_USER;st.assigneeUid=CURRENT_UID;st.tier=CURRENT_TIER;st.receivedAt=Date.now();
+ st.history.push({by:CURRENT_USER,role:CURRENT_ROLE,at:nowStr(),action:'Pulled auto-decision into manual review'});
+ wfSave(id,st);space='review';render();}
+function wfReassign(id){const st=wfGet(id);st.assigneeUid=CURRENT_UID;st.assignee=CURRENT_USER;st.tier=CURRENT_TIER;
+ st.history.push({by:CURRENT_USER,role:CURRENT_ROLE,at:nowStr(),action:'Reassigned to '+CURRENT_USER});wfSave(id,st);render();}
+function wfReopen(id){const st=wfGet(id);st.decision=null;st.status='in_review';
+ st.history.push({by:CURRENT_USER,role:CURRENT_ROLE,at:nowStr(),action:'Reopened for review'});wfSave(id,st);
+ const ov=getOverrides();delete ov[id];localStorage.setItem('uw_overrides',JSON.stringify(ov));space='review';render();}
+/* ---------- case spaces: manual-review queue vs auto-decisioned record ---------- */
+const SPACES=[
+ ["review","Review Queue","▣","Cases the system flagged for a human. These are the only cases you action."],
+ ["completed","Completed","✓","Manual-review cases you've approved or declined."],
+ ["auto_approved","Auto-Approved","⤴","Straight-through approvals — decided automatically, kept as a record."],
+ ["auto_declined","Auto-Declined","⤵","Straight-through declines — decided automatically, kept as a record."]];
+const SPACE_LABEL=Object.fromEntries(SPACES.map(s=>[s[0],s[1]]));
+let space='review';
+function bucketOf(c){const st=wfGet(c.id);
+ if(c.verdict==='yellow'||st.pulled)return st.decision?'completed':'review';
+ return c.verdict==='green'?'auto_approved':'auto_declined';}
+function spaceCases(sp){return CASES.filter(c=>bucketOf(c)===sp);}
+function currentList(){let l=spaceCases(space);
+ if(space==='review'){
+  if(CURRENT_ROLE==='underwriter'&&queueScope==='mine')l=l.filter(c=>wfGet(c.id).assigneeUid===CURRENT_UID);
+  l=l.slice().sort((a,b)=>priorityScore(b)-priorityScore(a));   // most important first
+ }
+ if(searchQ)l=l.filter(c=>c.name.toLowerCase().includes(searchQ)||c.id.toLowerCase().includes(searchQ));return l;}
+function setScope(s){queueScope=s;page=0;render();}
+function trailHTML(st){return st.history.length?st.history.slice().reverse().map(h=>`<div class="trail-row"><span class="trail-when">${h.at}</span><span class="trail-what">${h.action}</span><span class="trail-who">${h.by||''}</span></div>`).join(''):'<div class="note" style="margin:0">No activity yet.</div>';}
+function caseDeskHTML(c){
+ const st=wfGet(c.id);const isUW=CURRENT_ROLE==='underwriter';
+ const auto=(c.verdict!=='yellow')&&!st.pulled;
+ const resolved=!!st.decision;
+ const notes=st.notes.length?`<div class="card"><h3>Case notes</h3>${st.notes.slice().reverse().map(n=>`<div class="trail-row"><span class="trail-when">${n.at}</span><span class="trail-what">${n.text}</span><span class="trail-who">${n.by}</span></div>`).join('')}</div>`:'';
+ if(auto){
+  const word=c.verdict==='green'?'AUTO-APPROVED':'AUTO-DECLINED';const spn=c.verdict==='green'?'Auto-Approved':'Auto-Declined';
+  return `<div class="card"><h3>Disposition</h3>
+    <div class="auto-banner ${c.verdict==='green'?'ok':'bad'}"><div class="ab-word">${word}</div>
+     <div class="ab-sub">Straight-through decision — the system ${c.verdict==='green'?'approved':'declined'} this case automatically, so no underwriter action is required. It's filed in the ${spn} space as a record.</div></div>
+    <div class="desk-actions"><button class="ai-btn" style="background:var(--acc)" onclick="downloadMemo('${c.id}')">⬇ Decision memo</button>
+     ${isUW?`<button class="ai-btn" style="background:var(--mut)" onclick="wfPull('${c.id}')">Pull into review</button>`:''}</div>
+    ${st.history.length?`<div style="margin-top:14px">${trailHTML(st)}</div>`:''}</div>${notes}`;
+ }
+ const owner=st.assignee?`<b>${st.assignee}</b>`:'<span style="color:var(--mut)">Unassigned</span>';
+ const decided=resolved?`<div class="auto-banner ${st.decision.action==='APPROVED'?'ok':'bad'}"><div class="ab-word">${st.decision.action}</div><div class="ab-sub">“${st.decision.rationale}” — ${st.decision.by} (${st.decision.role}), ${st.decision.at}</div></div>`:'';
+ let controls;
+ if(isUW&&!resolved){
+  const pb=priorityBand(priorityScore(c));const h=ageHours(c);const slaCls=h>=8?'sla-breach':h>=6?'sla-warn':'sla-ok';
+  controls=`
+   <div class="desk-row"><span class="desk-l">Priority</span><span><span class="pri-chip" style="background:${pb[1]}">${pb[0]}</span> <span class="mono" style="font-size:11px;color:var(--mut)">score ${priorityScore(c)}/100</span></span></div>
+   <div class="desk-row"><span class="desk-l">Assigned to</span><span>${st.assignee||'Unassigned'}${st.tier?` <span class="tier-tag">${(UWS[st.tier]||{}).label}</span>`:''}${(st.assigneeUid&&st.assigneeUid!==CURRENT_UID)?` <button class="ai-btn" style="margin-left:8px;background:var(--mut)" onclick="wfReassign('${c.id}')">Take over</button>`:''}</span></div>
+   <div class="desk-row"><span class="desk-l">Time in queue</span><span class="sla-chip ${slaCls}">${h>=8?'⚠ OVER 8h SLA · ':''}${fmtAge(h)}</span></div>
+   <div class="desk-row"><span class="desk-l">Status</span><span class="status-chip wf-${st.status}">${WF_LABEL[st.status]}</span></div>
+   <div class="desk-actions" style="margin-top:14px">
+     <button class="ai-btn" style="background:var(--ok)" onclick="wfDecide('${c.id}','approve')">✓ Approve</button>
+     <button class="ai-btn" style="background:var(--bad)" onclick="wfDecide('${c.id}','decline')">✕ Decline</button>
+     <button class="ai-btn" style="background:var(--warn)" onclick="wfRequestInfo('${c.id}')">Request info</button>
+     <button class="ai-btn" style="background:var(--ink)" onclick="wfNote('${c.id}')">+ Note</button></div>
+   <div class="note">This case is in your queue because the system flagged it for a human. Approve or decline with a rationale — it's logged to the audit trail and moves the case to Completed.</div>`;
+ } else if(isUW&&resolved){
+  controls=`<div class="desk-actions" style="margin-top:2px">
+     <button class="ai-btn" style="background:var(--acc)" onclick="downloadMemo('${c.id}')">⬇ Decision memo</button>
+     <button class="ai-btn" style="background:var(--mut)" onclick="wfReopen('${c.id}')">Reopen</button></div>`;
+ } else {
+  controls=`<div class="desk-row"><span class="desk-l">Status</span><span class="status-chip wf-${st.status}">${WF_LABEL[st.status]}</span></div>
+   <div class="desk-row"><span class="desk-l">Owner</span><span>${owner}</span></div>
+   <div class="note">Manager view — read-only. Underwriters action manual-review cases from their queue.</div>`;
+ }
+ return `<div class="card"><h3>Underwriter Case Desk</h3>${decided}${controls}</div>${notes}<div class="card"><h3>Audit trail</h3>${trailHTML(st)}</div>`;
+}
+let searchQ="";
+function onSearch(q){searchQ=q.trim().toLowerCase();page=0;rail();}
+function pg(d){const mx=Math.max(0,Math.ceil(currentList().length/PAGE)-1);page=Math.min(mx,Math.max(0,page+d));rail();}
+function goSpace(sp){space=sp;view="space";page=0;render();}
 function goOverview(){view="overview";render();}
 function goManager(){view="manager";render();}
 function goScore(){view="score";render();}
-function sel(id){activeId=id;view="case";activeTab=4;render();}
+function sel(id){activeId=id;view="case";const c=CASES.find(x=>x.id===id);activeTab=(c&&bucketOf(c)==='review')?5:4;render();}
 function selTab(n){activeTab=n;render();}
 function render(){rail();main();}
+function buildNav(){
+ const nav=document.getElementById('navLinks');if(!nav)return;
+ // underwriters work case spaces; managers only oversee — no case records at all
+ const isMgr=CURRENT_ROLE==='manager';
+ if(isMgr){
+  nav.innerHTML=`<div class="nav-head">Oversight</div>
+    <div class="overview-link ${view==='overview'?'active':''}" onclick="goOverview()"><span>⌂ &nbsp;Portfolio & Model Card</span></div>
+    <div class="overview-link ${view==='manager'?'active':''}" onclick="goManager()"><span>▦ &nbsp;Manager Overview</span></div>`;
+  return;
+ }
+ const sp=SPACES.map(s=>{const n=spaceCases(s[0]).length;
+   const badge=s[0]==='review'?`<span class="nav-badge">${n}</span>`:`<span class="nav-count">${n}</span>`;
+   return `<div class="overview-link ${space===s[0]&&view==='space'?'active':''}" onclick="goSpace('${s[0]}')"><span>${s[2]} &nbsp;${s[1]}</span>${badge}</div>`;}).join('');
+ const tools=`<div class="overview-link ${view==='score'?'active':''}" onclick="goScore()"><span>＋ &nbsp;Score New Application</span></div>`;
+ nav.innerHTML=`<div class="nav-head">Case spaces</div>${sp}<div class="nav-head">Tools</div>${tools}`;
+}
 function rail(){
- document.getElementById('overviewLink').className="overview-link"+(view==="overview"?" active":"");
- document.getElementById('managerLink').className="overview-link"+(view==="manager"?" active":"");
- document.getElementById('scoreLink').className="overview-link"+(view==="score"?" active":"");
- document.getElementById('queueCount').textContent=filtered.length+" cases";
- const items=filtered.slice(page*PAGE,page*PAGE+PAGE);
- document.getElementById('caseList').innerHTML=items.map(c=>{
+ buildNav();
+ const list=currentList();
+ document.getElementById('listTitle').textContent=SPACE_LABEL[space]||'Cases';
+ document.getElementById('queueCount').textContent=list.length+(space==='review'?' to do':' cases');
+ const items=list.slice(page*PAGE,page*PAGE+PAGE);
+ document.getElementById('caseList').innerHTML=items.length?items.map((c,i)=>{
   const sc=c.verdict==='red'?'sc-bad':c.verdict==='yellow'?'sc-warn':'sc-ok';
+  const st=wfGet(c.id);const isRev=space==='review';
+  let meta='';
+  if(isRev){const pb=priorityBand(priorityScore(c));
+   meta=`<div class="ci-meta"><span class="pri-chip" style="background:${pb[1]}">${pb[0]}</span>${slaChip(c)}</div>
+    <div class="ci-meta">${queueScope==='team'&&st.tier?`<span class="tier-tag">${st.assignee} · ${(UWS[st.tier]||{}).label}</span>`:wfChip(c.id)}</div>`;
+  }else{meta=`<div class="ci-id" style="margin-top:2px">${wfChip(c.id)}</div>`;}
+  const rank=isRev?`<span class="rank-num">${page*PAGE+i+1}</span> `:'';
   return `<div class="case-item ${c.id===activeId&&view==='case'?'active':''}" onclick="sel('${c.id}')">
-   <div><div class="ci-name">${c.name}</div><div class="ci-id">${c.id}${c.has_docs?' <span class="doctag">· PDF</span>':''}</div></div>
-   <div class="score-chip ${sc}">${c.risk_score}</div></div>`;}).join('');
- const mx=Math.max(0,Math.ceil(filtered.length/PAGE)-1);
+   <div style="min-width:0"><div class="ci-name">${rank}${c.name}</div>
+    <div class="ci-id">${c.id}${c.has_docs?' <span class="doctag">· PDF</span>':''}</div>${meta}</div>
+   <div class="score-chip ${sc}">${c.risk_score}</div></div>`;}).join(''):'<div class="note" style="padding:16px 12px;color:#9AA0A8">No cases in this space.</div>';
+ const mx=Math.max(0,Math.ceil(list.length/PAGE)-1);
  document.getElementById('pageLabel').textContent=(page+1)+" / "+(mx+1);
  document.getElementById('prevBtn').disabled=page<=0;document.getElementById('nextBtn').disabled=page>=mx;
 }
+function spaceView(){
+ const meta=SPACES.find(s=>s[0]===space)||SPACES[0];const list=currentList();
+ const isRev=space==='review';
+ const toggle=(isRev&&CURRENT_ROLE==='underwriter')?`<div class="seg" style="margin-top:12px">
+    <button class="${queueScope==='mine'?'on':''}" onclick="setScope('mine')">My cases</button>
+    <button class="${queueScope==='team'?'on':''}" onclick="setScope('team')">Whole team</button></div>`:'';
+ let head,rows;
+ if(isRev){
+  head=`<tr><th>#</th><th>Priority</th><th>Applicant</th><th>Risk</th><th>Coverage</th><th>Time in queue</th><th>Assigned to</th><th></th></tr>`;
+  rows=list.slice(0,300).map((c,i)=>{const st=wfGet(c.id);const pb=priorityBand(priorityScore(c));
+    const sc=c.verdict==='red'?'sc-bad':c.verdict==='yellow'?'sc-warn':'sc-ok';
+    return `<tr onclick="sel('${c.id}')" style="cursor:pointer">
+      <td class="rank-num">${i+1}</td>
+      <td><span class="pri-chip" style="background:${pb[1]}">${pb[0]}</span></td>
+      <td><b>${c.name}</b><div style="font-size:11px;color:var(--mut)">${c.id} · ${c.policy}</div></td>
+      <td><span class="score-chip ${sc}">${c.risk_score}</span></td>
+      <td class="mono" style="white-space:nowrap">${fmt$(c.coverage)}</td>
+      <td>${slaChip(c)}</td>
+      <td><span class="tier-tag">${st.assignee||'—'}${st.tier?' · '+(UWS[st.tier]||{}).label:''}</span></td>
+      <td style="text-align:right"><button class="ai-btn" onclick="event.stopPropagation();sel('${c.id}')">Review</button></td></tr>`;}).join('');
+ }else{
+  head=`<tr><th>ID</th><th>Applicant</th><th>Risk</th><th>${space==='completed'?'Decision':'Status'}</th><th></th></tr>`;
+  rows=list.slice(0,300).map(c=>{const st=wfGet(c.id);
+    const sc=c.verdict==='red'?'sc-bad':c.verdict==='yellow'?'sc-warn':'sc-ok';
+    const right=space==='completed'&&st.decision?`<span class="status-chip wf-${st.status}">${st.decision.action}</span>`:`<span class="status-chip wf-${st.status}">${WF_LABEL[st.status]}</span>`;
+    return `<tr onclick="sel('${c.id}')" style="cursor:pointer">
+      <td class="mono" style="white-space:nowrap">${c.id}</td>
+      <td><b>${c.name}</b><div style="font-size:11px;color:var(--mut)">${c.occupation} · ${c.policy}</div></td>
+      <td><span class="score-chip ${sc}">${c.risk_score}</span></td>
+      <td>${right}</td>
+      <td style="text-align:right"><button class="ai-btn" onclick="event.stopPropagation();sel('${c.id}')">Open</button></td></tr>`;}).join('');
+ }
+ const breaches=isRev?list.filter(c=>ageHours(c)>=8).length:0;
+ const banner=isRev?`<div class="verdict-banner v-yellow" style="margin-top:16px"><div class="vb-word">${list.length} case(s) ranked by priority${breaches?` · ${breaches} over the 8h SLA`:''}</div><div class="vb-sub">Work top-down — most important first. These are the only cases needing a human; auto-approvals and auto-declines are filed separately. Anything over 8 hours in the queue is flagged red.</div></div>`:'';
+ return `<div class="case-head"><div><h2>${meta[1]}</h2>
+    <div class="case-meta"><span>${list.length} case(s)</span><span>${meta[3]}</span></div>${toggle}</div></div>
+   ${banner}
+   <div class="card" style="margin-top:16px">${list.length?`<table class="xt">${head}${rows}</table>`:`<div class="note" style="margin:0">Nothing in this space right now.</div>`}</div>`;
+}
 function main(){
  const el=document.getElementById('mainContent');
+ if(view==="space"){el.innerHTML=spaceView();return;}
  if(view==="overview"){el.innerHTML=overview();return;}
  if(view==="manager"){el.innerHTML=managerView();return;}
  if(view==="score"){el.innerHTML=scoreView();wireScoreForm();return;}
- const c=CASES.find(x=>x.id===activeId);if(!c){el.innerHTML=overview();return;}
+ const c=CASES.find(x=>x.id===activeId);if(!c){el.innerHTML=spaceView();return;}
  const vm=VM[c.verdict];
  el.innerHTML=`<div class="case-head">
    <div><h2>${c.name}</h2>
@@ -387,11 +838,18 @@ function panel(c){
   <div class="card explain"><h3>How this score works</h3>
    <p><b>Formula:</b> Risk Score = 50% × Rule Engine score + 50% × ML probability. The rule engine is fully auditable — every point traces to a documented factor weight below. The ML component is a gradient-boosting model trained on ${M.risk_models.n_train.toLocaleString()} records (AUC ${(M.risk_models.gradient_boosting.auc*100).toFixed(1)}% on ${M.risk_models.n_test.toLocaleString()} held-out cases), which captures factor interactions the rules miss. Blending them means one bad model can never single-handedly approve a risky case.</p>
    <p><b>The traffic light:</b> below ${A_LINE} with clean signals the case is <b style="color:var(--ok)">GREEN — APPROVE</b>, clear-cut and auto-approved. From ${A_LINE} to ${D_LINE-1}, or whenever there is a major data conflict, model disagreement, or the applicant disclosed unique circumstances, the case is <b style="color:var(--warn)">YELLOW — MANUAL REVIEW</b>: a human underwriter must look at the application and the person as a whole. At ${D_LINE} or above, or when the application materially contradicts the medical/identity evidence, the case is <b style="color:var(--bad)">RED — DECLINE</b>.</p>
-   <div class="bands">
-    <span class="band-chip" style="background:var(--ok-soft);color:var(--ok)">0–${A_LINE-1} Approve</span>
-    <span class="band-chip" style="background:var(--warn-soft);color:var(--warn)">${A_LINE}–${D_LINE-1} Manual Review</span>
-    <span class="band-chip" style="background:var(--bad-soft);color:var(--bad)">${D_LINE}–100 Decline</span>
-   </div></div>
+   <div class="scale-wrap">
+    <div class="scale-ticks"><span style="left:0%">0</span><span style="left:${A_LINE}%">${A_LINE}</span><span style="left:${D_LINE}%">${D_LINE}</span><span style="left:100%">100</span></div>
+    <div class="scale-track">
+     <div class="scale-seg" style="width:${A_LINE}%;background:var(--ok)"></div>
+     <div class="scale-seg" style="width:${D_LINE-A_LINE}%;background:var(--warn)"></div>
+     <div class="scale-seg" style="width:${100-D_LINE}%;background:var(--bad)"></div></div>
+    <div class="scale-labels">
+     <div class="slab" style="width:${A_LINE}%"><div class="sl-word" style="color:var(--ok)">APPROVE</div><div class="sl-sub">clear-cut, auto-approved</div></div>
+     <div class="slab" style="width:${D_LINE-A_LINE}%"><div class="sl-word" style="color:var(--warn)">MANUAL REVIEW</div><div class="sl-sub">a human sees the whole person</div></div>
+     <div class="slab" style="width:${100-D_LINE}%"><div class="sl-word" style="color:var(--bad)">DECLINE</div><div class="sl-sub">exceeds appetite / misrepresentation</div></div></div>
+   </div>
+   <div class="override-note"><span class="on-ic">⚠</span><div><b>Override:</b> any major cross-document conflict, model disagreement over 20 points, or a disclosed unique circumstance forces manual review — regardless of score.</div></div></div>
   <div class="card"><h3>Rule Engine — Factor Breakdown</h3>
    ${c.rule_factors.map(f=>`<div class="factor-row"><div><div class="factor-label">${f[0]}</div><div class="factor-detail">${f[1]}</div></div>
     <div class="factor-pts">${f[2]>0?'+':''}${f[2]}</div></div>`).join('')}
@@ -403,17 +861,11 @@ function panel(c){
   return `<div class="card"><h3>System Decision</h3><div class="decision-wrap">
    <div class="stamp ${cls}">${c.decision}</div>
    <div class="decision-detail"><h3>${c.rate_class}</h3>
-    ${c.reasons.map(r=>`<p>· ${r}</p>`).join('')}
-    <p class="mono" style="font-size:11px">Risk ${c.risk_score}/100 · Rule ${c.rule_score} · GB ${c.ml_score.toFixed(0)} · ${c.conflicts.length} conflict(s)</p></div></div>
+    <div class="why-head">Why this decision</div>
+    <ul class="why-list">${c.reasons.map(r=>`<li>${r}</li>`).join('')}</ul>
+    <p class="mono" style="font-size:11px;margin-top:10px">Risk ${c.risk_score}/100 · Rule ${c.rule_score} · GB ${c.ml_score.toFixed(0)} · ${c.conflicts.length} conflict(s)</p></div></div>
    ${c.unique?`<div class="unique-banner"><b>UNIQUE CIRCUMSTANCES</b><p style="margin:5px 0 0">“${c.unique}”</p></div>`:''}</div>
-  <div class="card"><h3>Human Underwriter Review</h3>
-   ${ov?`<div class="unique-banner" style="border-left-color:var(--acc);background:var(--acc-soft)"><b>OVERRIDDEN BY UNDERWRITER → ${ov.decision}</b>
-     <p style="margin:5px 0 0">${ov.reason?'“'+ov.reason+'” — ':''}Recorded ${ov.at}. This decision is included when you export overrides, and the models learn from it on the next training run.</p></div>
-    <button class="ai-btn" onclick="clearOverride('${c.id}')" style="background:var(--mut)">Remove override</button>`
-   :`<div class="note" style="margin:0 0 12px">Disagree with the system? Record the human call — it feeds back into model training.</div>
-    <button class="ai-btn" style="background:var(--ok)" onclick="setOverride('${c.id}',0)">Override → APPROVE</button>
-    <button class="ai-btn" style="background:var(--bad);margin-left:8px" onclick="setOverride('${c.id}',1)">Override → DECLINE</button>`}
-   <button class="ai-btn" style="margin-left:8px;background:var(--acc)" onclick="downloadMemo('${c.id}')">⬇ Decision Memo</button></div>
+  ${caseDeskHTML(c)}
   <div class="card"><div class="ai-head"><h3 style="margin:0">Underwriting Summary — grounded in extracted fields only</h3></div>
    <div class="ai-text">${c.ai_summary}</div></div>`;
  }
@@ -458,11 +910,11 @@ h1{font-size:20px;border-bottom:2px solid #111;padding-bottom:8px}h2{font-size:1
 .verdict{display:inline-block;border:3px solid ${colr};color:${colr};font-weight:700;padding:8px 18px;font-size:18px;letter-spacing:2px}
 td{padding:4px 14px 4px 0;font-size:14px}.mut{color:#666;font-size:12px}</style></head><body>
 <h1>Underwriting Decision Memo — ${c.name} (${c.id})</h1>
-<p class="mut">Generated ${new Date().toISOString().slice(0,10)} · Underwriting Copilot MVP · composite risk ${c.risk_score}/100</p>
+<p class="mut">Generated ${new Date().toISOString().slice(0,10)} · Underwriting Copilot MVP · composite risk ${c.risk_score}/100${CURRENT_USER?` · Reviewed by ${CURRENT_USER} (${CURRENT_ROLE})`:''}</p>
 <p><span class="verdict">${ov?ov.decision+' (HUMAN OVERRIDE)':c.decision}</span></p>
 ${ov&&ov.reason?`<p><b>Override reason:</b> ${ov.reason}</p>`:''}
 <h2>Rate class</h2><p>${c.rate_class}</p>
-<h2>Basis for decision</h2>${c.reasons.map(r=>`<p>· ${r}</p>`).join('')}
+<h2>Basis for decision</h2><ul>${c.reasons.map(r=>`<li>${r}</li>`).join('')}</ul>
 ${c.unique?`<h2>Unique circumstances disclosed</h2><p>“${c.unique}”</p>`:''}
 <h2>Summary</h2><p>${c.ai_summary}</p>
 <h2>Scores</h2><table><tr><td>Composite risk</td><td><b>${c.risk_score}/100</b></td></tr>
@@ -665,7 +1117,8 @@ function scoreNow(){
    <div class="gauge-wrap">${gauge(d.comp)}
     <div class="gauge-info">
      <div class="g-band cls-${VM[d.verdict][1]}">${VM[d.verdict][0]}</div>
-     ${d.reasons.map(r=>`<div class="g-note">· ${esc(r)}</div>`).join('')}
+     <div class="why-head">Why this decision</div>
+     <ul class="why-list">${d.reasons.map(r=>`<li>${esc(r)}</li>`).join('')}</ul>
      <div class="sub-scores">
       <div class="sub-score"><div class="ss-l">Rule engine (50%)</div><div class="ss-v">${rule}</div><div class="bar-track"><div class="bar-fill" style="width:${rule}%;background:var(--acc)"></div></div></div>
       <div class="sub-score"><div class="ss-l">ML — logistic (50%)</div><div class="ss-v">${ml.toFixed(0)}</div><div class="bar-track"><div class="bar-fill" style="width:${ml}%;background:var(--acc)"></div></div></div>
@@ -686,6 +1139,8 @@ function scoreNow(){
  document.getElementById('scoreResult').scrollIntoView({behavior:'smooth'});
 }
 render();
+// keep SLA timers + priority ranking live (queue/case views only, so forms aren't disturbed)
+setInterval(()=>{if(CURRENT_ROLE&&(view==='space'||view==='case'))render();},60000);
 </script>
 """
 
