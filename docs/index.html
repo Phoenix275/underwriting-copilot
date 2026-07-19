@@ -1043,7 +1043,7 @@ function wireScoreForm(){
    // each field tries multiple label synonyms so forms from other carriers still auto-fill
    const grab=(labels,re)=>{for(const label of labels){
     const m=text.match(new RegExp(label+"[\\s\\S]{0,60}?("+re+")","i"));if(m)return m[1];}return null;};
-   const name=grab(["FULL NAME","APPLICANT NAME","NAME OF APPLICANT","INSURED NAME","\\bNAME\\b"],"[A-Z][a-zA-Z'’-]+(?:\\s+[A-Z][a-zA-Z'’-]+)+");
+   const name=grab(["FULL NAME","APPLICANT NAME","NAME OF APPLICANT","INSURED NAME","\\bNAME\\b"],"[A-Z][a-zA-Z'’-]*[a-z](?:\\s+[A-Z][a-zA-Z'’-]*[a-z])+");
    if(name){document.getElementById('f_name').value=name;got.push('name');}
    const dob=grab(["DATE OF BIRTH","\\bDOB\\b","BIRTH DATE"],"\\d{4}-\\d{2}-\\d{2}")
     ||grab(["DATE OF BIRTH","\\bDOB\\b","BIRTH DATE"],"\\d{1,2}/\\d{1,2}/\\d{4}");
