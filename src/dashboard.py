@@ -354,6 +354,12 @@ function recomputeVerdicts(){
   else{verdict='green';decision='APPROVE';rate=comp<=25?'Preferred Rate Class':'Standard Rate Class';
     reasons.push(`Composite score ${comp} is below the ${A_LINE}-point approval line; engines agree and no conflicts or special circumstances were found`);}
   c.verdict=verdict;c.decision=decision;c.rate_class=rate;c.reasons=reasons;c.referred=verdict!=='green';
+  if(c.ai_summary){ // keep the baked narrative consistent with the recomputed verdict
+   const bandTxt=verdict==='green'?'green approval band':verdict==='yellow'?'yellow manual-review band':'red decline band';
+   c.ai_summary=c.ai_summary
+    .replace(/placing the case in the (?:green approval|yellow manual-review|red decline) band/,'placing the case in the '+bandTxt)
+    .replace(/System decision: [\s\S]*$/,`System decision: ${decision} — ${rate} (${reasons.join('; ')}).`);
+  }
  });
 }
 recomputeVerdicts();
@@ -1144,7 +1150,7 @@ setInterval(()=>{if(CURRENT_ROLE&&(view==='space'||view==='case'))render();},600
 </script>
 """
 
-APPROVE_LINE, DECLINE_LINE = 40, 70
+APPROVE_LINE, DECLINE_LINE = 50, 90  # must match A_LINE / D_LINE in the JS template
 
 def _money(n):
     return "$" + format(int(round(n)), ",")
