@@ -657,8 +657,9 @@ function gauge(score){
 }
 function overview(){
  const vc={green:0,yellow:0,red:0};CASES.forEach(c=>vc[c.verdict]++);
- const tc={"Low (0–25)":0,"Moderate (26–39)":0,"Elevated (40–69)":0,"High (70–100)":0};
- CASES.forEach(c=>{const s=c.risk_score;if(s<=25)tc["Low (0–25)"]++;else if(s<A_LINE)tc["Moderate (26–39)"]++;else if(s<D_LINE)tc["Elevated (40–69)"]++;else tc["High (70–100)"]++;});
+ const tierLabels={low:"Low (0–25)",mod:`Moderate (26–${A_LINE-1})`,elev:`Elevated (${A_LINE}–${D_LINE-1})`,high:`High (${D_LINE}–100)`};
+ const tc={[tierLabels.low]:0,[tierLabels.mod]:0,[tierLabels.elev]:0,[tierLabels.high]:0};
+ CASES.forEach(c=>{const s=c.risk_score;if(s<=25)tc[tierLabels.low]++;else if(s<A_LINE)tc[tierLabels.mod]++;else if(s<D_LINE)tc[tierLabels.elev]++;else tc[tierLabels.high]++;});
  const mx=Math.max(...Object.values(tc),1);const cols=["var(--ok)","var(--ok)","var(--warn)","var(--bad)"];
  const gb=M.risk_models.gradient_boosting,lr=M.risk_models.logistic_regression;
  const fi=M.risk_models.gb_feature_importance;const mxf=Math.max(...Object.values(fi));
