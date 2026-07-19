@@ -517,7 +517,7 @@ function caseDeskHTML(c){
      <button class="ai-btn" style="background:var(--ok)" onclick="wfDecide('${c.id}','approve')">✓ Approve</button>
      <button class="ai-btn" style="background:var(--bad)" onclick="wfDecide('${c.id}','decline')">✕ Decline</button>
      <button class="ai-btn" style="background:var(--warn)" onclick="wfRequestInfo('${c.id}')">Request info</button>
-     <button class="ai-btn" style="background:var(--ink)" onclick="wfNote('${c.id}')">+ Note</button></div>
+     <button class="ai-btn" onclick="wfNote('${c.id}')">+ Note</button></div>
    <div class="note">This case is in your queue because the system flagged it for a human. Approve or decline with a rationale — it's logged to the audit trail and moves the case to Completed.</div>`;
  } else if(isUW&&resolved){
   controls=`<div class="desk-actions" style="margin-top:2px">
