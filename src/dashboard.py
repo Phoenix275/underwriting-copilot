@@ -1059,9 +1059,11 @@ function wireScoreForm(){
     text+=tc.items.map(it=>it.str).join('\n')+'\n';}
    const got=[];
    // each field tries multiple label synonyms so forms from other carriers still auto-fill
-   const grab=(labels,re)=>{for(const label of labels){
-    const m=text.match(new RegExp(label+"[\\s\\S]{0,60}?("+re+")","i"));if(m)return m[1];}return null;};
-   const name=grab(["FULL NAME","APPLICANT NAME","NAME OF APPLICANT","INSURED NAME","\\bNAME\\b"],"[A-Z][a-zA-Z'’-]*[a-z](?:\\s+[A-Z][a-zA-Z'’-]*[a-z])+");
+   const grab=(labels,re,flags="i")=>{for(const label of labels){
+    const m=text.match(new RegExp(label+"[\\s\\S]{0,60}?("+re+")",flags));if(m)return m[1];}return null;};
+   // name value must match case-SENSITIVELY (no "i") or the [A-Z]/[a-z] token
+   // classes stop distinguishing names from the next ALL-CAPS form label
+   const name=grab(["FULL NAME","Full [Nn]ame","APPLICANT NAME","NAME OF APPLICANT","INSURED NAME","\\bNAME\\b"],"[A-Z][a-zA-Z'’-]*[a-z](?:\\s+[A-Z][a-zA-Z'’-]*[a-z])+","");
    if(name){document.getElementById('f_name').value=name;got.push('name');}
    const dob=grab(["DATE OF BIRTH","\\bDOB\\b","BIRTH DATE"],"\\d{4}-\\d{2}-\\d{2}")
     ||grab(["DATE OF BIRTH","\\bDOB\\b","BIRTH DATE"],"\\d{1,2}/\\d{1,2}/\\d{4}");
