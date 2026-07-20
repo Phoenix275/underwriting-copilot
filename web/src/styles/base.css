@@ -53,8 +53,12 @@ select {
   color: inherit;
 }
 
+/* Navigation is anchors so cases are linkable and open-in-new-tab works, but it
+   should read as chrome, not as prose. Content links re-enable their underline
+   where they appear inside running text. */
 a {
   color: inherit;
+  text-decoration: none;
 }
 
 svg {

@@ -7,11 +7,12 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:snapshot": "tsc -b && vite build --mode snapshot",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "verify": "node scripts/verify-port.mjs",
     "sync": "cp dist/index.html ../dashboard/underwriting_copilot_mvp.html && cp dist/index.html ../docs/index.html",
-    "release": "npm run verify && npm run build && npm run sync"
+    "release": "npm run verify && npm run build:snapshot && npm run sync"
   },
   "dependencies": {
     "motion": "^12.42.2",

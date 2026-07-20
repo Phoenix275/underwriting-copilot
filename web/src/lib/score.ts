@@ -10,7 +10,7 @@
  *  Ports: rule_score · framingham_cvd10 · external prior · logistic regression
  *  · estimate_premium · affordability_assess · decide. */
 
-import { report } from '../data'
+import { activeReport } from '../data/store'
 import type { Affordability, AffordIndicator, Case, Conflict, Tier, Verdict } from '../data/types'
 
 /* ------------------------------------------------------------------ input -- */
@@ -162,7 +162,10 @@ interface PriorModel {
   weight: number
 }
 
-const priorModels = (report.risk_models.prior_export ?? []) as unknown as PriorModel[]
+/** Read through a getter, not captured at import: in live mode the dataset is
+ *  replaced after this module has already been evaluated. */
+const priorModels = () =>
+  (activeReport().risk_models.prior_export ?? []) as unknown as PriorModel[]
 
 const sigmoid = (z: number) => 1 / (1 + Math.exp(-z))
 
@@ -172,7 +175,7 @@ const sigmoid = (z: number) => 1 / (1 + Math.exp(-z))
 export function externalPrior(f: Record<string, number>): number {
   let total = 0
   let wsum = 0
-  for (const m of priorModels) {
+  for (const m of priorModels()) {
     if (m.weight <= 0) continue
     let z = m.intercept
     for (let i = 0; i < m.features.length; i++) {
@@ -188,10 +191,9 @@ export function externalPrior(f: Record<string, number>): number {
 
 /* --------------------------------------------------------- logistic model -- */
 
-const lr = report.risk_models.lr_export
-
 /** Port of engine.ml_scores for the exported logistic regression. Returns 0–100. */
 export function mlScore(features: Record<string, number>): number {
+  const lr = activeReport().risk_models.lr_export
   let z = lr.intercept
   for (let i = 0; i < lr.features.length; i++) {
     const raw = features[lr.features[i]] ?? 0
@@ -383,9 +385,12 @@ export function decide(
   conflicts: Conflict[],
   unique: string | null,
   afford: Affordability | null,
-  aLine = report.decisioning.thresholds.a_line,
-  dLine = report.decisioning.thresholds.d_line,
+  aLineArg?: number,
+  dLineArg?: number,
 ): Decision {
+  const thresholds = activeReport().decisioning.thresholds
+  const aLine = aLineArg ?? thresholds.a_line
+  const dLine = dLineArg ?? thresholds.d_line
   const composite = Math.round(0.5 * ruleS + 0.5 * mlS)
   const majors = conflicts.filter((c) => c.severity === 'major')
   const misrep = majors.filter((c) => MISREP_TYPES.has(c.type))

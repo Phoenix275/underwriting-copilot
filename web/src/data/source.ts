@@ -1,0 +1,110 @@
+import bundledCases from './cases.json'
+import bundledReport from './report.json'
+import type { Case, Report } from './types'
+
+/** Where the workbench gets its data.
+ *
+ *  Two tiers, and the offline one is not a degraded mode — it is the artifact
+ *  that ships to Streamlit, GitHub Pages and a USB stick. When VITE_API_URL is
+ *  set the app reads the live book from the FastAPI service instead; if that
+ *  call fails for any reason it falls back to the bundle and says so in the
+ *  interface rather than showing an empty page.
+ *
+ *  The evaluation report travels with the cases because it carries the model
+ *  coefficients and decision thresholds the browser scores with — reading cases
+ *  from one run and thresholds from another would silently mis-score. */
+
+export type DataSource = 'live' | 'bundled'
+
+export interface Dataset {
+  cases: Case[]
+  report: Report
+  source: DataSource
+  /** why the live read failed, when it did */
+  error?: string
+  /** when the API produced this snapshot */
+  servedAt?: string
+}
+
+export const API_URL: string | undefined =
+  (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') || undefined
+
+export const BUNDLED: Dataset = {
+  cases: bundledCases as unknown as Case[],
+  report: bundledReport as unknown as Report,
+  source: 'bundled',
+}
+
+/** A live read must not hang the page — the bundle is already in memory, so
+ *  waiting more than a few seconds for the network is never the better option. */
+const TIMEOUT_MS = 6000
+
+export async function loadDataset(): Promise<Dataset> {
+  if (!API_URL) return BUNDLED
+
+  const abort = new AbortController()
+  const timer = setTimeout(() => abort.abort(), TIMEOUT_MS)
+  try {
+    const res = await fetch(`${API_URL}/portfolio`, {
+      signal: abort.signal,
+      headers: { Accept: 'application/json' },
+    })
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
+
+    const body = (await res.json()) as {
+      cases: Case[]
+      report: Report
+      served_at?: string
+    }
+    if (!Array.isArray(body.cases) || !body.cases.length || !body.report) {
+      throw new Error('response did not contain a scored book')
+    }
+
+    // the plane's entry order and the case file's prev/next both assume the
+    // pipeline's ascending-risk ordering, so sort defensively
+    const cases = [...body.cases].sort((a, b) => a.risk_score - b.risk_score)
+    return { cases, report: body.report, source: 'live', servedAt: body.served_at }
+  } catch (e) {
+    const reason =
+      e instanceof DOMException && e.name === 'AbortError'
+        ? `no response in ${TIMEOUT_MS / 1000}s`
+        : e instanceof Error
+          ? e.message
+          : String(e)
+    return { ...BUNDLED, error: reason }
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/* ---- writes ----------------------------------------------------------- */
+
+export interface DecisionRecord {
+  action: 'APPROVED' | 'DECLINED' | 'INFO_REQUESTED'
+  rationale: string
+  decided_by: string
+  decided_at?: string
+}
+
+export async function fetchDecisions(caseId: string): Promise<DecisionRecord[]> {
+  if (!API_URL) return []
+  const res = await fetch(`${API_URL}/cases/${encodeURIComponent(caseId)}/decisions`)
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
+  return res.json()
+}
+
+export async function recordDecision(
+  caseId: string,
+  d: Omit<DecisionRecord, 'decided_at'>,
+): Promise<void> {
+  if (!API_URL) throw new Error('No API configured — this build is a read-only snapshot.')
+  const res = await fetch(`${API_URL}/cases/${encodeURIComponent(caseId)}/decision`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(d),
+  })
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '')
+    throw new Error(detail || `${res.status} ${res.statusText}`)
+  }
+}

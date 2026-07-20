@@ -1,13 +1,11 @@
-import { useRef } from 'react'
+import { useMemo, useRef } from 'react'
 import { motion, useScroll, useSpring } from 'motion/react'
 import type { ViewId } from '../App'
-import { report } from '../data'
-import type { Case } from '../data/types'
+import { useData } from '../data/DataContext'
+import type { Case, Report } from '../data/types'
 import { IconArrow } from '../components/icons'
 import { affordClass, pct, usd, verdictClass } from '../lib/format'
 import '../styles/pipeline.css'
-
-const t = report.decisioning.thresholds
 
 interface Step {
   title: string
@@ -18,7 +16,9 @@ interface Step {
   forThisCase: (c: Case) => { text: string; cls?: string }
 }
 
-const STEPS: Step[] = [
+const buildSteps = (report: Report): Step[] => {
+  const t = report.decisioning.thresholds
+  return [
   {
     title: 'Read the packet',
     what:
@@ -89,9 +89,12 @@ const STEPS: Step[] = [
     ],
     forThisCase: (c) => ({ text: `${c.decision} — ${c.rate_class}.`, cls: verdictClass(c.verdict) }),
   },
-]
+  ]
+}
 
 export default function Pipeline({ c, onGo }: { c: Case; onGo: (v: ViewId) => void }) {
+  const { report } = useData()
+  const steps = useMemo(() => buildSteps(report), [report])
   const track = useRef<HTMLOListElement>(null)
   const { scrollYProgress } = useScroll({
     target: track,
@@ -123,7 +126,7 @@ export default function Pipeline({ c, onGo }: { c: Case; onGo: (v: ViewId) => vo
             <motion.div className="flow__spine-fill" style={{ scaleY: spine }} />
           </div>
 
-          {STEPS.map((s, i) => {
+          {steps.map((s, i) => {
             const mine = s.forThisCase(c)
             return (
               <li key={s.title} className="flow__step">

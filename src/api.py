@@ -14,12 +14,13 @@ import json
 import os
 import sqlite3
 import time
-from contextlib import contextmanager
+from contextlib import asynccontextmanager, contextmanager
 from typing import Optional
 
 import joblib
 import pandas as pd
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 import engine
@@ -29,13 +30,41 @@ import published_models
 ROOT = os.path.join(os.path.dirname(__file__), "..")
 MODELS_PATH = os.path.join(ROOT, "output", "models.joblib")
 REPORT_PATH = os.path.join(ROOT, "output", "evaluation_report.json")
+PORTFOLIO_PATH = os.path.join(ROOT, "output", "portfolio.json")
 DB_PATH = os.environ.get("COPILOT_DB", os.path.join(ROOT, "data", "copilot.db"))
-
-app = FastAPI(title="Underwriting Copilot API", version="0.5",
-              description="AI-assisted financial viability assessment — dual risk engine + affordability screen")
 
 _bundle = None
 _thresholds = (engine.APPROVE_LINE, engine.DECLINE_LINE)
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    _load()
+    _init_db()
+    yield
+
+
+app = FastAPI(title="Underwriting Copilot API", version="0.6",
+              description="AI-assisted financial viability assessment — dual risk engine + affordability screen",
+              lifespan=lifespan)
+
+# The workbench is a static bundle that may be served from GitHub Pages, a
+# Streamlit iframe or localhost, so it is always a different origin from this
+# API. Origins are read from COPILOT_ALLOWED_ORIGINS (comma separated); the
+# default is local development only — a deployment must name its own origins
+# rather than inherit a wildcard.
+_origins = [o.strip() for o in os.environ.get(
+    "COPILOT_ALLOWED_ORIGINS",
+    "http://localhost:5173,http://localhost:4173,http://localhost:8899",
+).split(",") if o.strip()]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_origins,
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
+)
 
 
 def _load():
@@ -68,12 +97,6 @@ def _init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT, case_id TEXT NOT NULL REFERENCES cases(case_id),
             action TEXT NOT NULL, rationale TEXT NOT NULL,
             decided_by TEXT NOT NULL, decided_at TEXT NOT NULL)""")
-
-
-@app.on_event("startup")
-def startup():
-    _load()
-    _init_db()
 
 
 class Applicant(BaseModel):
@@ -171,6 +194,29 @@ def score(applicant: Applicant):
     return result
 
 
+@app.get("/portfolio")
+def portfolio():
+    """The scored book and its evaluation report — what the workbench reads.
+
+    This is the pipeline's output rather than anything in SQLite: the 200 cases
+    come from a batch run, while the `cases` table below holds applications
+    submitted through POST /score. Serving it here is what lets the front end
+    run against a live backend instead of a bundle frozen at build time.
+    """
+    for path in (PORTFOLIO_PATH, REPORT_PATH):
+        if not os.path.exists(path):
+            raise HTTPException(
+                503,
+                f"{os.path.relpath(path, ROOT)} not found — run `python src/run_pipeline.py` first",
+            )
+    book = json.load(open(PORTFOLIO_PATH))
+    return {
+        "cases": book["cases"],
+        "report": json.load(open(REPORT_PATH)),
+        "served_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+    }
+
+
 @app.get("/cases")
 def cases():
     with _db() as con:
@@ -184,25 +230,61 @@ def cases():
 def case(case_id: str):
     with _db() as con:
         r = con.execute("SELECT * FROM cases WHERE case_id=?", (case_id,)).fetchone()
-        if not r:
-            raise HTTPException(404, "case not found")
         decs = con.execute("SELECT action, rationale, decided_by, decided_at FROM decisions "
                            "WHERE case_id=? ORDER BY id", (case_id,)).fetchall()
-    return {"case_id": r["case_id"], "created_at": r["created_at"],
-            "applicant": json.loads(r["payload"]), "result": json.loads(r["result"]),
-            "human_decisions": [dict(d) for d in decs]}
+    if r:
+        return {"case_id": r["case_id"], "created_at": r["created_at"],
+                "source": "api", "applicant": json.loads(r["payload"]),
+                "result": json.loads(r["result"]),
+                "human_decisions": [dict(d) for d in decs]}
+
+    # fall back to the batch book so every id the workbench can show is
+    # addressable here, not only the ones submitted through POST /score
+    if os.path.exists(PORTFOLIO_PATH):
+        for c in json.load(open(PORTFOLIO_PATH))["cases"]:
+            if c["id"] == case_id:
+                return {"case_id": case_id, "created_at": None, "source": "portfolio",
+                        "result": c, "human_decisions": [dict(d) for d in decs]}
+    raise HTTPException(404, "case not found")
+
+
+def _portfolio_ids() -> set:
+    """Case ids from the batch run. Read per call rather than cached so a fresh
+    pipeline run is picked up without restarting the API."""
+    if not os.path.exists(PORTFOLIO_PATH):
+        return set()
+    return {c["id"] for c in json.load(open(PORTFOLIO_PATH))["cases"]}
+
+
+def _case_exists(con, case_id: str) -> bool:
+    if con.execute("SELECT 1 FROM cases WHERE case_id=?", (case_id,)).fetchone():
+        return True
+    # a referral an underwriter actually works comes from the batch book, not
+    # from POST /score, so those ids have to be recordable against too
+    return case_id in _portfolio_ids()
 
 
 @app.post("/cases/{case_id}/decision")
 def record_decision(case_id: str, d: HumanDecision):
     with _db() as con:
-        if not con.execute("SELECT 1 FROM cases WHERE case_id=?", (case_id,)).fetchone():
+        if not _case_exists(con, case_id):
             raise HTTPException(404, "case not found")
         con.execute("INSERT INTO decisions(case_id, action, rationale, decided_by, decided_at) "
                     "VALUES (?,?,?,?,?)",
                     (case_id, d.action, d.rationale, d.decided_by,
                      time.strftime("%Y-%m-%d %H:%M:%S")))
     return {"case_id": case_id, "recorded": d.action}
+
+
+@app.get("/cases/{case_id}/decisions")
+def case_decisions(case_id: str):
+    """The human decision trail for one case — the audit record every AI
+    governance regime in the model card asks for."""
+    with _db() as con:
+        rows = con.execute(
+            "SELECT action, rationale, decided_by, decided_at FROM decisions "
+            "WHERE case_id=? ORDER BY id", (case_id,)).fetchall()
+    return [dict(r) for r in rows]
 
 
 @app.get("/health")

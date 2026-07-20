@@ -38,7 +38,7 @@ jobs:
       - name: Browser scoring engine must agree with the Python pipeline
         run: npm run verify
         working-directory: web
-      - run: npm run build
+      - run: npm run build:snapshot
         working-directory: web
       - name: Built dashboard must be a single self-contained file
         working-directory: web
@@ -56,6 +56,12 @@ jobs:
           if grep -qE '(src|href)="https?://' dist/index.html; then
             echo "build references an external origin:"
             grep -oE '(src|href)="https?://[^"]*"' dist/index.html | sort -u
+            exit 1
+          fi
+          # the shipped artifact is a read-only snapshot; a developer's local
+          # API URL must never be baked into it
+          if grep -qE 'localhost:(8000|5173)' dist/index.html; then
+            echo "a local API URL leaked into the snapshot build"
             exit 1
           fi
       - name: Committed copies must match the build

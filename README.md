@@ -62,14 +62,43 @@ The workbench front end is a Vite + React app in `web/`:
 npm --prefix web ci
 npm --prefix web run dev       # local dev server
 npm --prefix web run verify    # replay all 200 cases through the browser engine
-npm --prefix web run release   # verify → build → copy into dashboard/ and docs/
+npm --prefix web run release   # verify → snapshot build → copy into dashboard/ and docs/
 ```
 
-`npm run build` emits **one** self-contained `dist/index.html` with its data, fonts
-and styles inlined — the same file is served by Streamlit, by GitHub Pages from
-`docs/`, and by opening it off disk. CI fails the build if a second asset appears or
-if any tag references an external origin, because either would 404 inside the
-Streamlit iframe.
+## Two tiers: a snapshot and a live service
+
+The same React app runs in two modes, and the offline one is not a degraded
+fallback — it is the artifact that ships.
+
+**Snapshot (default).** `npm run release` builds with `--mode snapshot`, which forces
+`VITE_API_URL` empty. The result is **one** self-contained `dist/index.html` with data,
+fonts and styles inlined — served by Streamlit, by GitHub Pages from `docs/`, or opened
+straight off disk with no server and no network. CI fails the build if a second asset
+appears, if any tag references an external origin, or if a developer's local API URL
+leaks in.
+
+**Live.** Point the app at the FastAPI service and it reads the book over HTTP instead:
+
+```bash
+uvicorn api:app --app-dir src --port 8000      # terminal 1
+echo 'VITE_API_URL=http://localhost:8000' > web/.env.local
+npm --prefix web run dev                        # terminal 2
+```
+
+In live mode the workbench reads `GET /portfolio` (cases *and* the evaluation report
+together, so thresholds always match the run that produced the cases) and an underwriter
+can record a decision against a case, which persists to SQLite through
+`POST /cases/{id}/decision` and reads back as an audit trail. Set
+`COPILOT_ALLOWED_ORIGINS` to the origins you serve the bundle from — the default is
+localhost only, deliberately, rather than a wildcard.
+
+If the API is unreachable the app **does not** show an empty page: it falls back to the
+bundled book and says so in the rail, with the reason and a retry, because an underwriter
+silently reading yesterday's data is the worse failure.
+
+Every view is deep-linkable — `#/case/APP-1008`, `#/portfolio?filter=red`, `#/evidence`.
+Hash routing rather than paths, because the same file has to resolve identically on
+GitHub Pages, inside a Streamlit iframe, and from `file://`.
 
 Dependency files: `requirements.txt` is **deployment-only** (just Streamlit —
 the hosted dashboard is a pre-built static HTML file and does no modelling at
@@ -114,9 +143,12 @@ src/run_pipeline.py  orchestrator; writes evaluation_report.json + portfolio.jso
                      + models.joblib (consumed by the REST API)
 src/summaries.py     Claude-written case summaries w/ groundedness check;
                      falls back to the deterministic template without a key
-src/api.py           FastAPI REST API: POST /score → full engine verdict,
-                     SQLite-persisted cases + human decisions (brief's
-                     "REST APIs" + "SQL Database" items)
+src/api.py           FastAPI REST API (brief's "REST APIs" + "SQL Database" items):
+                     GET  /portfolio          the scored book + evaluation report
+                     POST /score              one applicant → full engine verdict
+                     GET  /cases[/{id}]       API-scored and batch cases
+                     POST /cases/{id}/decision   record a human decision
+                     GET  /cases/{id}/decisions  the audit trail
 src/dashboard.py     legacy single-file dashboard generator (superseded by web/)
 src/webdata.py       exports portfolio + report into web/src/data/
 tests/               54 offline tests: conflicts, rule engine, decide branches,
@@ -126,6 +158,8 @@ web/                 the workbench — Vite + React + TypeScript, builds to one 
   src/lib/score.ts       browser port of engine.py; verified against all 200 cases
   src/lib/projection.ts  perspective camera for the portfolio plane
   src/lib/guilloche.ts   hypotrochoid rosettes — the security-print house pattern
+  src/lib/router.ts      hash routing, so every view is a shareable link
+  src/data/source.ts     live API read with a bundled-snapshot fallback
   src/data/benchmarks.ts published industry figures, each with a source and a date
   src/views/             Portfolio · Case file · How it decides · Evidence · Score
   scripts/verify-port.mjs  replays the pipeline's cases through the browser engine

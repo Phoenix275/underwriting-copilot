@@ -34,6 +34,11 @@ await build({
   platform: 'node',
   outfile,
   logLevel: 'warning',
+  // score.ts reaches the dataset through data/store.ts, which pulls in the
+  // source layer and its `import.meta.env` lookup. Node has no such object, so
+  // stub it: with no VITE_API_URL the store falls back to the bundled data,
+  // which is exactly what this check should be comparing against.
+  define: { 'import.meta.env': '{}' },
 })
 
 const m = await import(pathToFileURL(outfile).href)

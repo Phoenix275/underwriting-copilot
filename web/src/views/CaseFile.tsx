@@ -1,7 +1,8 @@
 import { motion } from 'motion/react'
 import type { ViewId } from '../App'
-import { cases, report } from '../data'
+import { useData } from '../data/DataContext'
 import type { Case } from '../data/types'
+import DecisionPanel from '../components/DecisionPanel'
 import DecisionStamp from '../components/DecisionStamp'
 import { IconArrow } from '../components/icons'
 import { affordClass, pct, shortDecision, usd, usdShort, verdictClass } from '../lib/format'
@@ -28,6 +29,7 @@ export default function CaseFile({
   onOpen: (id: string) => void
   onGo: (v: ViewId) => void
 }) {
+  const { cases, report } = useData()
   const idx = cases.findIndex((x) => x.id === c.id)
   const prev = cases[idx - 1]
   const next = cases[idx + 1]
@@ -328,6 +330,12 @@ export default function CaseFile({
             <span className="figure factors__pts">{c.rule_score}</span>
           </div>
         </div>
+
+        <div className="srule">
+          <span className="eyebrow">The human decision</span>
+        </div>
+
+        <DecisionPanel caseId={c.id} />
 
         <div className="caseout">
           <button type="button" className="btn" onClick={() => onGo('pipeline')}>

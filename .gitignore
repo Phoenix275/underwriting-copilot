@@ -10,3 +10,6 @@ web/node_modules/
 web/dist/
 web/.vite/
 *.tsbuildinfo
+
+# local dev overrides (API URL etc.)
+web/.env.local

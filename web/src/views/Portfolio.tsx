@@ -1,25 +1,38 @@
 import { useMemo, useState } from 'react'
-import { cases, report } from '../data'
+import { useData } from '../data/DataContext'
 import type { Case } from '../data/types'
 import PortfolioPlane from '../components/PortfolioPlane'
 import { FILTERS, matchesFilter, strainScore, type PortfolioFilter } from '../lib/plane'
+import type { Route } from '../lib/router'
 import { pct, shortDecision, usdShort, verdictClass, affordClass } from '../lib/format'
 import '../styles/plane.css'
 import '../styles/queue.css'
 
-const t = report.decisioning.thresholds
-
 export default function Portfolio({
   onOpen,
   selectedId,
+  route,
+  navigate,
 }: {
   onOpen: (id: string) => void
   selectedId: string
+  route: Route
+  navigate: (r: Partial<Route> & { view: 'portfolio' }) => void
 }) {
-  const [filter, setFilter] = useState<PortfolioFilter>('all')
+  const { cases, report } = useData()
+  const t = report.decisioning.thresholds
+
+  // the filter lives in the URL so "here are the declines" is a link you can
+  // paste to a colleague, and the back button steps through what you looked at
+  const filter = (FILTERS.some((f) => f.id === route.params.filter)
+    ? route.params.filter
+    : 'all') as PortfolioFilter
+  const setFilter = (f: PortfolioFilter) =>
+    navigate({ view: 'portfolio', params: f === 'all' ? {} : { filter: f } })
+
   const [hovered, setHovered] = useState<Case | null>(null)
 
-  const items = useMemo(() => cases.filter((c) => matchesFilter(c, filter)), [filter])
+  const items = useMemo(() => cases.filter((c) => matchesFilter(c, filter)), [cases, filter])
   const shown = hovered ?? cases.find((c) => c.id === selectedId) ?? cases[0]
 
   const counts = useMemo(
@@ -28,7 +41,7 @@ export default function Portfolio({
       yellow: cases.filter((c) => c.verdict === 'yellow').length,
       red: cases.filter((c) => c.verdict === 'red').length,
     }),
-    [],
+    [cases],
   )
 
   return (

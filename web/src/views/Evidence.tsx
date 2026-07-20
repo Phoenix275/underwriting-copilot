@@ -1,4 +1,5 @@
-import { report } from '../data'
+import { useData } from '../data/DataContext'
+import type { FairnessRow, Report } from '../data/types'
 import {
   aucBenchmarks,
   coverageMultiples,
@@ -12,10 +13,10 @@ import {
 import { pct } from '../lib/format'
 import '../styles/evidence.css'
 
-const t = report.decisioning.thresholds
-const rm = report.risk_models
-
 export default function Evidence() {
+  const { report } = useData()
+  const t = report.decisioning.thresholds
+  const rm = report.risk_models
   const datasets = report.external_learning.datasets
 
   return (
@@ -104,7 +105,7 @@ export default function Evidence() {
           model gave to the share of those cases that were actually high risk.
         </p>
 
-        <Calibration />
+        <Calibration bins={rm.calibration} />
 
         {/* ---- STP context ---- */}
         <div className="srule">
@@ -310,7 +311,7 @@ function BenchRow({ b }: { b: Benchmark }) {
   )
 }
 
-function FairTable({ title, rows }: { title: string; rows: typeof report.fairness_by_age }) {
+function FairTable({ title, rows }: { title: string; rows: FairnessRow[] }) {
   return (
     <div className="fair">
       <div className="fair__head">
@@ -337,8 +338,7 @@ function FairTable({ title, rows }: { title: string; rows: typeof report.fairnes
   )
 }
 
-function Calibration() {
-  const bins = report.risk_models.calibration
+function Calibration({ bins }: { bins: Report['risk_models']['calibration'] }) {
   const W = 640
   const H = 220
   const pad = { l: 34, r: 8, t: 10, b: 26 }

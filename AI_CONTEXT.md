@@ -19,13 +19,22 @@ Underwriting Copilot is an **AI-assisted life-insurance underwriting workbench**
 - `webdata.py` — copies the two output files into `web/src/data/`. The report is written at **full precision** because it carries the model coefficients the browser re-scores with; rounding them drifts the in-browser score.
 - `dashboard.py` — the legacy single-file generator, superseded by `web/`. Still present but no longer the deployed artifact.
 
-**Frontend (`web/`)** is a **Vite + React 19 + TypeScript** app that builds via
-`vite-plugin-singlefile` to **one self-contained `index.html`** — data, fonts and CSS all
-inlined, no network calls, no server. The same file is served by Streamlit
-(`dashboard/underwriting_copilot_mvp.html`), by GitHub Pages (`docs/index.html`), and
-from disk. Five views: Portfolio · Case file · How it decides · Evidence · New application.
+**Frontend (`web/`)** is a **Vite + React 19 + TypeScript** app with five views:
+Portfolio · Case file · How it decides · Evidence · New application. It runs in two modes:
 
-Two things to know before editing it:
+- **Snapshot** (`npm run release`, builds with `--mode snapshot`) — `vite-plugin-singlefile`
+  emits **one self-contained `index.html`** with data, fonts and CSS inlined. No server, no
+  network. This is the committed artifact, copied to
+  `dashboard/underwriting_copilot_mvp.html` and `docs/index.html`.
+- **Live** (`VITE_API_URL` set) — reads `GET /portfolio` from the FastAPI service and can
+  write decisions back via `POST /cases/{id}/decision`. On any failure it falls back to the
+  bundled book and shows an amber warning in the rail rather than an empty page.
+
+Routing is **hash-based** (`web/src/lib/router.ts`) — `#/case/APP-1008`,
+`#/portfolio?filter=red` — because the same file must resolve on GitHub Pages, inside a
+Streamlit iframe, and from `file://`, and only hashes work in all three.
+
+Three things to know before editing it:
 
 1. **`web/src/lib/score.ts` is a port of `engine.py`.** It exists so the workbench can
    score a new application with no server. `npm --prefix web run verify` replays all 200
@@ -33,7 +42,11 @@ Two things to know before editing it:
    verdicts must match **exactly**. If you change `engine.py`, change `score.ts` and run
    verify. Note the browser composite uses the **logistic regression**, not gradient
    boosting, because a boosted ensemble cannot ship as coefficients.
-2. **The portfolio plane is hand-rolled SVG perspective projection**
+2. **Views read data from `useData()`, never by importing the JSON.** A static import
+   would freeze the bundled book and silently ignore live data. `score.ts` is the one
+   exception — it is a pure module, so it reads through `data/store.ts`, whose single
+   mutable slot the provider sets once on load.
+3. **The portfolio plane is hand-rolled SVG perspective projection**
    (`web/src/lib/projection.ts`), deliberately not WebGL — see the README for the
    measured bundle and accessibility reasoning. `fitCamera` re-solves scale and centre on
    every camera change, so the view cannot overflow its frame while being dragged.
