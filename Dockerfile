@@ -6,8 +6,8 @@
 FROM python:3.13-slim
 
 WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt requirements-pipeline.txt ./
+RUN pip install --no-cache-dir -r requirements.txt -r requirements-pipeline.txt
 
 COPY src/ src/
 COPY data/external/ data/external/

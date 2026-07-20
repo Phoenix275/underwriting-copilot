@@ -31,13 +31,19 @@ classification and approach the 0.86 XGBoost result in the literature.
 ## Run it
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-dev.txt   # pipeline + API + pytest
 python src/run_pipeline.py        # ~7s: data → docs → extract → score → evaluate
 python src/dashboard.py           # builds output/underwriting_copilot_mvp.html
 uvicorn api:app --app-dir src     # REST API (POST /score, GET /cases, SQLite-backed)
 pytest tests/ -q                  # 54 offline tests (also run in GitHub Actions CI)
 docker build -t underwriting-copilot . && docker run -p 8501:8501 underwriting-copilot
 ```
+
+Dependency files: `requirements.txt` is **deployment-only** (just Streamlit —
+the hosted dashboard is a pre-built static HTML file and does no modelling at
+runtime, so cloud builds stay fast and wheel-independent);
+`requirements-pipeline.txt` is the pipeline + REST API stack;
+`requirements-dev.txt` adds pytest.
 
 Env knobs: `N_APPLICANTS` (default 4000), `N_PACKETS` (default 60).
 Set `ANTHROPIC_API_KEY` to have case summaries written by Claude with a
