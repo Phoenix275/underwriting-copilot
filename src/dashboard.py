@@ -330,8 +330,11 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 <script>
 const DATA = /*__DATA__*/;
 const M = DATA.metrics, CASES = DATA.cases;
-const A_LINE = 50, D_LINE = 90;  // <50 approve · 50–89 manual review · ≥90 decline
+// approve/decline lines are STP-optimised by the pipeline (fallback 50/90)
+const _THR=(M.decisioning||{}).thresholds||{};
+const A_LINE=_THR.a_line||50, D_LINE=_THR.d_line||90;
 const VM={green:["APPROVE","ok"],yellow:["MANUAL REVIEW","warn"],red:["DECLINE","bad"]};
+const AFF={pass:["AFFORDABLE","ok"],strain:["STRAINED","warn"],fail:["NOT JUSTIFIED","bad"]};
 const bandOf=s=>s<A_LINE?"green":s<D_LINE?"yellow":"red";
 const band=s=>s<=25?["Low","var(--ok)"]:s<A_LINE?["Moderate","var(--ok)"]:s<D_LINE?["Elevated","var(--warn)"]:["High","var(--bad)"];
 // thresholds moved to 50/90 — recompute every case's verdict client-side so the whole app is consistent (no pipeline rerun)
@@ -346,14 +349,16 @@ function recomputeVerdicts(){
     reasons.push('Application contradicts medical/identity evidence: '+misrep.map(k=>k.type.replace(/_/g,' ')).join('; '));}
   else if(comp>=D_LINE){verdict='red';decision='DECLINE';rate='Declined — Risk Exceeds Appetite';
     reasons.push(`Composite risk score ${comp}/100 is in the ${D_LINE}+ decline band`);}
-  else if(majors.length||c.unique||comp>=A_LINE||Math.abs(c.rule_score-c.ml_score)>20){verdict='yellow';decision='MANUAL REVIEW';rate='Referred — Senior Underwriter Review';
+  else if(majors.length||c.unique||(c.afford&&c.afford.verdict==='fail')||comp>=A_LINE||Math.abs(c.rule_score-c.ml_score)>20){verdict='yellow';decision='MANUAL REVIEW';rate='Referred — Senior Underwriter Review';
     if(majors.length)reasons.push(`${majors.length} major data conflict(s): `+majors.map(k=>k.type.replace(/_/g,' ')).join('; '));
     if(c.unique){rate='Referred — Unique Circumstances Disclosed';reasons.push('Applicant disclosed unique circumstances: '+c.unique);}
+    if(c.afford&&c.afford.verdict==='fail'){rate='Referred — Financial Underwriting Review';(c.afford.reasons||[]).forEach(r=>reasons.push(r));}
     if(comp>=A_LINE)reasons.push(`Composite score ${comp} sits in the ${A_LINE}–${D_LINE-1} referral band`);
     if(Math.abs(c.rule_score-c.ml_score)>20)reasons.push(`Rule engine (${c.rule_score}) and ML model (${Math.round(c.ml_score)}) disagree materially`);}
   else{verdict='green';decision='APPROVE';rate=comp<=25?'Preferred Rate Class':'Standard Rate Class';
-    reasons.push(`Composite score ${comp} is below the ${A_LINE}-point approval line; engines agree and no conflicts or special circumstances were found`);}
-  c.verdict=verdict;c.decision=decision;c.rate_class=rate;c.reasons=reasons;c.referred=verdict!=='green';
+    reasons.push(`Composite score ${comp} is below the ${A_LINE}-point approval line; engines agree and no conflicts or special circumstances were found`);
+    if(c.afford&&c.afford.verdict==='strain')reasons.push('Affordability is strained but within tolerance — flagged on the financial viability panel');}
+  c.verdict=verdict;c.decision=decision;c.rate_class=rate;c.reasons=reasons;c.referred=verdict==='yellow';
   if(c.ai_summary){ // keep the baked narrative consistent with the recomputed verdict
    const bandTxt=verdict==='green'?'green approval band':verdict==='yellow'?'yellow manual-review band':'red decline band';
    c.ai_summary=c.ai_summary
@@ -632,13 +637,15 @@ function main(){
  if(view==="score"){el.innerHTML=scoreView();wireScoreForm();return;}
  const c=CASES.find(x=>x.id===activeId);if(!c){el.innerHTML=spaceView();return;}
  const vm=VM[c.verdict];
+ const afvm=c.afford?AFF[c.afford.verdict]:null;
  el.innerHTML=`<div class="case-head">
    <div><h2>${c.name}</h2>
     <div class="case-meta"><span>${c.id}</span><span>${c.occupation}</span><span>${c.city}, ${c.state}</span><span>${c.policy}</span></div></div>
    <div class="headline-score">
     <div><div class="hs-num" style="color:var(--${vm[1]})">${c.risk_score}<span style="font-size:16px;color:var(--mut)">/100</span></div>
      <div class="hs-lab">Composite Risk Score</div></div>
-    <div class="hs-class cls-${vm[1]}">${vm[0]}</div></div></div>
+    <div class="hs-class cls-${vm[1]}">${vm[0]}</div>
+    ${afvm?`<div style="text-align:center"><div class="hs-class cls-${afvm[1]}" style="font-size:13px">${c.afford.label}</div><div class="hs-lab" style="margin-top:4px">Financial Viability</div></div>`:''}</div></div>
   <div class="tabs">${[[1,'Application'],[2,'Documents'],[3,'Extraction & Conflicts'],[4,'Risk Score'],[5,'Decision']]
    .map(t=>`<div class="tab ${t[0]===activeTab?'active':''}" onclick="selTab(${t[0]})">${t[1]}</div>`).join('')}</div>
   ${panel(c)}`;
@@ -654,6 +661,17 @@ function gauge(score){
   ${tick(A_LINE)}${tick(D_LINE)}
   <text x="100" y="88" text-anchor="middle" font-family="Space Grotesk" font-size="30" font-weight="700" fill="var(--ink)">${score}</text>
   <text x="100" y="104" text-anchor="middle" font-family="Inter" font-size="9" fill="var(--mut)">approve &lt;${A_LINE} · decline ≥${D_LINE}</text></svg>`;
+}
+function affordCard(af){
+ if(!af)return '';
+ const stCol={pass:"var(--ok)",strain:"var(--warn)",fail:"var(--bad)"};
+ const stLab={pass:"PASS",strain:"STRAINED",fail:"FAIL"};
+ return `<div class="card"><h3>Financial Viability — Affordability Screen</h3>
+  <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap">
+   <span class="g-band cls-${AFF[af.verdict][1]}">${af.label}</span>
+   <span class="mono" style="font-size:12px;color:var(--mut)">est. premium ${fmt$(af.premium)}/yr · ${fmt$(af.premium_monthly)}/mo</span></div>
+  ${af.indicators.map(i=>`<div class="factor-row"><div><div class="factor-label">${i.label} <b style="color:${stCol[i.status]}">· ${stLab[i.status]}</b></div><div class="factor-detail">${i.detail}</div></div><div class="factor-pts" style="color:${stCol[i.status]}">${i.value}</div></div>`).join('')}
+  <div class="note">Financial underwriting asks a different question from risk scoring: not “how risky is this life?” but “can this applicant sustain the premium, and is the requested amount financially justified?” A failed indicator refers the case to financial underwriting regardless of the mortality risk score.</div></div>`;
 }
 function overview(){
  const vc={green:0,yellow:0,red:0};CASES.forEach(c=>vc[c.verdict]++);
@@ -679,6 +697,15 @@ function overview(){
   <div class="stat"><div class="sv">${(M.decisioning.straight_through_rate*100).toFixed(1)}%</div><div class="sl">Straight-through rate — decided with no human touch</div></div>
   <div class="stat"><div class="sv">${M.risk_models.n_train.toLocaleString()}</div><div class="sl">Training records (test: ${M.risk_models.n_test.toLocaleString()}, base risk rate ${(M.risk_models.positive_rate*100).toFixed(0)}%)</div></div>
  </div>
+ ${M.affordability?`<div class="card" style="margin-top:16px"><h3>Financial Viability — Portfolio Affordability</h3>
+  <div class="legend-row">
+   <div class="legend-chip cls-ok"><span class="swatch" style="background:var(--ok)"></span>AFFORDABLE · ${M.affordability.n_affordable} (${(M.affordability.affordable_rate*100).toFixed(0)}%) — all four indicators pass</div>
+   <div class="legend-chip cls-warn"><span class="swatch" style="background:var(--warn)"></span>STRAINED · ${M.affordability.n_strained} (${(M.affordability.strained_rate*100).toFixed(0)}%) — within tolerance, flagged</div>
+   <div class="legend-chip cls-bad"><span class="swatch" style="background:var(--bad)"></span>NOT JUSTIFIED · ${M.affordability.n_not_justified} (${(M.affordability.not_justified_rate*100).toFixed(0)}%) — referred to financial underwriting</div>
+  </div>
+  <table class="xt" style="margin-top:12px"><tr><th>Affordability indicator</th><th>Fail rate</th></tr>
+   ${Object.entries(M.affordability.indicator_fail_rates).map(([k,v])=>`<tr><td>${k}</td><td class="mono">${(v*100).toFixed(1)}%</td></tr>`).join('')}</table>
+  <div class="note">Four financial-underwriting screens run on every applicant: premium-to-income (≤5%), disposable income after premium, coverage-to-income against an age-banded cap, and debt-service ratio (≤20% of net). Average premium-to-income across the portfolio is ${(M.affordability.avg_premium_to_income*100).toFixed(1)}% on an average estimated premium of ${fmt$(M.affordability.avg_annual_premium)}/yr. Any failed indicator refers the case regardless of mortality-risk score — this is the affordability half of the copilot the project brief asks for.</div></div>`:''}
  <div class="card" style="margin-top:16px"><h3>Composite Risk Score Distribution</h3>
   ${Object.entries(tc).map(([t,n],i)=>`<div class="hist-bar-row"><div class="hist-label">${t}</div>
    <div class="hist-track"><div class="hist-fill" style="width:${n/mx*100}%;background:${cols[i]}"></div></div><div class="hist-count">${n}</div></div>`).join('')}
@@ -749,6 +776,7 @@ function managerView(){
   <div class="stat"><div class="sv">${conflicts.length}</div><div class="sl">Cases with cross-document conflicts (${majors.length} major) — recall ${(M.conflict_screening.detection_recall*100).toFixed(0)}%, ${M.conflict_screening.fp} false alarms</div></div>
   <div class="stat"><div class="sv">${uniques.length}</div><div class="sl">Unique-circumstances disclosures — every one routed to a human</div></div>
   <div class="stat"><div class="sv">${ovList.length}</div><div class="sl">Underwriter overrides recorded in this browser${(M.decisioning.n_overrides_learned||0)>0?` · ${M.decisioning.n_overrides_learned} already trained on`:''} — export from the Model Card</div></div>
+  ${M.affordability?`<div class="stat" style="border-top:4px solid var(--warn)"><div class="sv">${CASES.filter(c=>c.afford&&c.afford.verdict==='fail').length}</div><div class="sl"><b>NOT FINANCIALLY JUSTIFIED</b> · coverage or premium out of line with income — referred to financial underwriting (${(M.affordability.not_justified_rate*100).toFixed(0)}% pipeline-wide)</div></div>`:''}
  </div>
  <div class="card" style="margin-top:16px"><h3>Review Queue — largest exposure first (where senior time should go)</h3>
   <table class="xt"><tr><th>Case</th><th>Applicant</th><th>Coverage</th><th>Risk</th><th>Why it's here</th></tr>
@@ -784,7 +812,8 @@ function panel(c){
     ["Location",c.city+", "+c.state],["Preferred Policy",c.policy]])
   +sec("Section 2 — Amount of Insurance Applying For",[
     ["Coverage Requested ($25k increments)",fmt$(c.coverage)],["Coverage-to-Income Multiple",(c.coverage/c.income).toFixed(1)+"×"],
-    ["Existing Coverage (other carrier)",c.existing_cov?fmt$(c.existing_cov):"None"],["Intends to Replace Existing Coverage",c.existing_cov?(c.replacing?"Yes":"No"):"—"]])
+    ["Existing Coverage (other carrier)",c.existing_cov?fmt$(c.existing_cov):"None"],["Intends to Replace Existing Coverage",c.existing_cov?(c.replacing?"Yes":"No"):"—"],
+    ["Estimated Annual Premium",c.premium?fmt$(c.premium)+"/yr ("+fmt$(c.premium/12)+"/mo)":"—"],["Premium as % of Income",c.afford?(c.afford.pti*100).toFixed(1)+"%":"—"]])
   +sec("Section 4 — Financial Information",[
     ["Annual Net Earned Income",fmt$(c.income)],["Personal Net Worth (assets − liabilities)",fmt$(c.net_worth)],
     ["Monthly Expenses",fmt$(c.expenses)],["Existing Debt",fmt$(c.debt)],
@@ -804,8 +833,8 @@ function panel(c){
   +(c.unique?`<div class="unique-banner"><b>UNIQUE CIRCUMSTANCES DISCLOSED</b><p style="margin:5px 0 0">“${c.unique}” — this disclosure automatically routes the file to a human underwriter so the person is assessed as a whole, not just by the score.</p></div>`:'');
  }
  if(activeTab===2){
-  const docs=c.has_docs?[["Application Form (Parts A–B, health questionnaire)","Parsed ✓"],["Payslip / Earnings Statement","Parsed ✓"],["Paramedical Exam Report + consumer report","Parsed ✓"]]
-   :[["Application Form","Not in packet sample"],["Payslip / Earnings Statement","Not in packet sample"],["Paramedical Exam Report","Not in packet sample"]];
+  const docs=c.has_docs?[["Application Form (Parts A–B, health questionnaire)","Parsed ✓"],["Payslip / Earnings Statement","Parsed ✓"],["Paramedical Exam Report + consumer report","Parsed ✓"],["Bank Statement (3-month, deposits & expense categories)","Parsed ✓"],["Tax Slip — 2025 Statement of Income","Parsed ✓"]]
+   :[["Application Form","Not in packet sample"],["Payslip / Earnings Statement","Not in packet sample"],["Paramedical Exam Report","Not in packet sample"],["Bank Statement (3-month)","Not in packet sample"],["Tax Slip — Statement of Income","Not in packet sample"]];
   return `<div class="card"><h3>Document Packet</h3>`+docs.map(d=>`<div class="doc-row"><div class="dot ${c.has_docs?'':'miss'}"></div><div class="dname">${d[0]}</div><div class="dstatus">${d[1]}</div></div>`).join('')
    +(c.has_docs?'':'<div class="note">This applicant is in the scored portfolio but outside the PDF-packet sample; scores are computed from structured data. In production, every case flows through document extraction.</div>')+`</div>`;
  }
@@ -814,13 +843,15 @@ function panel(c){
   const e=c.extraction;
   const rows=[["Name (form)",e.name],["DOB (form)",e.form_dob],["DOB (paramed / ID)",e.paramed_dob],
    ["Declared income (form)",fmt$(e.form_income)],["Income (payslip, annualized)",fmt$(e.payslip_income)],
+   ["Income (tax slip, 2025)",fmt$(e.tax_income)],["Bank deposits (monthly avg)",fmt$(e.bank_deposit_monthly)],
+   ["Bank outflows (monthly avg)",fmt$(e.bank_outflow_monthly)],
    ["Declared debt (form)",fmt$(e.form_debt)],["Debt (credit bureau)",fmt$(e.bureau_debt)],
    ["Tobacco (form 4a)",e.form_tobacco_yes?"YES":"NO"],["Cotinine (lab)",e.cotinine],
    ["Height / Weight",e.height_cm+" cm / "+e.weight_kg+" kg"],["Blood pressure",e.blood_pressure],["Cholesterol",e.cholesterol+" mg/dL"]];
   const confl=c.conflicts.length?c.conflicts.map(k=>`<div class="conflict-card ${k.severity==='minor'?'minor':''}">
    <b>${k.severity.toUpperCase()} · ${k.type.replace(/_/g,' ').toUpperCase()}</b><p>${k.description}</p></div>`).join('')
-   :'<div class="note">No cross-document conflicts detected. All four checks passed — every applicant runs through the identical checklist.</div>';
-  return `<div class="card"><h3>Extracted Fields (3 documents)</h3><table class="xt"><tr><th>Field</th><th>Value</th></tr>
+   :'<div class="note">No cross-document conflicts detected. All six checks passed — every applicant runs through the identical checklist.</div>';
+  return `<div class="card"><h3>Extracted Fields (5 documents)</h3><table class="xt"><tr><th>Field</th><th>Value</th></tr>
    ${rows.map(r=>`<tr><td>${r[0]}</td><td class="mono">${r[1]??'—'}</td></tr>`).join('')}</table></div>
    <div class="card"><h3>Cross-Document Conflict Screen</h3>${confl}</div>`;
  }
@@ -872,6 +903,7 @@ function panel(c){
     <ul class="why-list">${c.reasons.map(r=>`<li>${r}</li>`).join('')}</ul>
     <p class="mono" style="font-size:11px;margin-top:10px">Risk ${c.risk_score}/100 · Rule ${c.rule_score} · GB ${c.ml_score.toFixed(0)} · ${c.conflicts.length} conflict(s)</p></div></div>
    ${c.unique?`<div class="unique-banner"><b>UNIQUE CIRCUMSTANCES</b><p style="margin:5px 0 0">“${c.unique}”</p></div>`:''}</div>
+  ${affordCard(c.afford)}
   ${caseDeskHTML(c)}
   <div class="card"><div class="ai-head"><h3 style="margin:0">Underwriting Summary — grounded in extracted fields only</h3></div>
    <div class="ai-text">${c.ai_summary}</div></div>`;
@@ -896,7 +928,7 @@ function exportOverrides(){
    "Age":c.age,"BMI":c.bmi,"Smoker Status":c.smoker,"Existing Conditions":c.conditions,
    "Family History Flag":c.family,"Debt-to-Income Ratio":c.dti,"Credit Score":c.credit,
    "Hazardous Activities":c.hazard,"Driving Violations (3yr)":c.violations,
-   "Alcohol Use":c.alcohol,"External Risk Prior":c.ext_prior,
+   "Alcohol Use":c.alcohol,"External Risk Prior":c.ext_prior,"Published CVD Prior":c.pub_prior||0.1,
    "Prior Application Declined":d.prior_decline||0,"Dangerous Driving (5yr)":d.dangerous_driving||0,
    "Drug/Alcohol Counselling (5yr)":d.drug_use||0,"Criminal Record":d.criminal||0,
    "Bankruptcy Declared":d.bankruptcy||0,"Foreign Travel Planned":d.foreign_travel||0,
@@ -921,6 +953,7 @@ td{padding:4px 14px 4px 0;font-size:14px}.mut{color:#666;font-size:12px}</style>
 <p><span class="verdict">${ov?ov.decision+' (HUMAN OVERRIDE)':c.decision}</span></p>
 ${ov&&ov.reason?`<p><b>Override reason:</b> ${ov.reason}</p>`:''}
 <h2>Rate class</h2><p>${c.rate_class}</p>
+${c.afford?`<h2>Financial viability</h2><p><b>${c.afford.label}</b> — estimated premium ${fmt$(c.afford.premium)}/yr (${(c.afford.pti*100).toFixed(1)}% of income) · coverage ${c.afford.cov_mult.toFixed(1)}× income against a cap of ${c.afford.cov_cap}× · disposable income after premium ${fmt$(c.afford.disposable)}/mo · debt service ${(c.afford.dsr*100).toFixed(0)}% of net.</p>`:''}
 <h2>Basis for decision</h2><ul>${c.reasons.map(r=>`<li>${r}</li>`).join('')}</ul>
 ${c.unique?`<h2>Unique circumstances disclosed</h2><p>“${c.unique}”</p>`:''}
 <h2>Summary</h2><p>${c.ai_summary}</p>
@@ -957,6 +990,18 @@ function ruleScoreJS(f){
   .forEach(([k,label,pts])=>{factors.push([label,f[k]?"Yes":"No",f[k]?pts:0]);});
  return [Math.min(factors.reduce((s,x)=>s+x[2],0),100),factors];
 }
+function framinghamJS(f){
+ // Framingham office-based general-CVD model (D'Agostino 2008) — published
+ // coefficients, identical to src/published_models.py
+ const P=f.sex==="F"
+  ?{a:2.72107,b:0.51125,s:2.81291,sm:0.61868,d:0.77763,s0:0.94833,m:26.0145}
+  :{a:3.11296,b:0.79277,s:1.85508,sm:0.70953,d:0.53160,s0:0.88431,m:23.9802};
+ const age=Math.min(74,Math.max(30,f.age)),bmi=Math.min(50,Math.max(15,f.bmi)),
+       sbp=Math.min(200,Math.max(90,f.sysbp));
+ const sum=P.a*Math.log(age)+P.b*Math.log(bmi)+P.s*Math.log(sbp)
+  +(f.smoker==="Smoker"?P.sm:0)+(f.conditions.toLowerCase().includes("diabetes")?P.d:0);
+ return 1-Math.pow(P.s0,Math.exp(sum-P.m));
+}
 function extPriorJS(f){
  // identical computation to external_data.prior_scores(), using the exported dataset models
  const pm=M.risk_models.prior_export||[];if(!pm.length)return 0.5;
@@ -979,23 +1024,56 @@ function mlScoreJS(f,prior){
   prior_decline:f.priorDecline?1:0,dangerous_driving:f.dangerousDriving?1:0,drug_use:f.drugUse?1:0,
   criminal_record:f.criminal?1:0,bankruptcy:f.bankruptcy?1:0,foreign_travel:f.foreignTravel?1:0,
   weight_change:f.weightChange?1:0,
-  external_prior:prior};
+  external_prior:prior,published_cvd_prior:framinghamJS(f)};
  let z=ex.intercept;
  ex.features.forEach((name,i)=>{z+=ex.coef[i]*((x[name]-ex.scaler_mean[i])/ex.scaler_std[i]);});
  return 100/(1+Math.exp(-z));
 }
-function decideJS(rule,ml,unique){
+function premiumJS(age,smoker,coverage,policy){
+ // identical to engine.estimate_premium
+ const mult={"Term Life - 20yr":1,"Term Life - 30yr":1.45,"Universal Life":5,"Whole Life":8.5};
+ let rate=0.9*Math.exp(0.045*(age-30));
+ if(smoker==="Smoker")rate*=2.3;else if(smoker==="Former smoker")rate*=1.25;
+ return coverage/1000*rate*(mult[policy]||1);
+}
+function affordJS(f){
+ // identical to engine.affordability_assess (4-indicator financial viability screen)
+ const income=Math.max(f.income,1),net=income*0.78/12,prem=premiumJS(f.age,f.smoker,f.coverage,f.policy);
+ const pm=prem/12,pti=prem/income,disp=net-f.expenses-pm,dpay=f.debt*0.025,dsr=dpay/net;
+ const cap=f.age<40?25:f.age<50?20:f.age<60?15:10;
+ const cmult=f.coverage/income;
+ const ind=[],reasons=[];
+ const add=(label,value,status,detail)=>{ind.push({label,value,status,detail});if(status==="fail")reasons.push(label+": "+detail);};
+ add("Premium-to-income",(pti*100).toFixed(1)+"%",pti<=0.05?"pass":pti<=0.10?"strain":"fail",
+  `annual premium ${fmt$(prem)} is ${(pti*100).toFixed(1)}% of gross income (benchmark ≤5%, strained to 10%)`);
+ const floor=Math.max(0.05*net,150);
+ add("Disposable income after premium",fmt$(disp)+"/mo",disp<0?"fail":disp<floor?"strain":"pass",
+  `net ${fmt$(net)}/mo − expenses ${fmt$(f.expenses)}/mo − premium ${fmt$(pm)}/mo leaves ${fmt$(disp)}/mo (floor ${fmt$(floor)})`);
+ add("Coverage-to-income multiple",cmult.toFixed(1)+"×",cmult<=cap?"pass":cmult<=cap*1.1?"strain":"fail",
+  `total coverage sought is ${cmult.toFixed(1)}× income against an age-${f.age} cap of ${cap}×`);
+ add("Debt-service ratio",(dsr*100).toFixed(0)+"%",dsr<=0.20?"pass":dsr<=0.35?"strain":"fail",
+  `estimated debt payments ${fmt$(dpay)}/mo consume ${(dsr*100).toFixed(0)}% of net income (benchmark ≤20%)`);
+ const sts=ind.map(i=>i.status);
+ const verdict=sts.includes("fail")?"fail":sts.includes("strain")?"strain":"pass";
+ if(verdict==="strain")reasons.push("Affordability indicators are within tolerance but strained: "+ind.filter(i=>i.status==="strain").map(i=>i.label).join("; "));
+ return {verdict,label:{pass:"AFFORDABLE",strain:"STRAINED",fail:"NOT JUSTIFIED"}[verdict],
+  premium:prem,premium_monthly:pm,pti,disposable:disp,cov_mult:cmult,cov_cap:cap,dsr,indicators:ind,reasons};
+}
+function decideJS(rule,ml,unique,afford){
  const comp=Math.round(0.5*rule+0.5*ml);const reasons=[];
+ const affFail=afford&&afford.verdict==="fail";
  let verdict,decision,rate;
  if(comp>=D_LINE){verdict="red";decision="DECLINE";rate="Declined — Risk Exceeds Appetite";
   reasons.push(`Composite risk score ${comp}/100 is in the ${D_LINE}+ decline band`);}
- else if(unique||comp>=A_LINE||Math.abs(rule-ml)>20){verdict="yellow";decision="MANUAL REVIEW";
-  rate=unique?"Referred — Unique Circumstances Disclosed":"Referred — Senior Underwriter Review";
-  if(unique)reasons.push("Applicant disclosed unique circumstances: "+unique);
+ else if(unique||affFail||comp>=A_LINE||Math.abs(rule-ml)>20){verdict="yellow";decision="MANUAL REVIEW";
+  rate="Referred — Senior Underwriter Review";
+  if(unique){rate="Referred — Unique Circumstances Disclosed";reasons.push("Applicant disclosed unique circumstances: "+unique);}
+  if(affFail){rate="Referred — Financial Underwriting Review";afford.reasons.forEach(r=>reasons.push(r));}
   if(comp>=A_LINE)reasons.push(`Composite score ${comp} sits in the ${A_LINE}–${D_LINE-1} referral band`);
   if(Math.abs(rule-ml)>20)reasons.push(`Rule engine (${rule}) and ML model (${ml.toFixed(0)}) disagree materially`);}
  else{verdict="green";decision="APPROVE";rate=comp<=25?"Preferred Rate Class":"Standard Rate Class";
-  reasons.push(`Composite score ${comp} is below the ${A_LINE}-point approval line; engines agree and no special circumstances were disclosed`);}
+  reasons.push(`Composite score ${comp} is below the ${A_LINE}-point approval line; engines agree and no special circumstances were disclosed`);
+  if(afford&&afford.verdict==="strain")reasons.push("Affordability is strained but within tolerance — see the financial viability screen");}
  return {verdict,decision,rate,comp,reasons};
 }
 let pdfLoaded=false;
@@ -1017,6 +1095,8 @@ function scoreView(){
    <div><label>Annual income (USD)</label><input id="f_income" type="number" placeholder="from PDF (default 60,000)"></div>
    <div><label>Total debt (USD)</label><input id="f_debt" type="number" placeholder="from PDF (default 20,000)"></div>
    <div><label>Coverage requested (USD)</label><input id="f_coverage" type="number" placeholder="from PDF (default 300,000)"></div>
+   <div><label>Monthly expenses (USD)</label><input id="f_expenses" type="number" placeholder="default 55% of monthly income"></div>
+   <div><label>Policy type</label><select id="f_policy"><option>Term Life - 20yr</option><option>Term Life - 30yr</option><option>Universal Life</option><option>Whole Life</option></select></div>
    <div><label>BMI</label><input id="f_bmi" type="number" step="0.1" placeholder="default 25"></div>
    <div><label>Systolic blood pressure</label><input id="f_sysbp" type="number" placeholder="default 120"></div>
    <div><label>Total cholesterol (mg/dL)</label><input id="f_chol" type="number" placeholder="default 200"></div>
@@ -1099,10 +1179,12 @@ function scoreNow(){
  const v=id=>document.getElementById(id).value;
  const defaulted=[];
  const num=(id,dflt,label)=>{const x=v(id);if(x===''||isNaN(+x)){defaulted.push(label+' = '+dflt);return dflt;}return +x;};
+ const incomeIn=(v('f_income')===''||isNaN(+v('f_income')))?60000:+v('f_income');
  const f={name:v('f_name')||'New Applicant',
   age:num('f_age',40,'age'),credit:num('f_credit',715,'credit score'),income:num('f_income',60000,'income'),
   debt:num('f_debt',20000,'debt'),coverage:num('f_coverage',300000,'coverage'),bmi:num('f_bmi',25,'BMI'),
   sysbp:num('f_sysbp',120,'systolic BP'),chol:num('f_chol',200,'cholesterol'),
+  expenses:num('f_expenses',Math.round(incomeIn/12*0.55),'monthly expenses'),policy:v('f_policy'),
   smoker:v('f_smoker'),alcohol:v('f_alcohol'),sex:v('f_sex'),
   conditions:v('f_conditions')||'None',family:+v('f_family'),violations:num('f_violations',0,'driving violations'),
   hazard:v('f_hazard')==='1',hazardDetail:v('f_hazard_detail'),
@@ -1114,14 +1196,16 @@ function scoreNow(){
  const [rule,factors]=ruleScoreJS(f);
  const prior=extPriorJS(f);
  const ml=mlScoreJS(f,prior);
- const d=decideJS(rule,ml,f.unique);
+ const af=affordJS(f);
+ const d=decideJS(rule,ml,f.unique,af);
  const esc=s=>String(s).replace(/</g,'&lt;');
  const vbSub={green:"Clear-cut acceptable risk. This applicant should be approved — every signal is clean and the score is comfortably below the approval line.",
   yellow:"A human underwriter needs to review this application and the person as a whole before a decision is issued.",
   red:"This application should be declined — the risk clearly exceeds appetite at the disclosed values."};
  document.getElementById('scoreResult').innerHTML=`
   <div class="verdict-banner v-${d.verdict}"><div class="vb-word">${d.decision} — ${esc(f.name)}</div>
-   <div class="vb-sub"><b>${d.rate}.</b> ${vbSub[d.verdict]}</div></div>
+   <div class="vb-sub"><b>${d.rate}.</b> ${vbSub[d.verdict]} Financial viability: <b>${af.label}</b> — estimated premium ${fmt$(af.premium)}/yr (${(af.pti*100).toFixed(1)}% of income).</div></div>
+  ${affordCard(af)}
   <div class="card"><h3>Live Composite Score</h3>
    <div class="gauge-wrap">${gauge(d.comp)}
     <div class="gauge-info">
@@ -1153,7 +1237,7 @@ setInterval(()=>{if(CURRENT_ROLE&&(view==='space'||view==='case'))render();},600
 </script>
 """
 
-APPROVE_LINE, DECLINE_LINE = 50, 90  # must match A_LINE / D_LINE in the JS template
+APPROVE_LINE, DECLINE_LINE = 50, 90  # fallback; build() overrides from pipeline thresholds
 
 def _money(n):
     return "$" + format(int(round(n)), ",")
@@ -1196,6 +1280,12 @@ def case_summary(c):
         f"(rule engine {c['rule_score']}, gradient boosting {c['ml_score']:.0f}), "
         f"placing the case in the {band}.",
     ]
+    af = c.get("afford")
+    if af:
+        s.append(f"On financial viability, the estimated premium of {_money(af['premium'])}/yr "
+                 f"is {af['pti']*100:.1f}% of income and the coverage sought is "
+                 f"{af['cov_mult']:.1f}× income — the affordability screen reads {af['label']}."
+                 + (f" {af['reasons'][0]}." if af["verdict"] == "fail" and af.get("reasons") else ""))
     if c.get("unique"):
         s.append(f"The applicant disclosed unique circumstances — “{c['unique']}” — "
                  f"which routes the file to a human underwriter for whole-person review.")
