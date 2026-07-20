@@ -9,6 +9,8 @@
   7. Emit evaluation_report.json + portfolio.json (for the dashboard)
 """
 import json, os, sys, time
+
+import joblib
 import numpy as np
 import pandas as pd
 
@@ -96,7 +98,11 @@ def main():
     lr_scores, gb_scores = engine.ml_scores(models, df)
     df["ml_score_lr"], df["ml_score_gb"] = lr_scores, gb_scores
 
-    history.append({"run": run_no, "date": "2026-07-07", "n_train_pool": len(train_df),
+    # persist the trained models + dataset prior models for the REST API (src/api.py)
+    joblib.dump({"models": models, "prior_models": prior_models, "features": engine.FEATURES},
+                os.path.join(OUT, "models.joblib"))
+
+    history.append({"run": run_no, "date": time.strftime("%Y-%m-%d"), "n_train_pool": len(train_df),
                     "n_overrides": n_overrides,
                     "gb_auc": model_report["gradient_boosting"]["auc"],
                     "lr_auc": model_report["logistic_regression"]["auc"],
@@ -194,16 +200,29 @@ def main():
             **d,
         })
 
-    # fairness slice: verdict mix by age band — the first question any
-    # insurance regulator asks of an automated decisioning system
-    fairness = []
-    for lo, hi in [(21, 30), (31, 40), (41, 50), (51, 60), (61, 70)]:
-        grp = [p for p in portfolio if lo <= p["age"] <= hi]
-        if grp:
-            fairness.append({"band": f"{lo}–{hi}", "n": len(grp),
-                             "green": round(sum(1 for p in grp if p["verdict"] == "green") / len(grp), 3),
-                             "yellow": round(sum(1 for p in grp if p["verdict"] == "yellow") / len(grp), 3),
-                             "red": round(sum(1 for p in grp if p["verdict"] == "red") / len(grp), 3)})
+    # fairness slices — verdict mix AND model error rates per group.
+    # Verdict mix answers "who gets approved"; FPR/FNR answer "who does the
+    # model get WRONG" — a group can have a fair outcome mix but bear an
+    # unfair share of the errors. Sex is audited because it feeds both priors.
+    def fairness_slice(name, grp):
+        n = len(grp)
+        fp = sum(1 for p in grp if p["ml_score"] >= 50 and p["label"] == 0)
+        neg = sum(1 for p in grp if p["label"] == 0)
+        fn = sum(1 for p in grp if p["ml_score"] < 50 and p["label"] == 1)
+        pos = sum(1 for p in grp if p["label"] == 1)
+        return {"band": name, "n": n,
+                "green": round(sum(1 for p in grp if p["verdict"] == "green") / n, 3),
+                "yellow": round(sum(1 for p in grp if p["verdict"] == "yellow") / n, 3),
+                "red": round(sum(1 for p in grp if p["verdict"] == "red") / n, 3),
+                "model_fpr": round(fp / neg, 3) if neg else None,
+                "model_fnr": round(fn / pos, 3) if pos else None}
+
+    fairness = [fairness_slice(f"{lo}–{hi}", grp)
+                for lo, hi in [(21, 30), (31, 40), (41, 50), (51, 60), (61, 70)]
+                if (grp := [p for p in portfolio if lo <= p["age"] <= hi])]
+    fairness_sex = [fairness_slice(label, grp)
+                    for sex, label in [("M", "Male"), ("F", "Female")]
+                    if (grp := [p for p in portfolio if p["sex"] == sex])]
 
     stp = sum(1 for p in portfolio if not p["referred"]) / len(portfolio)
     conflict_recall = tp / max(tp + fn, 1)
@@ -232,7 +251,7 @@ def main():
     print("[7/7] writing reports…")
     model_report["prior_export"] = prior_models
     report = {
-        "generated_at": "2026-07-07", "n_applicants": len(df), "n_packets": N_PACKETS,
+        "generated_at": time.strftime("%Y-%m-%d %H:%M"), "n_applicants": len(df), "n_packets": N_PACKETS,
         "external_learning": {"datasets": ext_report,
                               "n_usable": len(usable),
                               "total_rows": sum(d["rows"] for d in usable)},
@@ -250,6 +269,7 @@ def main():
                          "n_overrides_learned": n_overrides,
                          "thresholds": {"a_line": int(a_line), "d_line": int(d_line), **thr_stats}},
         "fairness_by_age": fairness,
+        "fairness_by_sex": fairness_sex,
     }
     with open(os.path.join(OUT, "evaluation_report.json"), "w") as f:
         json.dump(report, f, indent=2)

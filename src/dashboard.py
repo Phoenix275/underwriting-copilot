@@ -715,8 +715,8 @@ function overview(){
    const ds=el.datasets.filter(d=>!d.error);
    const histMax=Math.max(...hist.map(h=>h.n_train_pool),1);
    return `<div class="note" style="margin:0 0 12px">The models learn a risk prior from <b>${ds.length} public real-world datasets (${(el.total_rows||0).toLocaleString()} records)</b> — heart disease, diabetes, cancer survival, mortality and credit-default studies — blended into every score as the “external prior” feature. On top of that, every pipeline run adds a fresh batch to a growing training pool, so the models retrain on more data each time.</div>
-   <table class="xt"><tr><th>Dataset</th><th>Records</th><th>Shared factors</th><th>Prior AUC</th></tr>
-    ${ds.map(d=>`<tr><td>${d.name}</td><td class="mono">${d.rows.toLocaleString()}</td><td class="mono">${d.features.join(', ')}</td><td class="mono">${(d.auc*100).toFixed(0)}%</td></tr>`).join('')}</table>
+   <table class="xt"><tr><th>Dataset</th><th>Records</th><th>Shared factors</th><th>Prior AUC</th><th>In prior</th></tr>
+    ${ds.map(d=>`<tr style="${d.included_in_prior===false?'opacity:.45':''}"><td>${d.name}</td><td class="mono">${d.rows.toLocaleString()}</td><td class="mono">${d.features.join(', ')}</td><td class="mono">${(d.auc*100).toFixed(0)}%</td><td class="mono">${d.included_in_prior===false?'excluded (≈chance)':'✓ weighted'}</td></tr>`).join('')}</table>
    <div style="margin-top:16px"><b style="font-size:12.5px">Training runs</b>
     ${hist.map(h=>`<div class="hist-bar-row"><div class="hist-label">Run ${h.run}</div>
      <div class="hist-track"><div class="hist-fill" style="width:${h.n_train_pool/histMax*100}%;background:var(--acc)"></div></div>
@@ -730,13 +730,18 @@ function overview(){
    <div class="hist-track" style="height:9px"><div class="hist-fill" style="width:${b.actual*100}%;background:var(--ink)"></div></div>
    <div class="hist-count" style="width:150px"></div></div>`).join('')}
   <div class="note"><span style="color:var(--acc)">■</span> predicted probability vs <span style="color:var(--ink)">■</span> actual high-risk rate, per prediction band on held-out test data. The closer each pair, the more a score can be read literally as a probability — this is what justifies drawing hard approve/decline lines at ${A_LINE} and ${D_LINE}.</div></div>
- <div class="card"><h3>Fairness — verdict mix by age band</h3>
-  <table class="xt"><tr><th>Age band</th><th>Cases</th><th>Green</th><th>Yellow</th><th>Red</th></tr>
-   ${(M.fairness_by_age||[]).map(f=>`<tr><td>${f.band}</td><td class="mono">${f.n}</td>
+ <div class="card"><h3>Fairness — verdict mix &amp; model error rates by group</h3>
+  ${(()=>{const frows=f=>`<tr><td>${f.band}</td><td class="mono">${f.n}</td>
     <td class="mono" style="color:var(--ok)">${(f.green*100).toFixed(0)}%</td>
     <td class="mono" style="color:var(--warn)">${(f.yellow*100).toFixed(0)}%</td>
-    <td class="mono" style="color:var(--bad)">${(f.red*100).toFixed(0)}%</td></tr>`).join('')}</table>
-  <div class="note">Age is a legitimate actuarial factor in life insurance, so approval rates are expected to fall with age — this table makes the gradient visible and reviewable instead of hidden. Any slice that looks disproportionate to the underlying mortality risk is a flag for review.</div></div>
+    <td class="mono" style="color:var(--bad)">${(f.red*100).toFixed(0)}%</td>
+    <td class="mono">${f.model_fpr!=null?(f.model_fpr*100).toFixed(0)+'%':'—'}</td>
+    <td class="mono">${f.model_fnr!=null?(f.model_fnr*100).toFixed(0)+'%':'—'}</td></tr>`;
+   const head=`<tr><th>Group</th><th>Cases</th><th>Green</th><th>Yellow</th><th>Red</th><th>Model FPR</th><th>Model FNR</th></tr>`;
+   return `<table class="xt">${head}${(M.fairness_by_age||[]).map(frows).join('')}</table>
+    ${(M.fairness_by_sex||[]).length?`<div style="margin-top:14px"><b style="font-size:12.5px">By sex</b> <span style="font-size:11.5px;color:var(--mut)">— audited because sex feeds both the external-data and Framingham priors</span></div>
+    <table class="xt">${head}${M.fairness_by_sex.map(frows).join('')}</table>`:''}`;})()}
+  <div class="note">Age is a legitimate actuarial factor in life insurance, so approval rates are expected to fall with age — the verdict-mix columns make that gradient visible and reviewable instead of hidden. The error-rate columns answer a different question: <b>who does the model get wrong</b>. FPR = share of actually-low-risk people the ML flags high-risk (wrongly penalised); FNR = share of actually-high-risk people it misses. A group can have a fair outcome mix yet bear an unfair share of the errors — a materially higher FPR for one group is a flag for review even when approval rates look balanced.</div></div>
  <div class="card"><h3>Underwriter Feedback Loop</h3>
   <div class="note" style="margin:0 0 12px">Overrides recorded on any case's Decision tab are stored in this browser${(M.decisioning.n_overrides_learned||0)>0?` — and <b>${M.decisioning.n_overrides_learned} human override(s) are already in the training data</b> from previous exports`:''}. Export them, save as <span class="mono">data/overrides.json</span>, and re-run the pipeline: the models retrain on the human decisions.</div>
   <button class="ai-btn" onclick="exportOverrides()">⬇ Export underwriter overrides</button></div>
@@ -1003,16 +1008,17 @@ function framinghamJS(f){
  return 1-Math.pow(P.s0,Math.exp(sum-P.m));
 }
 function extPriorJS(f){
- // identical computation to external_data.prior_scores(), using the exported dataset models
+ // identical computation to external_data.prior_scores(): AUC-weighted mean
  const pm=M.risk_models.prior_export||[];if(!pm.length)return 0.5;
  const cx={age:f.age,bmi:f.bmi,smoker:f.smoker==="Smoker"?1:0,
   diabetes:f.conditions.toLowerCase().includes("diabetes")?1:0,sys_bp:f.sysbp,chol:f.chol,
   sex:f.sex==="M"?1:f.sex==="F"?0:0.5};
- let s=0;
+ let s=0,ws=0;
  pm.forEach(m=>{let z=m.intercept;
   m.features.forEach((n,i)=>{z+=m.coef[i]*((cx[n]-m.mean[i])/m.std[i]);});
-  s+=1/(1+Math.exp(-z));});
- return s/pm.length;
+  const w=(m.weight!=null?m.weight:1);
+  s+=w/(1+Math.exp(-z));ws+=w;});
+ return ws>0?s/ws:0.5;
 }
 function mlScoreJS(f,prior){
  const ex=M.risk_models.lr_export;
@@ -1301,10 +1307,26 @@ def case_summary(c):
     return " ".join(s)
 
 def build():
+    import summaries
     with open(os.path.join(OUT, "portfolio.json")) as f:
         data = json.load(f)
+    use_llm = bool(os.environ.get("ANTHROPIC_API_KEY"))
+    llm_limit = int(os.environ.get("LLM_SUMMARY_LIMIT", 40))
+    n_llm = 0
     for c in data["cases"]:
-        c["ai_summary"] = case_summary(c)
+        text = None
+        if use_llm and n_llm < llm_limit:
+            text = summaries.llm_summary(c)
+            if text:
+                ok, bad = summaries.groundedness_check(text, c)
+                if not ok:      # a summary citing untraceable numbers is worse than a template
+                    text = None
+                else:
+                    n_llm += 1
+        c["ai_summary"] = text or case_summary(c)
+        c["summary_source"] = "llm" if text else "template"
+    if use_llm:
+        print(f"LLM summaries: {n_llm}/{len(data['cases'])} generated (grounded), rest templated")
     html = TEMPLATE.replace("/*__DATA__*/", json.dumps(data))
     path = os.path.join(OUT, "underwriting_copilot_mvp.html")
     with open(path, "w") as f:

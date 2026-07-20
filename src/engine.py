@@ -1,5 +1,6 @@
 """engine.py — Conflict detection, dual risk engine, affordability, decision logic."""
 import math
+import warnings
 import numpy as np
 import pandas as pd
 
@@ -35,8 +36,10 @@ def detect_conflicts(rec):
         try:
             if fn(rec):
                 found.append({"type": name, "severity": severity, "description": desc})
-        except Exception:
-            pass
+        except Exception as e:
+            # a crashing check must never silently pass a packet — surface it
+            warnings.warn(f"conflict check '{name}' errored on record "
+                          f"{rec.get('name', '?')}: {e}", stacklevel=2)
     return found
 
 # ---------------- rule engine (explainable, weighted per brainstorming notes) ------
@@ -316,17 +319,17 @@ def decide(rule_s, ml_s, conflicts, unique=None, a_line=APPROVE_LINE, d_line=DEC
             "tier": tier(composite), "reasons": reasons, "referred": verdict == "yellow"}
 
 
-def optimize_thresholds(composites, labels, clean, approve_risk_max=0.05, decline_prec_min=0.70):
-    """Pick the approve/decline lines that MAXIMISE straight-through processing,
-    subject to safety constraints measured against ground truth:
-      - auto-approve zone must contain ≤ approve_risk_max actual high-risk cases
-      - auto-decline zone must be ≥ decline_prec_min actual high-risk (precision)
-    `clean` marks cases with no conflicts/disclosures (only those can auto-approve).
-    Returns (a_line, d_line, stats).
-    """
-    comp = np.asarray(composites); y = np.asarray(labels); cl = np.asarray(clean, dtype=bool)
-    # if no line pair satisfies the strict constraint, relax the approve-zone
-    # risk ceiling in steps and record which ceiling was actually used
+def _threshold_stats(a, d, comp, y, cl, ceiling):
+    appr = cl & (comp < a); decl = comp >= d
+    return {"stp_est": round(float((appr.sum() + decl.sum()) / len(comp)), 4),
+            "approve_risk_rate": round(float(y[appr].mean()) if appr.sum() else 0.0, 4),
+            "decline_precision": round(float(y[decl].mean()) if decl.sum() else 1.0, 4),
+            "n_auto_approve": int(appr.sum()), "n_auto_decline": int(decl.sum()),
+            "approve_risk_ceiling_used": ceiling}
+
+def _search_thresholds(comp, y, cl, approve_risk_max, decline_prec_min):
+    """Grid-search the (approve, decline) lines maximising STP on the given set,
+    relaxing the approve-zone risk ceiling in steps if the strict one is infeasible."""
     for risk_max in (approve_risk_max, 0.08, 0.10, 0.12, 0.15):
         best, best_stp = None, -1.0
         for a in range(30, 71):
@@ -339,19 +342,32 @@ def optimize_thresholds(composites, labels, clean, approve_risk_max=0.05, declin
                     continue
                 stp = (appr.sum() + decl.sum()) / len(comp)
                 if stp > best_stp:
-                    best_stp = stp
-                    best = (a, d, {"stp_est": round(float(stp), 4),
-                                    "approve_risk_rate": round(float(y[appr].mean()) if appr.sum() else 0.0, 4),
-                                    "decline_precision": round(float(y[decl].mean()) if decl.sum() else 1.0, 4),
-                                    "n_auto_approve": int(appr.sum()), "n_auto_decline": int(decl.sum()),
-                                    "approve_risk_ceiling_used": risk_max})
+                    best_stp, best = stp, (a, d, risk_max)
         if best is not None:
             return best
-    # last resort: default lines with honestly-computed stats
-    appr = cl & (comp < APPROVE_LINE); decl = comp >= DECLINE_LINE
-    return (APPROVE_LINE, DECLINE_LINE,
-            {"stp_est": round(float((appr.sum() + decl.sum()) / len(comp)), 4),
-             "approve_risk_rate": round(float(y[appr].mean()) if appr.sum() else 0.0, 4),
-             "decline_precision": round(float(y[decl].mean()) if decl.sum() else 1.0, 4),
-             "n_auto_approve": int(appr.sum()), "n_auto_decline": int(decl.sum()),
-             "approve_risk_ceiling_used": None})
+    return (APPROVE_LINE, DECLINE_LINE, None)
+
+def optimize_thresholds(composites, labels, clean, approve_risk_max=0.05,
+                        decline_prec_min=0.70, seed=13):
+    """Pick the approve/decline lines that MAXIMISE straight-through processing,
+    subject to safety constraints measured against ground truth:
+      - auto-approve zone must contain ≤ approve_risk_max actual high-risk cases
+      - auto-decline zone must be ≥ decline_prec_min actual high-risk (precision)
+    `clean` marks cases with no conflicts/disclosures (only those can auto-approve).
+
+    Leakage control: the grid search runs on a random HALF of the portfolio and
+    every reported statistic is computed on the other, held-out half — the STP
+    number is out-of-sample, not tuned-on-itself.
+    Returns (a_line, d_line, stats).
+    """
+    comp = np.asarray(composites); y = np.asarray(labels); cl = np.asarray(clean, dtype=bool)
+    rng = np.random.default_rng(seed)
+    tune = rng.random(len(comp)) < 0.5
+    hold = ~tune
+    if tune.sum() < 50 or hold.sum() < 50:   # tiny portfolios: no split possible
+        a, d, ceiling = _search_thresholds(comp, y, cl, approve_risk_max, decline_prec_min)
+        return a, d, {**_threshold_stats(a, d, comp, y, cl, ceiling), "evaluation": "in-sample (n too small to split)"}
+    a, d, ceiling = _search_thresholds(comp[tune], y[tune], cl[tune], approve_risk_max, decline_prec_min)
+    stats = _threshold_stats(a, d, comp[hold], y[hold], cl[hold], ceiling)
+    stats["evaluation"] = f"holdout (tuned on {int(tune.sum())}, evaluated on {int(hold.sum())})"
+    return a, d, stats

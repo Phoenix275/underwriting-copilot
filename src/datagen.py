@@ -5,10 +5,12 @@ high-risk label. Schema matches the team's Life Insurance Sample Dataset
 (Applicants / Medical Records / Financial Viability sheets) so the two
 datasets are interchangeable.
 """
+import datetime
+
 import numpy as np
 import pandas as pd
 
-RNG = np.random.default_rng(42)
+_CURRENT_YEAR = datetime.date.today().year
 
 FIRST = ["Aisha","Marcus","Priya","David","Linda","James","Grace","Robert","Elena","Samuel",
          "Nina","Victor","Farah","Tomas","Ingrid","Kofi","Mei","Arjun","Sofia","Liam",
@@ -67,7 +69,7 @@ def generate(n: int, seed: int = 42) -> pd.DataFrame:
         # ~15% seek an over-insured multiple so financial underwriting has real work
         cov_mult = rng.uniform(10, 28) if rng.random() < 0.15 else rng.uniform(3, 8)
         coverage = int(np.clip(round(income * cov_mult / 25000) * 25000, 25000, 1000000))
-        birth_year = 2026 - age
+        birth_year = _CURRENT_YEAR - age
         dob = f"{birth_year}-{rng.integers(1,13):02d}-{rng.integers(1,29):02d}"
         name = f"{FIRST[rng.integers(len(FIRST))]} {LAST[rng.integers(len(LAST))]}"
         city, state = CITIES[rng.integers(len(CITIES))]

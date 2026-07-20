@@ -1,6 +1,11 @@
-numpy
-pandas
-scikit-learn
-reportlab
-pdfplumber
-streamlit
+# runtime — pinned to the versions this build was verified against
+numpy==2.5.1
+pandas==2.3.3
+scikit-learn==1.6.1
+reportlab==5.0.0
+pdfplumber==0.11.10
+joblib==1.5.3
+httpx==0.28.1
+fastapi==0.139.2
+uvicorn==0.51.0
+streamlit>=1.37

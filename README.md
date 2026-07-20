@@ -15,12 +15,13 @@ Pipeline: **PDF packet → extraction → conflict screen → dual risk engine +
 | Stage | Metric | Result |
 |---|---|---|
 | Extraction | Field-level accuracy vs printed ground truth (12 fields × 60 packets) | **100%** |
-| Conflict screening | Recall on deliberately injected conflicts (6 check types) | **100%** (15/15) |
+| Conflict screening | Recall on deliberately injected conflicts (6 check types) | **100%** |
 | Conflict screening | Precision (false positives) | **100%** (0 FP) |
-| Risk model | Logistic Regression AUC (held-out 800) | **0.886** |
-| Risk model | Gradient Boosting AUC | **0.877** |
-| Affordability | Portfolio split (4-indicator financial screen) | **41% affordable · 35% strained · 23% not justified** |
-| Decisioning | Straight-through-processing rate (STP-optimised thresholds) | **41.2%** |
+| Risk model | Logistic Regression AUC (held-out 20%) | **0.890** |
+| Risk model | Gradient Boosting AUC | **0.885** |
+| Affordability | Portfolio split (4-indicator financial screen) | **42% affordable · 36% strained · 22% not justified** |
+| Decisioning | Straight-through rate — **evaluated on a held-out half**, thresholds tuned on the other | **43.2%** |
+| Tests | Offline pytest suite (engine, affordability, doc round-trip, API), runs in CI | **54 passing** |
 
 Extraction is 100% because generated PDFs are digital text; on real scans it will drop —
 that is exactly the gap **Google Document AI** closes (adapter stub included, `DocumentAIExtractor`).
@@ -33,9 +34,28 @@ classification and approach the 0.86 XGBoost result in the literature.
 pip install -r requirements.txt
 python src/run_pipeline.py        # ~7s: data → docs → extract → score → evaluate
 python src/dashboard.py           # builds output/underwriting_copilot_mvp.html
+uvicorn api:app --app-dir src     # REST API (POST /score, GET /cases, SQLite-backed)
+pytest tests/ -q                  # 54 offline tests (also run in GitHub Actions CI)
+docker build -t underwriting-copilot . && docker run -p 8501:8501 underwriting-copilot
 ```
 
 Env knobs: `N_APPLICANTS` (default 4000), `N_PACKETS` (default 60).
+Set `ANTHROPIC_API_KEY` to have case summaries written by Claude with a
+groundedness check (every number must trace to a case fact); without a key
+the deterministic template summaries are used — the pipeline never requires
+network access or a paid key.
+
+## Statistical honesty
+
+- **Thresholds are tuned on half the portfolio and every reported STP /
+  approve-zone-risk / decline-precision number comes from the held-out half**
+  (`engine.optimize_thresholds`) — the headline rate is out-of-sample.
+- The external-data prior is an **AUC-weighted** blend; dataset models at or
+  near chance (AUC < 0.55) are excluded and shown as such on the model card.
+- Fairness is audited by **age band and by sex** — verdict mix plus per-group
+  model **FPR/FNR**, because a group can have a fair outcome mix while bearing
+  an unfair share of the errors. Sex is audited specifically because it feeds
+  both the external-data and Framingham priors.
 
 ## Repository layout
 
@@ -53,8 +73,15 @@ src/engine.py        6-check conflict screen (equal for every applicant) · weig
                      debt service) · decision logic (major conflict → auto-refer;
                      rule/ML disagreement → auto-refer; not-justified → financial UW).
 src/run_pipeline.py  orchestrator; writes evaluation_report.json + portfolio.json
-src/dashboard.py     single-file underwriter dashboard with embedded results and
-                     Claude-generated grounded case summaries (works in claude.ai).
+                     + models.joblib (consumed by the REST API)
+src/summaries.py     Claude-written case summaries w/ groundedness check;
+                     falls back to the deterministic template without a key
+src/api.py           FastAPI REST API: POST /score → full engine verdict,
+                     SQLite-persisted cases + human decisions (brief's
+                     "REST APIs" + "SQL Database" items)
+src/dashboard.py     single-file underwriter dashboard with embedded results
+tests/               54 offline tests: conflicts, rule engine, decide branches,
+                     affordability, premium, docgen→extract round trip, API
 ```
 
 ## The six conflict checks (equal screening)

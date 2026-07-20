@@ -5,3 +5,4 @@ output/
 data/training_pool.csv
 data/model_history.json
 .gstack/
+data/copilot.db

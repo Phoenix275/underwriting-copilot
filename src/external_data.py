@@ -184,6 +184,9 @@ REGISTRY = [
 ]
 
 
+# minimum held-out AUC for a dataset model to enter the blended prior
+MIN_AUC = 0.55
+
 def _fetch(url, path):
     if os.path.exists(path) and os.path.getsize(path) > 0:
         return False
@@ -222,13 +225,20 @@ def load_and_fit(seed=13):
             sc = StandardScaler().fit(Xtr)
             lr = LogisticRegression(max_iter=2000).fit(sc.transform(Xtr), ytr)
             auc = float(roc_auc_score(yte, lr.predict_proba(sc.transform(Xte))[:, 1]))
-            models.append({"name": title, "features": feats,
-                           "coef": [float(v) for v in lr.coef_[0]],
-                           "intercept": float(lr.intercept_[0]),
-                           "mean": [float(v) for v in sc.mean_],
-                           "std": [float(v) for v in sc.scale_]})
+            # chance-level dataset models add noise, not signal: exclude below
+            # MIN_AUC, and weight the rest by how far above chance they are
+            included = auc >= MIN_AUC
+            if included:
+                models.append({"name": title, "features": feats,
+                               "coef": [float(v) for v in lr.coef_[0]],
+                               "intercept": float(lr.intercept_[0]),
+                               "mean": [float(v) for v in sc.mean_],
+                               "std": [float(v) for v in sc.scale_],
+                               "auc": round(auc, 4),
+                               "weight": round(auc - 0.5, 4)})
             report.append({"name": title, "rows": int(len(X)), "features": feats,
                            "auc": round(auc, 3), "event_rate": round(float(y.mean()), 3),
+                           "included_in_prior": included,
                            "source": url, "cached": not fetched})
         except Exception as e:
             report.append({"name": title, "error": str(e), "source": url})
@@ -248,17 +258,22 @@ def _canon_frame(df):
 
 
 def prior_scores(models, df):
-    """External Risk Prior per applicant: mean event probability across dataset models."""
+    """External Risk Prior per applicant: AUC-weighted mean event probability
+    across dataset models (a model barely above chance contributes almost
+    nothing; a strong one dominates)."""
     C = _canon_frame(df)
     if not models:
         return np.full(len(df), 0.5)
-    probs = []
+    total = np.zeros(len(df))
+    wsum = 0.0
     for m in models:
         Z = np.full(len(df), m["intercept"])
         for i, f in enumerate(m["features"]):
             Z += m["coef"][i] * (C[f].values - m["mean"][i]) / m["std"][i]
-        probs.append(1.0 / (1.0 + np.exp(-Z)))
-    return np.mean(probs, axis=0)
+        w = float(m.get("weight", 1.0))
+        total += w * (1.0 / (1.0 + np.exp(-Z)))
+        wsum += w
+    return total / wsum if wsum > 0 else np.full(len(df), 0.5)
 
 
 if __name__ == "__main__":
