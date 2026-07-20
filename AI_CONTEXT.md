@@ -11,9 +11,10 @@ Underwriting Copilot is an **AI-assisted life-insurance underwriting workbench**
 **Backend pipeline (Python, `src/`)** runs offline and produces the data the app displays:
 - `datagen.py` — generates synthetic applicants with correlated risk factors and a ground-truth "high risk" label.
 - `external_data.py` — trains small models on 17 public health/credit datasets and blends them into an "External Risk Prior" fed into the main models.
-- `docgen.py` — builds 3-document PDF packets (application form, payslip, paramedical report) and **injects contradictions at a 30% rate** so detection can be measured.
+- `published_models.py` — Framingham office-based CVD model (published coefficients, no training) exposed as the `published_cvd_prior` feature.
+- `docgen.py` — builds 5-document PDF packets (application form, payslip, paramedical report, 3-month bank statement, tax slip) and **injects contradictions at a 30% rate** so detection can be measured.
 - `extract.py` — pulls key fields out of the packets.
-- `engine.py` — the core: conflict detection, a weighted **rule engine**, **ML models** (logistic regression + gradient boosting), and the **decision logic**.
+- `engine.py` — the core: conflict detection (6 checks), a weighted **rule engine**, **ML models** (logistic regression + gradient boosting), the **affordability screen** (4 financial-viability indicators + indicative premium estimator), and the **decision logic**.
 - `run_pipeline.py` — orchestrates the above and writes `output/portfolio.json` (all cases) + `output/evaluation_report.json` (metrics).
 - `dashboard.py` — injects `portfolio.json` into a big HTML/CSS/JS template and writes the final self-contained `output/underwriting_copilot_mvp.html`.
 
@@ -24,7 +25,8 @@ Underwriting Copilot is an **AI-assisted life-insurance underwriting workbench**
 Each case object (from `portfolio.json`, embedded as `DATA.cases`) has roughly these fields:
 
 - Identity/application: `id` (e.g. "APP-1123"), `name`, `age`, `occupation`, `city`, `state`, `policy`, `coverage` (face amount, USD), `has_docs`.
-- Risk inputs: `bmi`, `smoker`, `conditions`, `credit`, `dti` (debt-to-income), `ext_prior`.
+- Risk inputs: `bmi`, `smoker`, `conditions`, `credit`, `dti` (debt-to-income), `ext_prior`, `pub_prior` (Framingham CVD).
+- Affordability: `premium` (indicative annual premium) and `afford` — `{verdict: "pass"|"strain"|"fail", label: "AFFORDABLE"|"STRAINED"|"NOT JUSTIFIED", premium, pti, disposable, cov_mult, cov_cap, dsr, indicators[], reasons[]}`. A `fail` verdict forces MANUAL REVIEW ("Referred — Financial Underwriting Review") regardless of risk score.
 - Scores: `risk_score` (composite 0–100), `rule_score`, `ml_score` (gradient boosting), `ml_score_lr` (logistic), `rule_factors` (array of `[label, detail, points]`).
 - Screening: `conflicts` (array of `{type, severity: "major"|"minor", description}`), `unique` (disclosed circumstance text or null).
 - Decision: `verdict` ("green"|"yellow"|"red"), `decision` ("APPROVE"|"MANUAL REVIEW"|"DECLINE"), `rate_class`, `reasons` (array of strings), `label` (ground truth), `ai_summary` (pre-written narrative).
@@ -33,18 +35,23 @@ Each case object (from `portfolio.json`, embedded as `DATA.cases`) has roughly t
 
 **Composite risk score** = `0.5 × rule_engine + 0.5 × ML_probability`, on a 0–100 scale.
 
-**Bands (thresholds 50 / 90):**
-- `< 50` → **APPROVE** (green) — clear-cut, auto-approved.
-- `50–89` → **MANUAL REVIEW** (yellow) — a human underwriter must look at it.
-- `≥ 90` → **DECLINE** (red) — risk exceeds appetite.
+**Bands (thresholds are STP-optimised per pipeline run, fallback 50 / 90):**
+`run_pipeline` grid-searches the approve/decline lines to maximise straight-through
+processing under safety constraints (approve-zone true-risk ceiling, decline-zone
+precision floor) and writes them to `metrics.decisioning.thresholds`; the app reads
+`A_LINE`/`D_LINE` from there (this build: 34 / 60).
+- `< A_LINE` → **APPROVE** (green) — clear-cut, auto-approved.
+- `A_LINE–D_LINE-1` → **MANUAL REVIEW** (yellow) — a human underwriter must look at it.
+- `≥ D_LINE` → **DECLINE** (red) — risk exceeds appetite.
 
 **Overrides that force manual review or decline regardless of score:**
 - Any **major cross-document conflict** → at least manual review.
 - **Material misrepresentation** (smoker non-disclosure or DOB mismatch) → automatic **DECLINE**.
 - **Model disagreement** (rule vs ML differ by >20 points) → manual review.
 - A **disclosed unique circumstance** → manual review.
+- A **failed affordability screen** (NOT JUSTIFIED) → manual review, "Referred — Financial Underwriting Review".
 
-Important implementation detail: the thresholds were changed to 50/90 after the data was generated, so the app **recomputes every case's verdict/decision/reasons client-side at load** (`recomputeVerdicts()` in the JS) to stay consistent — it does not rely solely on the values baked into `portfolio.json`.
+Important implementation detail: the app **recomputes every case's verdict/decision/reasons client-side at load** (`recomputeVerdicts()` in the JS, using the pipeline's exported thresholds and the baked `afford` verdict) to stay consistent — it does not rely solely on the values baked into `portfolio.json`.
 
 ## 5. Two roles (demo credential login)
 
