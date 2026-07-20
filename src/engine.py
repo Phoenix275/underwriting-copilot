@@ -1,4 +1,5 @@
-"""engine.py — Conflict detection, dual risk engine, decision logic."""
+"""engine.py — Conflict detection, dual risk engine, affordability, decision logic."""
+import math
 import numpy as np
 import pandas as pd
 
@@ -18,6 +19,14 @@ CHECKS = [
      lambda r: r.get("form_debt") is not None and r.get("bureau_debt")
                and r["bureau_debt"] > max(r["form_debt"], 1000) * 1.5,
      "Credit-bureau debt figure exceeds declared debt by >50%"),
+    ("income_deposit_mismatch", "major",
+     lambda r: r.get("payslip_income") and r.get("bank_deposit_monthly")
+               and r["bank_deposit_monthly"] * 12 < r["payslip_income"] * 0.80,
+     "Bank-statement deposits run >20% below payslip income — stated income is not evidenced in the account"),
+    ("tax_income_mismatch", "major",
+     lambda r: r.get("form_income") and r.get("tax_income")
+               and r["tax_income"] < r["form_income"] * 0.85,
+     "Income reported to the tax authority is >15% below the income declared on the application"),
 ]
 
 def detect_conflicts(rec):
@@ -77,13 +86,102 @@ def rule_score(a):
 def tier(score):
     return "low" if score <= 25 else "moderate" if score <= 50 else "elevated" if score <= 70 else "high"
 
+# ---------------- affordability / financial viability (financial underwriting) -----
+# The project brief is an *affordability* copilot: can this applicant sustain the
+# premium, and is the requested face amount financially justified? These are the
+# standard financial-underwriting screens, separate from mortality risk.
+
+POLICY_PREMIUM_MULT = {"Term Life - 20yr": 1.0, "Term Life - 30yr": 1.45,
+                       "Universal Life": 5.0, "Whole Life": 8.5}
+
+def estimate_premium(age, smoker, coverage, policy):
+    """Indicative annual premium in USD: rate per $1k of face amount, term-20
+    non-smoker baseline, exponential in age, loaded for tobacco and for
+    permanent products. Indicative only — a real quote engine replaces this."""
+    rate = 0.9 * math.exp(0.045 * (age - 30))
+    if smoker == "Smoker":
+        rate *= 2.3
+    elif smoker == "Former smoker":
+        rate *= 1.25
+    return round(coverage / 1000.0 * rate * POLICY_PREMIUM_MULT.get(policy, 1.0), 2)
+
+# max justified (coverage + existing) / income multiple by age — standard
+# financial-underwriting income-replacement table
+COVERAGE_CAPS = [(40, 25), (50, 20), (60, 15), (999, 10)]
+
+NET_INCOME_FACTOR = 0.78   # after-tax take-home approximation
+DEBT_SERVICE_RATE = 0.025  # blended monthly payment as a share of debt balance
+
+def affordability_assess(income, monthly_expenses, debt, coverage, existing_cov,
+                         age, premium):
+    """Four-indicator financial viability screen. Returns verdict
+    'pass' (AFFORDABLE) / 'strain' (STRAINED) / 'fail' (NOT JUSTIFIED),
+    with every indicator, its benchmark, and plain-English reasons."""
+    income = max(float(income), 1.0)
+    net_monthly = income * NET_INCOME_FACTOR / 12
+    prem_monthly = premium / 12
+    pti = premium / income
+    disposable = net_monthly - float(monthly_expenses) - prem_monthly
+    debt_pay = float(debt) * DEBT_SERVICE_RATE
+    dsr = debt_pay / net_monthly
+    cap = next(m for a, m in COVERAGE_CAPS if age < a)
+    cov_mult = (float(coverage) + float(existing_cov)) / income
+
+    ind, reasons = [], []
+    def add(label, value, status, detail):
+        ind.append({"label": label, "value": value, "status": status, "detail": detail})
+        if status == "fail":
+            reasons.append(f"{label}: {detail}")
+
+    s = "pass" if pti <= 0.05 else "strain" if pti <= 0.10 else "fail"
+    add("Premium-to-income", f"{pti*100:.1f}%", s,
+        f"annual premium {_usd(premium)} is {pti*100:.1f}% of gross income (benchmark ≤5%, strained to 10%)")
+
+    floor = max(0.05 * net_monthly, 150.0)
+    s = "fail" if disposable < 0 else "strain" if disposable < floor else "pass"
+    add("Disposable income after premium", _usd(disposable) + "/mo", s,
+        f"net {_usd(net_monthly)}/mo − expenses {_usd(monthly_expenses)}/mo − premium {_usd(prem_monthly)}/mo "
+        f"leaves {_usd(disposable)}/mo (floor {_usd(floor)})")
+
+    s = "pass" if cov_mult <= cap else "strain" if cov_mult <= cap * 1.1 else "fail"
+    add("Coverage-to-income multiple", f"{cov_mult:.1f}×", s,
+        f"total coverage sought is {cov_mult:.1f}× income against an age-{age} cap of {cap}×")
+
+    s = "pass" if dsr <= 0.20 else "strain" if dsr <= 0.35 else "fail"
+    add("Debt-service ratio", f"{dsr*100:.0f}%", s,
+        f"estimated debt payments {_usd(debt_pay)}/mo consume {dsr*100:.0f}% of net income (benchmark ≤20%)")
+
+    statuses = [i["status"] for i in ind]
+    verdict = "fail" if "fail" in statuses else "strain" if "strain" in statuses else "pass"
+    label = {"pass": "AFFORDABLE", "strain": "STRAINED", "fail": "NOT JUSTIFIED"}[verdict]
+    if verdict == "strain":
+        reasons.append("Affordability indicators are within tolerance but strained: "
+                       + "; ".join(i["label"] for i in ind if i["status"] == "strain"))
+    return {"verdict": verdict, "label": label, "premium": round(premium, 2),
+            "premium_monthly": round(prem_monthly, 2), "pti": round(pti, 4),
+            "disposable": round(disposable, 2), "cov_mult": round(cov_mult, 2),
+            "cov_cap": cap, "dsr": round(dsr, 4), "indicators": ind, "reasons": reasons}
+
+def _usd(n):
+    return "$" + format(int(round(float(n))), ",")
+
+def afford_from_row(a):
+    """Affordability assessment straight from an applicant row."""
+    premium = estimate_premium(int(a["Age"]), a["Smoker Status"],
+                               float(a["Coverage Amount Requested (USD)"]),
+                               a["Policy Type Requested"])
+    return affordability_assess(a["Annual Income (USD)"], a["Monthly Expenses (USD)"],
+                                a["Existing Debt (USD)"], a["Coverage Amount Requested (USD)"],
+                                a.get("Existing Coverage (USD)", 0) if hasattr(a, "get") else a["Existing Coverage (USD)"],
+                                int(a["Age"]), premium)
+
 # ---------------- ML engine --------------------------------------------------------
 FEATURES = ["Age", "BMI", "smoker_now", "smoker_former", "n_conditions",
             "Family History Flag", "Debt-to-Income Ratio", "Credit Score",
             "hazardous_activity", "driving_violations", "alcohol_heavy",
             "prior_decline", "dangerous_driving", "drug_use", "criminal_record",
             "bankruptcy", "foreign_travel", "weight_change",
-            "external_prior"]
+            "external_prior", "published_cvd_prior"]
 
 def featurize(df):
     X = pd.DataFrame({
@@ -106,6 +204,8 @@ def featurize(df):
         "weight_change": df["Weight Change 10lb (12mo)"].astype(int),
         # blended event probability learned from public real-world datasets
         "external_prior": df["External Risk Prior"] if "External Risk Prior" in df else 0.5,
+        # Framingham office-based general-CVD model (published, zero-training)
+        "published_cvd_prior": df["Published CVD Prior"] if "Published CVD Prior" in df else 0.1,
     })
     return X[FEATURES]
 
@@ -168,26 +268,28 @@ def ml_scores(models, df):
 # green  = APPROVE        — clear-cut acceptable risk, auto-approve
 # yellow = MANUAL REVIEW  — a human underwriter must look at the whole person
 # red    = DECLINE        — application contradicts evidence, or risk clearly exceeds appetite
-APPROVE_LINE = 40   # composite below this (with clean signals) auto-approves
-DECLINE_LINE = 70   # composite at/above this declines
+APPROVE_LINE = 50   # defaults; run_pipeline passes STP-optimised lines instead
+DECLINE_LINE = 90
 
 MISREP_TYPES = {"smoker_nondisclosure", "dob_mismatch"}
 
-def decide(rule_s, ml_s, conflicts, unique=None):
+def decide(rule_s, ml_s, conflicts, unique=None, a_line=APPROVE_LINE, d_line=DECLINE_LINE,
+           afford=None):
     composite = int(round(0.5 * rule_s + 0.5 * ml_s))
     majors = [c for c in conflicts if c["severity"] == "major"]
     misrep = [c for c in majors if c["type"] in MISREP_TYPES]
+    afford_fail = bool(afford and afford["verdict"] == "fail")
     reasons = []
     if misrep:
         verdict, decision = "red", "DECLINE"
         rate = "Declined — Material Misrepresentation"
         reasons.append("Application contradicts medical/identity evidence: "
                        + "; ".join(c["type"].replace("_", " ") for c in misrep))
-    elif composite >= DECLINE_LINE:
+    elif composite >= d_line:
         verdict, decision = "red", "DECLINE"
         rate = "Declined — Risk Exceeds Appetite"
-        reasons.append(f"Composite risk score {composite}/100 is in the {DECLINE_LINE}+ decline band")
-    elif majors or unique or composite >= APPROVE_LINE or abs(rule_s - ml_s) > 20:
+        reasons.append(f"Composite risk score {composite}/100 is in the {d_line}+ decline band")
+    elif majors or unique or afford_fail or composite >= a_line or abs(rule_s - ml_s) > 20:
         verdict, decision = "yellow", "MANUAL REVIEW"
         rate = "Referred — Senior Underwriter Review"
         if majors:
@@ -195,14 +297,61 @@ def decide(rule_s, ml_s, conflicts, unique=None):
         if unique:
             rate = "Referred — Unique Circumstances Disclosed"
             reasons.append(f"Applicant disclosed unique circumstances: {unique}")
-        if composite >= APPROVE_LINE:
-            reasons.append(f"Composite score {composite} sits in the {APPROVE_LINE}–{DECLINE_LINE - 1} referral band")
+        if afford_fail:
+            rate = "Referred — Financial Underwriting Review"
+            reasons.extend(afford["reasons"])
+        if composite >= a_line:
+            reasons.append(f"Composite score {composite} sits in the {a_line}–{d_line - 1} referral band")
         if abs(rule_s - ml_s) > 20:
             reasons.append(f"Rule engine ({rule_s}) and ML model ({ml_s:.0f}) disagree materially")
     else:
         verdict, decision = "green", "APPROVE"
         rate = "Preferred Rate Class" if composite <= 25 else "Standard Rate Class"
-        reasons.append(f"Composite score {composite} is below the {APPROVE_LINE}-point approval line; "
+        reasons.append(f"Composite score {composite} is below the {a_line}-point approval line; "
                        f"engines agree and no conflicts or special circumstances were found")
+        if afford and afford["verdict"] == "strain":
+            reasons.append("Affordability is strained but within tolerance — flagged on the financial viability panel")
+    # straight-through = any auto decision (approve OR decline); only yellow needs a human
     return {"decision": decision, "rate_class": rate, "verdict": verdict, "risk_score": composite,
-            "tier": tier(composite), "reasons": reasons, "referred": verdict != "green"}
+            "tier": tier(composite), "reasons": reasons, "referred": verdict == "yellow"}
+
+
+def optimize_thresholds(composites, labels, clean, approve_risk_max=0.05, decline_prec_min=0.70):
+    """Pick the approve/decline lines that MAXIMISE straight-through processing,
+    subject to safety constraints measured against ground truth:
+      - auto-approve zone must contain ≤ approve_risk_max actual high-risk cases
+      - auto-decline zone must be ≥ decline_prec_min actual high-risk (precision)
+    `clean` marks cases with no conflicts/disclosures (only those can auto-approve).
+    Returns (a_line, d_line, stats).
+    """
+    comp = np.asarray(composites); y = np.asarray(labels); cl = np.asarray(clean, dtype=bool)
+    # if no line pair satisfies the strict constraint, relax the approve-zone
+    # risk ceiling in steps and record which ceiling was actually used
+    for risk_max in (approve_risk_max, 0.08, 0.10, 0.12, 0.15):
+        best, best_stp = None, -1.0
+        for a in range(30, 71):
+            appr = cl & (comp < a)
+            if appr.sum() and y[appr].mean() > risk_max:
+                continue
+            for d in range(max(a + 10, 60), 101):
+                decl = comp >= d
+                if decl.sum() and y[decl].mean() < decline_prec_min:
+                    continue
+                stp = (appr.sum() + decl.sum()) / len(comp)
+                if stp > best_stp:
+                    best_stp = stp
+                    best = (a, d, {"stp_est": round(float(stp), 4),
+                                    "approve_risk_rate": round(float(y[appr].mean()) if appr.sum() else 0.0, 4),
+                                    "decline_precision": round(float(y[decl].mean()) if decl.sum() else 1.0, 4),
+                                    "n_auto_approve": int(appr.sum()), "n_auto_decline": int(decl.sum()),
+                                    "approve_risk_ceiling_used": risk_max})
+        if best is not None:
+            return best
+    # last resort: default lines with honestly-computed stats
+    appr = cl & (comp < APPROVE_LINE); decl = comp >= DECLINE_LINE
+    return (APPROVE_LINE, DECLINE_LINE,
+            {"stp_est": round(float((appr.sum() + decl.sum()) / len(comp)), 4),
+             "approve_risk_rate": round(float(y[appr].mean()) if appr.sum() else 0.0, 4),
+             "decline_precision": round(float(y[decl].mean()) if decl.sum() else 1.0, 4),
+             "n_auto_approve": int(appr.sum()), "n_auto_decline": int(decl.sum()),
+             "approve_risk_ceiling_used": None})

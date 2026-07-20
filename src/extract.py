@@ -10,7 +10,7 @@ Output schema per applicant (extracted_record):
   name, form_dob, paramed_dob, form_income, payslip_income,
   form_debt, bureau_debt, form_tobacco_yes, cotinine,
   height_cm, weight_kg, blood_pressure, cholesterol, conditions_yes,
-  family_history_yes
+  family_history_yes, bank_deposit_monthly, bank_outflow_monthly, tax_income
 """
 import re
 import pdfplumber
@@ -101,12 +101,34 @@ class LocalTextExtractor:
             "bureau_debt": _money(_grab(text, "Credit-Bureau Debt Figure (attached consumer report)")),
         }
 
+    def extract_bank_statement(self, path):
+        with pdfplumber.open(path) as pdf:
+            text = pdf.pages[0].extract_text() or ""
+        return {
+            "bank_deposit_monthly": _money(_grab(text, "Average Monthly Deposits")),
+            "bank_outflow_monthly": _money(_grab(text, "Average Monthly Outflows")),
+            "bank_closing_balance": _money(_grab(text, "Closing Balance (30 Jun 2026)")),
+        }
+
+    def extract_tax_slip(self, path):
+        with pdfplumber.open(path) as pdf:
+            text = pdf.pages[0].extract_text() or ""
+        return {
+            "tax_income": _money(_grab(text, "Total Income Reported (Box 1)")),
+            "tax_year": _grab(text, "Tax Year"),
+        }
+
     def extract_packet(self, packet_dir):
         import os
         rec = {}
         rec.update(self.extract_application(os.path.join(packet_dir, "application_form.pdf")))
         rec.update(self.extract_payslip(os.path.join(packet_dir, "payslip.pdf")))
         rec.update(self.extract_paramed(os.path.join(packet_dir, "paramed_report.pdf")))
+        for fname, fn in (("bank_statement.pdf", self.extract_bank_statement),
+                          ("tax_slip.pdf", self.extract_tax_slip)):
+            p = os.path.join(packet_dir, fname)
+            if os.path.exists(p):   # packets generated before the financial docs existed
+                rec.update(fn(p))
         return rec
 
 

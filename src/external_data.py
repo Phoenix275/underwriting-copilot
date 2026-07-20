@@ -69,6 +69,27 @@ def _load_hcv(p):
     X = pd.DataFrame({"age": d.Age, "sex": (d.Sex == "m").astype(int)})
     return X, (~d.Category.str.contains("Blood Donor")).astype(int)
 
+def _load_cardio(p):
+    d = pd.read_csv(p)
+    bmi = d.weight / (d.height / 100) ** 2
+    X = pd.DataFrame({"age": d.age / 365.25, "sex": (d.gender == 2).astype(int),
+                      "bmi": bmi, "sys_bp": _num(d.ap_hi).clip(70, 250),
+                      "smoker": d.smoke})
+    return X, d.cardio
+
+def _load_stroke(p):
+    d = pd.read_csv(p, na_values="N/A")
+    X = pd.DataFrame({"age": d.age, "sex": (d.gender == "Male").astype(int),
+                      "bmi": _num(d.bmi),
+                      "smoker": (d.smoking_status == "smokes").astype(int)})
+    return X, d.stroke
+
+def _load_premium(p):
+    d = pd.read_csv(p)
+    bmi = d.Weight / (d.Height / 100) ** 2
+    X = pd.DataFrame({"age": d.Age, "bmi": bmi, "diabetes": d.Diabetes})
+    return X, (d.PremiumPrice > d.PremiumPrice.median()).astype(int)
+
 def _load_thoracic(p):
     rows = []
     with open(p) as f:
@@ -154,6 +175,12 @@ REGISTRY = [
      "https://archive.ics.uci.edu/ml/machine-learning-databases/00571/hcvdat0.csv", _load_hcv),
     ("UCI Thoracic Surgery — 1yr mortality", "thoracic.arff",
      "https://archive.ics.uci.edu/ml/machine-learning-databases/00277/ThoraricSurgery.arff", _load_thoracic),
+    ("Kaggle Cardiovascular Disease (mirror)", "cardio.csv",
+     "https://raw.githubusercontent.com/2025AA05573/2025AA05573_ML_assignment2/main/cardio_train.csv", _load_cardio),
+    ("Kaggle Stroke Prediction, 5.1k patients (mirror)", "stroke.csv",
+     "https://raw.githubusercontent.com/ray-project/raydp/master/tutorials/dataset/healthcare-dataset-stroke-data.csv", _load_stroke),
+    ("Medical Insurance Premium — insurer-priced risk (mirror)", "premium.csv",
+     "https://raw.githubusercontent.com/PanyiDong/InsurAutoML/master/data/Medicalpremium.csv", _load_premium),
 ]
 
 

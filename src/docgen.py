@@ -1,19 +1,23 @@
 """docgen.py — Synthetic document packet generator.
 
-For each applicant produces a 3-document PDF packet modeled on real
+For each applicant produces a 5-document PDF packet modeled on real
 underwriting inputs:
   1. application_form.pdf  — in-depth form: yes/no questions, each "Yes"
                              followed by a fill-in-the-blank detail line
                              (structure per manager feedback)
   2. payslip.pdf           — employer, gross pay, YTD income
   3. paramed_report.pdf    — exam vitals, cotinine (nicotine) result, DOB
+  4. bank_statement.pdf    — 3-month deposits/outflows with expense categories
+  5. tax_slip.pdf          — prior-year income reported to the tax authority
 
 Conflicts are injected at a controlled rate and logged to ground truth,
 making conflict-detection *measurable*:
-  income_mismatch      form declared income != payslip annualized income
-  smoker_nondisclosure form says No tobacco, paramed cotinine POSITIVE
-  dob_mismatch         form DOB != paramed report DOB
-  debt_understated     form declared debt << credit-report debt figure
+  income_mismatch         form declared income != payslip annualized income
+  smoker_nondisclosure    form says No tobacco, paramed cotinine POSITIVE
+  dob_mismatch            form DOB != paramed report DOB
+  debt_understated        form declared debt << credit-report debt figure
+  income_deposit_mismatch bank deposits run far below payslip income
+  tax_income_mismatch     tax-reported income << income declared on the form
 """
 import json, os
 import numpy as np
@@ -160,6 +164,64 @@ def paramed_report(path, a, printed):
     c.drawString(0.8 * inch, 0.7 * inch, "Synthetic document generated for prototype evaluation.")
     c.save()
 
+def bank_statement(path, a, printed, rng):
+    """3-month personal account summary: deposits vs categorized outflows.
+    The AVERAGE lines are the extraction ground truth; the per-month rows
+    jitter around them for realism (display only)."""
+    c = canvas.Canvas(path, pagesize=LETTER)
+    _header(c, "PERSONAL ACCOUNT STATEMENT", "First Meridian Bank  ·  Statement period: 01 Apr 2026 – 30 Jun 2026")
+    y = H - 1.5 * inch
+    y = _kv(c, y, "Account Holder", printed["name"])
+    dep, outf = printed["bank_deposit_monthly"], printed["bank_outflow_monthly"]
+    c.setFont("Helvetica-Bold", 9); c.setFillColorRGB(*INK)
+    c.drawString(0.8 * inch, y, "MONTHLY ACTIVITY"); y -= 18
+    c.setFont("Helvetica", 8.5); c.setFillColorRGB(*MUTE)
+    c.drawString(0.8 * inch, y, "MONTH"); c.drawString(2.6 * inch, y, "TOTAL DEPOSITS"); c.drawString(4.4 * inch, y, "TOTAL WITHDRAWALS")
+    y -= 14; c.setFont("Helvetica", 9.5); c.setFillColorRGB(*INK)
+    for mon in ("April 2026", "May 2026", "June 2026"):
+        jd, jo = dep * float(rng.uniform(0.96, 1.04)), outf * float(rng.uniform(0.96, 1.04))
+        c.drawString(0.8 * inch, y, mon)
+        c.drawString(2.6 * inch, y, f"${jd:,.2f}")
+        c.drawString(4.4 * inch, y, f"${jo:,.2f}")
+        y -= 15
+    y -= 8
+    y = _kv(c, y, "Average Monthly Deposits", f"${dep:,.2f}")
+    y = _kv(c, y, "Average Monthly Outflows", f"${outf:,.2f}")
+    c.setFont("Helvetica-Bold", 9); c.setFillColorRGB(*INK)
+    c.drawString(0.8 * inch, y, "OUTFLOWS BY CATEGORY (MONTHLY AVERAGE)"); y -= 18
+    debt_pay = min(float(a["Existing Debt (USD)"]) * 0.025, outf * 0.55)
+    housing = (outf - debt_pay) * 0.52
+    utilities = (outf - debt_pay) * 0.11
+    groceries = (outf - debt_pay) * 0.17
+    transport = (outf - debt_pay) * 0.08
+    disc = outf - debt_pay - housing - utilities - groceries - transport
+    c.setFont("Helvetica", 9.5)
+    for lab, v in (("Housing / Rent", housing), ("Loan & Debt Payments", debt_pay),
+                   ("Utilities", utilities), ("Groceries", groceries),
+                   ("Transport", transport), ("Discretionary", disc)):
+        c.setFillColorRGB(*MUTE); c.drawString(0.8 * inch, y, lab)
+        c.setFillColorRGB(*INK); c.drawString(3.4 * inch, y, f"${v:,.2f}")
+        y -= 15
+    y -= 10
+    _kv(c, y, "Closing Balance (30 Jun 2026)", f"${a['Avg Bank Balance (USD)']:,.2f}")
+    c.setFont("Helvetica-Oblique", 7.5); c.setFillColorRGB(*MUTE)
+    c.drawString(0.8 * inch, 0.7 * inch, "Synthetic document generated for prototype evaluation.")
+    c.save()
+
+def tax_slip(path, a, printed):
+    """Prior-year statement of income — the third-party check on declared income."""
+    c = canvas.Canvas(path, pagesize=LETTER)
+    _header(c, "STATEMENT OF INCOME — TAX YEAR 2025", "Issued by employer to the tax authority  ·  Copy B, for employee records")
+    y = H - 1.5 * inch
+    y = _kv(c, y, "Employee", printed["name"])
+    y = _kv(c, y, "Employer", a["Employer"])
+    y = _kv(c, y, "Employment Status", a["Employment Status"])
+    y = _kv(c, y, "Total Income Reported (Box 1)", f"${printed['tax_income']:,.2f}")
+    y = _kv(c, y, "Tax Year", "2025")
+    c.setFont("Helvetica-Oblique", 7.5); c.setFillColorRGB(*MUTE)
+    c.drawString(0.8 * inch, 0.7 * inch, "Synthetic document generated for prototype evaluation.")
+    c.save()
+
 def _shift_dob(dob, rng):
     y_, m, d = dob.split("-")
     return f"{y_}-{m}-{min(int(d) + int(rng.integers(1, 9)), 28):02d}"
@@ -181,7 +243,8 @@ def generate_packets(df, out_dir, conflict_rate=0.30, seed=7):
         }
         injected = []
         if rng.random() < conflict_rate:
-            kind = rng.choice(["income_mismatch", "smoker_nondisclosure", "dob_mismatch", "debt_understated"])
+            kind = rng.choice(["income_mismatch", "smoker_nondisclosure", "dob_mismatch",
+                               "debt_understated", "income_deposit_mismatch", "tax_income_mismatch"])
             if kind == "income_mismatch":
                 printed["form_income"] = round(printed["payslip_income"] * float(rng.uniform(1.25, 1.7)), -2)
             elif kind == "smoker_nondisclosure":
@@ -192,9 +255,21 @@ def generate_packets(df, out_dir, conflict_rate=0.30, seed=7):
             elif kind == "debt_understated":
                 printed["bureau_debt"] = round(max(printed["form_debt"], 5000) * float(rng.uniform(1.8, 3.0)), -2)
             injected.append(str(kind))
+        # financial-doc figures are derived AFTER injection so each packet carries
+        # exactly the one injected conflict (tax slip mirrors the form declaration;
+        # deposits mirror the payslip) — keeps detection measurement orthogonal
+        printed["bank_deposit_monthly"] = round(printed["payslip_income"] / 12, 2)
+        printed["bank_outflow_monthly"] = round(float(a["Monthly Expenses (USD)"]), 2)
+        printed["tax_income"] = round(printed["form_income"], 2)
+        if injected and injected[0] == "income_deposit_mismatch":
+            printed["bank_deposit_monthly"] = round(printed["bank_deposit_monthly"] * float(rng.uniform(0.50, 0.70)), 2)
+        elif injected and injected[0] == "tax_income_mismatch":
+            printed["tax_income"] = round(printed["form_income"] * float(rng.uniform(0.60, 0.80)), 2)
         application_form(os.path.join(pdir, "application_form.pdf"), a, printed)
         payslip(os.path.join(pdir, "payslip.pdf"), a, printed)
         paramed_report(os.path.join(pdir, "paramed_report.pdf"), a, printed)
+        bank_statement(os.path.join(pdir, "bank_statement.pdf"), a, printed, rng)
+        tax_slip(os.path.join(pdir, "tax_slip.pdf"), a, printed)
         truth[aid] = {"printed": printed, "injected_conflicts": injected}
     with open(os.path.join(out_dir, "doc_ground_truth.json"), "w") as f:
         json.dump(truth, f, indent=1)

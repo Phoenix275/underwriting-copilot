@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, os.path.dirname(__file__))
-import datagen, docgen, engine, external_data
+import datagen, docgen, engine, external_data, published_models
 from extract import LocalTextExtractor
 
 OUT = os.path.join(os.path.dirname(__file__), "..", "output")
@@ -29,7 +29,8 @@ CONFLICT_RATE = 0.30
 
 # comparable fields for extraction accuracy (extracted vs printed ground truth)
 ACC_FIELDS = ["name", "form_dob", "paramed_dob", "form_income", "payslip_income",
-              "form_debt", "bureau_debt", "form_tobacco_yes", "cotinine"]
+              "form_debt", "bureau_debt", "form_tobacco_yes", "cotinine",
+              "bank_deposit_monthly", "bank_outflow_monthly", "tax_income"]
 
 def field_match(fname, ext, truth):
     if ext is None: return False
@@ -56,6 +57,8 @@ def main():
     print(f"[2/7] generating {N_APPLICANTS} synthetic applicants (run #{run_no}, fresh seed)…")
     df = datagen.generate(N_APPLICANTS, seed=42 + run_no)
     df["External Risk Prior"] = external_data.prior_scores(prior_models, df)
+    # already-built, peer-reviewed model used as-is (no training): Framingham office CVD
+    df["Published CVD Prior"] = published_models.prior_from_df(df)
     df.to_csv(os.path.join(OUT, "applicants.csv"), index=False)
 
     # continuous learning: every run adds a fresh batch to a growing training pool
@@ -81,6 +84,9 @@ def main():
         if ov:
             ov_df = pd.DataFrame([{**o["fields"], "High Risk Label": int(o["label"])} for o in ov])
             train_df = pd.concat([pool, ov_df], ignore_index=True)
+            for col, dflt in (("External Risk Prior", 0.5), ("Published CVD Prior", 0.1)):
+                if col in train_df:
+                    train_df[col] = pd.to_numeric(train_df[col], errors="coerce").fillna(dflt)
             n_overrides = len(ov_df)
 
     print(f"[3/7] training risk models on pool of {len(train_df):,} records "
@@ -118,7 +124,8 @@ def main():
 
     print("[6/7] conflict detection + decisions…")
     tp = fp = fn = 0
-    portfolio = []
+    # pass 1 — score every applicant, collect conflicts and clean flags
+    scored = []
     for _, a in df.iterrows():
         aid = a["Applicant ID"]
         rule_s, factors = engine.rule_score(a)
@@ -131,7 +138,27 @@ def main():
         else:
             conflicts = []
         unique = None if a["Unique Circumstances"] == "None" else a["Unique Circumstances"]
-        d = engine.decide(rule_s, ml_s, conflicts, unique=unique)
+        afford = engine.afford_from_row(a)
+        clean = not unique and not any(c["severity"] == "major" for c in conflicts) \
+                and abs(rule_s - ml_s) <= 20 and afford["verdict"] != "fail"
+        scored.append((a, rule_s, factors, ml_s, conflicts, unique, clean, afford))
+
+    # STP optimiser — pick approve/decline lines that maximise straight-through
+    # subject to safety constraints checked against ground truth
+    composites = [round(0.5 * s[1] + 0.5 * s[3]) for s in scored]
+    labels = [int(s[0]["High Risk Label"]) for s in scored]
+    cleans = [s[6] for s in scored]
+    a_line, d_line, thr_stats = engine.optimize_thresholds(composites, labels, cleans)
+    print(f"      STP-optimised thresholds: approve <{a_line} · decline ≥{d_line} "
+          f"(est STP {thr_stats['stp_est']:.0%}, approve-zone risk "
+          f"{thr_stats['approve_risk_rate']:.1%}, decline precision {thr_stats['decline_precision']:.0%})")
+
+    # pass 2 — decide with the optimised lines
+    portfolio = []
+    for a, rule_s, factors, ml_s, conflicts, unique, clean, afford in scored:
+        aid = a["Applicant ID"]
+        d = engine.decide(rule_s, ml_s, conflicts, unique=unique, a_line=a_line, d_line=d_line,
+                          afford=afford)
         portfolio.append({
             "id": aid, "name": a["Full Name"], "sex": a["Sex"], "age": int(a["Age"]), "dob": a["Date of Birth"],
             "net_worth": float(a["Net Worth (USD)"]), "existing_cov": float(a["Existing Coverage (USD)"]),
@@ -155,6 +182,8 @@ def main():
             "hazard": a["Hazardous Activities"], "violations": int(a["Driving Violations (3yr)"]),
             "alcohol": a["Alcohol Use"], "unique": unique,
             "ext_prior": round(float(a["External Risk Prior"]), 4),
+            "pub_prior": round(float(a["Published CVD Prior"]), 4),
+            "premium": afford["premium"], "afford": afford,
             "credit": int(a["Credit Score"]), "dti": float(a["Debt-to-Income Ratio"]),
             "label": int(a["High Risk Label"]),
             "rule_score": rule_s, "rule_factors": factors, "ml_score": ml_s,
@@ -181,6 +210,25 @@ def main():
     conflict_precision = tp / max(tp + fp, 1)
     agreement = np.mean([engine.tier(p["rule_score"]) == engine.tier(p["ml_score"]) for p in portfolio])
 
+    # affordability / financial viability metrics (the brief's core success metric)
+    n = len(portfolio)
+    aff_counts = {"pass": 0, "strain": 0, "fail": 0}
+    for p in portfolio:
+        aff_counts[p["afford"]["verdict"]] += 1
+    afford_metrics = {
+        "affordable_rate": round(aff_counts["pass"] / n, 4),
+        "strained_rate": round(aff_counts["strain"] / n, 4),
+        "not_justified_rate": round(aff_counts["fail"] / n, 4),
+        "n_affordable": aff_counts["pass"], "n_strained": aff_counts["strain"],
+        "n_not_justified": aff_counts["fail"],
+        "avg_premium_to_income": round(float(np.mean([p["afford"]["pti"] for p in portfolio])), 4),
+        "avg_annual_premium": round(float(np.mean([p["premium"] for p in portfolio])), 2),
+        "indicator_fail_rates": {
+            ind["label"]: round(sum(1 for p in portfolio
+                                    if p["afford"]["indicators"][i]["status"] == "fail") / n, 4)
+            for i, ind in enumerate(portfolio[0]["afford"]["indicators"])},
+    }
+
     print("[7/7] writing reports…")
     model_report["prior_export"] = prior_models
     report = {
@@ -196,9 +244,11 @@ def main():
                                 "detection_precision": round(conflict_precision, 4),
                                 "tp": tp, "fp": fp, "fn": fn},
         "risk_models": model_report,
+        "affordability": afford_metrics,
         "decisioning": {"straight_through_rate": round(stp, 4),
                          "rule_ml_tier_agreement": round(float(agreement), 4),
-                         "n_overrides_learned": n_overrides},
+                         "n_overrides_learned": n_overrides,
+                         "thresholds": {"a_line": int(a_line), "d_line": int(d_line), **thr_stats}},
         "fairness_by_age": fairness,
     }
     with open(os.path.join(OUT, "evaluation_report.json"), "w") as f:

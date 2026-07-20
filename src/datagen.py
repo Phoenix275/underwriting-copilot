@@ -63,8 +63,10 @@ def generate(n: int, seed: int = 42) -> pd.DataFrame:
         years_emp = int(np.clip(rng.normal(min(age - 22, 15), 5), 0, age - 20))
         credit = int(np.clip(rng.normal(715 - 40 * (debt / max(income, 1)) + 15 * (years_emp > 5), 55), 480, 850))
         dti = round(debt / income, 3)
-        # coverage in $25k increments, $25k–$1M (per Manulife OTIP application)
-        coverage = int(np.clip(round(income * rng.uniform(3, 8) / 25000) * 25000, 25000, 1000000))
+        # coverage in $25k increments, $25k–$1M (per Manulife OTIP application);
+        # ~15% seek an over-insured multiple so financial underwriting has real work
+        cov_mult = rng.uniform(10, 28) if rng.random() < 0.15 else rng.uniform(3, 8)
+        coverage = int(np.clip(round(income * cov_mult / 25000) * 25000, 25000, 1000000))
         birth_year = 2026 - age
         dob = f"{birth_year}-{rng.integers(1,13):02d}-{rng.integers(1,29):02d}"
         name = f"{FIRST[rng.integers(len(FIRST))]} {LAST[rng.integers(len(LAST))]}"
