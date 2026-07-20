@@ -1,0 +1,82 @@
+/* Design tokens — security-document printing.
+ *
+ * The artefacts this product reads are engraved documents: policy certificates,
+ * payslips, bank statements, tax slips. The palette is drawn from intaglio and
+ * banknote printing rather than from dashboard convention: a cool near-black
+ * ink, one certificate-stock vellum, one engraving teal for structure.
+ *
+ * Colour is rationed. Only a verdict may be coloured — pass / watch / fail.
+ * Selection and hover are expressed through elevation and vellum, never hue,
+ * so a coloured pixel on this page always means an underwriting outcome. */
+
+:root {
+  /* ---- ground ---- */
+  --ink: #0b1017;          /* page */
+  --ink-raised: #111823;   /* panel */
+  --ink-card: #161f2b;     /* card on panel */
+  --rule: #26303d;         /* hairline, engraved at rest */
+  --rule-bright: #37455a;  /* hairline, active */
+
+  /* ---- paper & text ---- */
+  --vellum: #e8e4d8;       /* certificate stock, primary text */
+  --vellum-ink: #101720;   /* text printed on vellum */
+  --muted: #8a94a2;        /* secondary text */
+  --faint: #5d6773;        /* tertiary, captions */
+
+  /* ---- engraving ---- */
+  --engrave: #2c7c86;      /* guilloché line, axes, structure */
+  --engrave-dim: #1b4e56;
+
+  /* ---- verdict (the only permitted colour) ---- */
+  --pass: #4fa383;
+  --watch: #d9a441;
+  --fail: #d8524a;
+  --pass-wash: rgba(79, 163, 131, 0.14);
+  --watch-wash: rgba(217, 164, 65, 0.14);
+  --fail-wash: rgba(216, 82, 74, 0.14);
+
+  /* ---- type ---- */
+  --display: 'Big Shoulders Display', 'Haettenschweiler', 'Arial Narrow', sans-serif;
+  --body: 'Public Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* fluid scale — clamps so tablet never falls into a dead zone */
+  --t-hero: clamp(2.75rem, 9vw, 7.5rem);
+  --t-h1: clamp(2rem, 5.2vw, 3.5rem);
+  --t-h2: clamp(1.4rem, 3vw, 2rem);
+  --t-h3: 1.0625rem;
+  --t-body: 0.9375rem;
+  --t-small: 0.8125rem;
+  --t-micro: 0.6875rem;
+
+  /* ---- space ---- */
+  --gap: 1rem;
+  --pad-view: clamp(1.125rem, 4vw, 3.5rem);
+  --rail: 15rem;      /* desktop side rail */
+  --dock: 4.25rem;    /* mobile bottom dock */
+
+  --radius: 3px;      /* documents have corners, not pills */
+  --radius-lg: 5px;
+
+  /* ---- motion ----
+   * One easing for everything that settles (documents come to rest, they do
+   * not bounce), one faster curve for direct manipulation. */
+  --ease-settle: cubic-bezier(0.16, 0.84, 0.28, 1);
+  --ease-quick: cubic-bezier(0.32, 0.72, 0.4, 1);
+}
+
+/* Motion is decoration on top of a page that must work without it. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ease-settle: linear;
+    --ease-quick: linear;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

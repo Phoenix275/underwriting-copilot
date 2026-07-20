@@ -1,25 +1,26 @@
-"""Streamlit wrapper — serves the self-contained Underwriting Copilot dashboard.
+"""Streamlit wrapper — serves the self-contained Underwriting Copilot workbench.
 
-The dashboard is a single self-contained HTML file (built by src/dashboard.py).
-This wrapper only embeds it full-screen for hosting on Streamlit Community
-Cloud — it does no modelling at runtime, which is why requirements.txt is
-deliberately minimal. Tech Mahindra GLP Internship — Finance Project 1.
+The workbench is a Vite/React app built to a single HTML file (web/ →
+dashboard/underwriting_copilot_mvp.html) with its data, fonts and styles
+inlined. This wrapper only hosts it, which is why requirements.txt is
+deliberately just Streamlit: nothing is modelled at runtime.
+
+Tech Mahindra GLP Internship — Finance Project 1.
 """
 import pathlib
 
 import streamlit as st
-import streamlit.components.v1 as components
 
 st.set_page_config(page_title="Underwriting Copilot", page_icon="🛡️", layout="wide")
 
-# strip Streamlit chrome so the embedded app fills the page
+# strip Streamlit's chrome so the embedded app owns the page
 st.markdown(
     """
     <style>
       #MainMenu, header, footer {visibility: hidden;}
       .block-container {padding: 0 !important; max-width: 100% !important;}
       .stAppViewBlockContainer {padding: 0 !important;}
-      iframe {min-height: 96vh;}
+      iframe {min-height: 96vh; border: 0;}
     </style>
     """,
     unsafe_allow_html=True,
@@ -29,10 +30,22 @@ HTML = pathlib.Path(__file__).parent / "dashboard" / "underwriting_copilot_mvp.h
 
 if not HTML.exists():
     st.error(
-        "Dashboard build not found at `dashboard/underwriting_copilot_mvp.html`.\n\n"
-        "Rebuild it with `python src/run_pipeline.py && python src/dashboard.py`, "
-        "then copy `output/underwriting_copilot_mvp.html` into `dashboard/`."
+        "Workbench build not found at `dashboard/underwriting_copilot_mvp.html`.\n\n"
+        "Build it with:\n\n"
+        "```\n"
+        "python src/run_pipeline.py && python src/webdata.py\n"
+        "npm --prefix web ci && npm --prefix web run release\n"
+        "```"
     )
     st.stop()
 
-components.html(HTML.read_text(encoding="utf-8"), height=1000, scrolling=True)
+markup = HTML.read_text(encoding="utf-8")
+
+# st.iframe replaced st.components.v1.html in Streamlit 1.56; keep the old path
+# working so the app still runs on whatever version Community Cloud resolves.
+if hasattr(st, "iframe"):
+    st.iframe(markup, height=1000)
+else:  # pragma: no cover - older Streamlit
+    import streamlit.components.v1 as components
+
+    components.html(markup, height=1000, scrolling=True)

@@ -1,0 +1,187 @@
+.score {
+  display: grid;
+  gap: clamp(1rem, 3vw, 2rem);
+  align-items: start;
+}
+
+@media (min-width: 1000px) {
+  .score {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 21rem);
+  }
+
+  /* the verdict follows you down the form — the whole point is watching it
+     change as you edit, so it must never scroll out of sight */
+  .score__out {
+    position: sticky;
+    top: 1.5rem;
+  }
+}
+
+/* ---- form -------------------------------------------------------------- */
+
+.fgroup {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  padding: 1rem 0 0;
+  margin: 0 0 1.5rem;
+}
+
+.fgroup legend {
+  padding: 0 0.5rem 0 0;
+}
+
+.fgroup__body {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  margin-top: 0.5rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.field__label {
+  font-size: var(--t-small);
+  color: var(--muted);
+}
+
+.field__hint {
+  font-size: var(--t-micro);
+  color: var(--faint);
+}
+
+.field input,
+.field select {
+  width: 100%;
+  padding: 0.4375rem 0.625rem;
+  border: 1px solid var(--rule-bright);
+  border-radius: var(--radius);
+  background: var(--ink-raised);
+  font-family: var(--mono);
+  font-size: var(--t-small);
+  transition: border-color 0.15s var(--ease-quick);
+}
+
+.field input:hover,
+.field select:hover {
+  border-color: var(--muted);
+}
+
+.field input:focus-visible,
+.field select:focus-visible {
+  border-color: var(--vellum);
+}
+
+.score__checks {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 0.375rem 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  margin-bottom: 0.5rem;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: var(--t-small);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.check input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--engrave);
+  flex: none;
+}
+
+.check:hover {
+  color: var(--vellum);
+}
+
+.score__reset {
+  margin-top: -0.5rem;
+}
+
+/* ---- live result ------------------------------------------------------- */
+
+.score__out {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  background: var(--ink-raised);
+  padding: 1.25rem;
+}
+
+.score__stamp {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+}
+
+.score__scores {
+  display: flex;
+  gap: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.big {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.big__value {
+  font-size: 2rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.big__value--sm {
+  font-size: 0.9375rem;
+  letter-spacing: 0.06em;
+  padding-top: 0.5rem;
+}
+
+.score__ind {
+  margin-top: 1rem;
+  padding-top: 0.875rem;
+  border-top: 1px solid var(--rule);
+}
+
+.score__indrow {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.25rem 0 0.25rem 0.625rem;
+  border-left: 2px solid currentColor;
+  margin-bottom: 0.25rem;
+  font-size: var(--t-small);
+}
+
+.score__indrow span:first-child {
+  color: var(--muted);
+}
+
+.score__why {
+  margin-top: 1.125rem;
+  padding-top: 0.875rem;
+  border-top: 1px solid var(--rule);
+}
+
+.score__why .reasons {
+  margin-top: 0.375rem;
+}
+
+.score__note {
+  margin-top: 1rem;
+  font-size: var(--t-micro);
+  line-height: 1.55;
+  color: var(--faint);
+}

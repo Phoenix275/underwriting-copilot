@@ -12,9 +12,16 @@ import pandas as pd
 
 _CURRENT_YEAR = datetime.date.today().year
 
-FIRST = ["Aisha","Marcus","Priya","David","Linda","James","Grace","Robert","Elena","Samuel",
-         "Nina","Victor","Farah","Tomas","Ingrid","Kofi","Mei","Arjun","Sofia","Liam",
-         "Yuki","Omar","Clara","Dmitri","Anya","Rahul","Beatriz","Chen","Amara","Jonas"]
+# Given names are split so a generated record's name and its Sex field agree.
+# A demo that prints "Linda Haddad · male" reads as a data-quality fault to an
+# underwriter, whatever the model does. The split follows the conventional
+# association of each name only — it carries no meaning beyond keeping one
+# synthetic record internally consistent.
+FIRST_F = ["Aisha","Priya","Linda","Grace","Elena","Nina","Farah","Ingrid",
+           "Mei","Sofia","Yuki","Clara","Anya","Beatriz","Amara"]
+FIRST_M = ["Marcus","David","James","Robert","Samuel","Victor","Tomas","Kofi",
+           "Arjun","Liam","Omar","Dmitri","Rahul","Chen","Jonas"]
+FIRST = FIRST_F + FIRST_M
 LAST = ["Rahman","Bell","Nair","Kim","Torres","Whitfield","Odom","Nguyen","Vasquez","Osei",
         "Kaplan","Ivanov","Haddad","Lindqvist","Mensah","Tanaka","Sharma","Rossi","Okafor","Novak",
         "Fischer","Almeida","Wu","Petrov","Kowalski","Iyer","Santos","Zhang","Diallo","Berg"]
@@ -71,7 +78,10 @@ def generate(n: int, seed: int = 42) -> pd.DataFrame:
         coverage = int(np.clip(round(income * cov_mult / 25000) * 25000, 25000, 1000000))
         birth_year = _CURRENT_YEAR - age
         dob = f"{birth_year}-{rng.integers(1,13):02d}-{rng.integers(1,29):02d}"
-        name = f"{FIRST[rng.integers(len(FIRST))]} {LAST[rng.integers(len(LAST))]}"
+        # draw the indices here so the random stream is unchanged; the given
+        # name is chosen from the sex-matched list once `sex` is known below
+        first_i = int(rng.integers(len(FIRST)))
+        surname = LAST[rng.integers(len(LAST))]
         city, state = CITIES[rng.integers(len(CITIES))]
         # lifestyle rating factors (standard avocation / MVR / alcohol questions)
         hazard = HAZARDS[rng.integers(len(HAZARDS))] if rng.random() < (0.11 if occ_type == "manual" else 0.07) else "None"
@@ -81,6 +91,8 @@ def generate(n: int, seed: int = 42) -> pd.DataFrame:
         unique = CIRCUMSTANCES[rng.integers(len(CIRCUMSTANCES))] if rng.random() < 0.12 else "None"
         # Section 6 personal declarations (per Manulife OTIP term-life application)
         sex = "M" if rng.random() < 0.5 else "F"
+        pool = FIRST_M if sex == "M" else FIRST_F
+        name = f"{pool[first_i % len(pool)]} {surname}"
         prior_decline = int(rng.random() < 0.05)
         dangerous_driving = int(rng.random() < (0.10 if violations >= 2 else 0.03))
         foreign_travel = int(rng.random() < 0.14)

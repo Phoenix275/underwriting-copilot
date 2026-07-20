@@ -1,0 +1,125 @@
+.flow {
+  position: relative;
+  padding-left: 3.75rem;
+}
+
+/* The spine is the pipeline. It fills as you read down it, which is the only
+   scroll-linked motion in the product and the only place it describes
+   something true about the content. */
+.flow__spine {
+  position: absolute;
+  left: 1.4375rem;
+  top: 0.5rem;
+  bottom: 3rem;
+  width: 1px;
+  background: var(--rule);
+  overflow: hidden;
+}
+
+.flow__spine-fill {
+  width: 100%;
+  height: 100%;
+  background: var(--engrave);
+  transform-origin: top center;
+}
+
+.flow__step {
+  position: relative;
+  padding-bottom: clamp(2.5rem, 6vw, 4rem);
+}
+
+.flow__step:last-child {
+  padding-bottom: 0;
+}
+
+.flow__marker {
+  position: absolute;
+  left: -3.75rem;
+  top: -0.125rem;
+  width: 2.875rem;
+  height: 2.875rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--rule-bright);
+  border-radius: 50%;
+  background: var(--ink);
+  font-size: 1.0625rem;
+  color: var(--engrave);
+}
+
+.flow__title {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(1.5rem, 3.2vw, 2.125rem);
+  line-height: 0.95;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  margin-bottom: 0.625rem;
+}
+
+.flow__what {
+  max-width: 64ch;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.flow__measured {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  margin: 1.25rem 0 1rem;
+}
+
+.flow__stat {
+  flex: 1 1 11rem;
+  padding: 0.6875rem 0.875rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--ink-raised);
+}
+
+.flow__statval {
+  display: block;
+  font-size: 1.4375rem;
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+.flow__statlabel {
+  display: block;
+  margin-top: 0.1875rem;
+  font-size: var(--t-micro);
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.flow__mine {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.6875rem 0.875rem;
+  border-left: 2px solid var(--rule-bright);
+  background: rgba(255, 255, 255, 0.025);
+  font-size: var(--t-small);
+}
+
+@media (max-width: 640px) {
+  .flow {
+    padding-left: 2.75rem;
+  }
+
+  .flow__spine {
+    left: 1.0625rem;
+  }
+
+  .flow__marker {
+    left: -2.75rem;
+    width: 2.125rem;
+    height: 2.125rem;
+    font-size: 0.875rem;
+  }
+
+  .flow__stat {
+    flex-basis: 100%;
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "name": "underwriting-copilot-web",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Underwriting Copilot workbench — Vite + React front end over the Python pipeline's outputs.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -b --noEmit",
+    "verify": "node scripts/verify-port.mjs",
+    "sync": "cp dist/index.html ../dashboard/underwriting_copilot_mvp.html && cp dist/index.html ../docs/index.html",
+    "release": "npm run verify && npm run build && npm run sync"
+  },
+  "dependencies": {
+    "motion": "^12.42.2",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.7.0",
+    "typescript": "~5.9.3",
+    "vite": "^6.4.3",
+    "vite-plugin-singlefile": "^2.3.3"
+  }
+}

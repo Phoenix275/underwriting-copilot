@@ -15,10 +15,28 @@ Underwriting Copilot is an **AI-assisted life-insurance underwriting workbench**
 - `docgen.py` — builds 5-document PDF packets (application form, payslip, paramedical report, 3-month bank statement, tax slip) and **injects contradictions at a 30% rate** so detection can be measured.
 - `extract.py` — pulls key fields out of the packets.
 - `engine.py` — the core: conflict detection (6 checks), a weighted **rule engine**, **ML models** (logistic regression + gradient boosting), the **affordability screen** (4 financial-viability indicators + indicative premium estimator), and the **decision logic**.
-- `run_pipeline.py` — orchestrates the above and writes `output/portfolio.json` (all cases) + `output/evaluation_report.json` (metrics).
-- `dashboard.py` — injects `portfolio.json` into a big HTML/CSS/JS template and writes the final self-contained `output/underwriting_copilot_mvp.html`.
+- `run_pipeline.py` — orchestrates the above and writes `output/portfolio.json` (all cases) + `output/evaluation_report.json` (metrics). **Stateful:** it appends each run's applicants to `data/training_pool.csv` and retrains on the whole pool, so metrics drift across repeated local runs. Both that file and `data/model_history.json` are gitignored; delete them to reproduce the README's figures.
+- `webdata.py` — copies the two output files into `web/src/data/`. The report is written at **full precision** because it carries the model coefficients the browser re-scores with; rounding them drifts the in-browser score.
+- `dashboard.py` — the legacy single-file generator, superseded by `web/`. Still present but no longer the deployed artifact.
 
-**Frontend (the HTML file)** is a **self-contained, client-side single-page app** written in vanilla JS. All case data is embedded at build time as a JS constant (`const DATA = {...}`). There is no server, no network calls, no framework. It runs entirely in the browser. User actions persist to `localStorage`.
+**Frontend (`web/`)** is a **Vite + React 19 + TypeScript** app that builds via
+`vite-plugin-singlefile` to **one self-contained `index.html`** — data, fonts and CSS all
+inlined, no network calls, no server. The same file is served by Streamlit
+(`dashboard/underwriting_copilot_mvp.html`), by GitHub Pages (`docs/index.html`), and
+from disk. Five views: Portfolio · Case file · How it decides · Evidence · New application.
+
+Two things to know before editing it:
+
+1. **`web/src/lib/score.ts` is a port of `engine.py`.** It exists so the workbench can
+   score a new application with no server. `npm --prefix web run verify` replays all 200
+   pipeline cases through it and fails if they disagree — rule engine and affordability
+   verdicts must match **exactly**. If you change `engine.py`, change `score.ts` and run
+   verify. Note the browser composite uses the **logistic regression**, not gradient
+   boosting, because a boosted ensemble cannot ship as coefficients.
+2. **The portfolio plane is hand-rolled SVG perspective projection**
+   (`web/src/lib/projection.ts`), deliberately not WebGL — see the README for the
+   measured bundle and accessibility reasoning. `fitCamera` re-solves scale and centre on
+   every camera change, so the view cannot overflow its frame while being dragged.
 
 ## 3. The data model (one "case")
 

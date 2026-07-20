@@ -1,0 +1,296 @@
+/* The thesis and the evidence for it sit side by side, so the plane gets a
+   frame roughly as tall as it is wide — which is the aspect a raked square
+   plane actually projects to. Stacked, it would be forced into a letterbox. */
+.hero {
+  display: grid;
+  gap: clamp(1.25rem, 3vw, 2.5rem);
+  align-items: center;
+  padding: clamp(1.5rem, 3.5vw, 2.5rem) var(--pad-view) 0;
+}
+
+.hero__say {
+  min-width: 0;
+}
+
+.hero__plane {
+  min-width: 0;
+}
+
+.hero__legend {
+  min-width: 0;
+}
+
+@media (min-width: 1100px) {
+  .hero {
+    grid-template-columns: minmax(0, 25rem) minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      'say   plane'
+      'legend plane';
+    align-items: start;
+    min-height: min(82svh, 760px);
+  }
+
+  .hero__say {
+    grid-area: say;
+  }
+
+  .hero__legend {
+    grid-area: legend;
+  }
+
+  .hero__plane {
+    grid-area: plane;
+    align-self: stretch;
+  }
+
+  .hero__plane,
+  .hero__plane .plane {
+    height: 100%;
+  }
+
+  .hero__plane .plane__svg {
+    height: 100%;
+    aspect-ratio: auto;
+  }
+}
+
+.plane {
+  position: relative;
+  touch-action: none;
+  user-select: none;
+}
+
+/* The plane is capped so the hero and the first queue rows share the fold;
+   fitCamera solves for the frame it is given, so capping height never clips. */
+/* Below the two-column breakpoint the plane takes an intrinsic aspect rather
+   than a viewport height. A raked square plane projects to roughly 1 : 0.85, so
+   a tall narrow box would fit it by width and leave the rest of the box empty. */
+.plane__svg {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 0.85;
+  cursor: grab;
+}
+
+.plane__svg:active {
+  cursor: grabbing;
+}
+
+/* ---- terrain --------------------------------------------------------- */
+
+.plane__region {
+  stroke-width: 1;
+}
+
+.plane__region--pass {
+  fill: var(--pass-wash);
+  stroke: color-mix(in srgb, var(--pass) 45%, transparent);
+}
+
+.plane__region--refer {
+  fill: rgba(255, 255, 255, 0.017);
+  stroke: var(--rule);
+}
+
+.plane__region--strain {
+  fill: var(--watch-wash);
+  stroke: color-mix(in srgb, var(--watch) 50%, transparent);
+}
+
+.plane__region--decline {
+  fill: var(--fail-wash);
+  stroke: color-mix(in srgb, var(--fail) 55%, transparent);
+}
+
+/* the extruded faces are darker than their tops, as a lit surface would be */
+.plane__wall {
+  stroke-width: 1;
+}
+
+.plane__wall--strain {
+  fill: color-mix(in srgb, var(--watch) 12%, var(--ink));
+  stroke: color-mix(in srgb, var(--watch) 35%, transparent);
+}
+
+.plane__wall--decline {
+  fill: color-mix(in srgb, var(--fail) 14%, var(--ink));
+  stroke: color-mix(in srgb, var(--fail) 40%, transparent);
+}
+
+/* ---- engraving ------------------------------------------------------- */
+
+.plane__grid path {
+  fill: none;
+  stroke: var(--engrave);
+  stroke-width: 0.5;
+  opacity: 0.24;
+}
+
+.plane__edge {
+  fill: none;
+  stroke: var(--engrave);
+  stroke-width: 1.1;
+  opacity: 0.55;
+}
+
+.plane__ticks text {
+  font-family: var(--mono);
+  font-size: 11px;
+  fill: var(--faint);
+}
+
+.plane__caption text {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  fill: var(--muted);
+}
+
+/* ---- markers --------------------------------------------------------- */
+
+.plane__dot {
+  cursor: pointer;
+  stroke: var(--ink);
+  stroke-width: 1;
+  transition: r 0.22s var(--ease-settle), stroke-width 0.2s var(--ease-quick);
+}
+
+.plane__marker.is-selected .plane__dot {
+  stroke: var(--vellum);
+  stroke-width: 2;
+}
+
+.plane__stem {
+  stroke: var(--vellum);
+  stroke-width: 0.9;
+  opacity: 0.5;
+}
+
+.plane__dot:focus-visible {
+  outline: 2px solid var(--vellum);
+  outline-offset: 3px;
+}
+
+/* Cases settle onto the plane in ascending risk order — the queue is
+   pre-sorted, so the approve floor fills before the decline plateau does.
+   Driven entirely by CSS so the stagger costs no JavaScript per frame. */
+@media (prefers-reduced-motion: no-preference) {
+  .plane__marker {
+    animation: marker-settle 0.5s var(--ease-settle) backwards;
+    animation-delay: calc(var(--i, 0) * 5ms + 250ms);
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  @keyframes marker-settle {
+    from {
+      opacity: 0;
+      transform: translateY(-14px) scale(0.4);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes seal-drift {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+}
+
+.plane__hint {
+  position: absolute;
+  right: 0;
+  top: 0;
+  margin: 0;
+  pointer-events: none;
+}
+
+/* ---- legend ---------------------------------------------------------- */
+
+.planelegend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--rule);
+}
+
+.planelegend__item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: var(--t-small);
+  color: var(--muted);
+}
+
+.planelegend__swatch {
+  width: 22px;
+  height: 10px;
+  border-radius: 2px;
+  border: 1px solid;
+  flex: none;
+}
+
+/* ---- readout --------------------------------------------------------- */
+
+.planeread {
+  min-height: 5.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  background: var(--ink-raised);
+}
+
+.planeread__name {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 1.375rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.planeread__meta {
+  font-size: var(--t-small);
+  color: var(--muted);
+  margin-top: 0.25rem;
+}
+
+.planeread__scores {
+  margin-left: auto;
+  display: flex;
+  gap: 1.5rem;
+  text-align: right;
+}
+
+.planeread__empty {
+  color: var(--faint);
+  font-size: var(--t-small);
+}
+
+@media (max-width: 640px) {
+  .plane__hint {
+    position: static;
+    margin-bottom: 0.5rem;
+  }
+
+  .planeread {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .planeread__scores {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-start;
+    text-align: left;
+  }
+}

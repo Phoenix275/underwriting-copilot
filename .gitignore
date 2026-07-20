@@ -6,3 +6,7 @@ data/training_pool.csv
 data/model_history.json
 .gstack/
 data/copilot.db
+web/node_modules/
+web/dist/
+web/.vite/
+*.tsbuildinfo
