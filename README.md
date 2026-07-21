@@ -20,7 +20,7 @@ Pipeline: **PDF packet → extraction → conflict screen → dual risk engine +
 | Risk model | Logistic Regression AUC (held-out 20%) | **0.901** |
 | Risk model | Gradient Boosting AUC | **0.889** |
 | Affordability | Portfolio split (4-indicator financial screen) | **43% affordable · 35% strained · 22% not justified** |
-| Decisioning | Straight-through rate — **evaluated on a held-out half**, thresholds tuned on the other | **42.7%** |
+| Decisioning | Straight-through rate — **evaluated on a held-out half**, thresholds tuned on the other | **60.3%** |
 | Tests | Offline pytest suite (engine, affordability, doc round-trip, API), runs in CI | **54 passing** |
 | Front end | Browser scoring engine replayed against all 200 pipeline cases | **rule + affordability exact** |
 
@@ -117,6 +117,16 @@ network access or a paid key.
 - **Thresholds are tuned on half the portfolio and every reported STP /
   approve-zone-risk / decline-precision number comes from the held-out half**
   (`engine.optimize_thresholds`) — the headline rate is out-of-sample.
+- **Straight-through processing is deliberately maximised, and the trade is
+  shown, not hidden.** STP rose from 42.7% to **60.3%** by letting the
+  auto-decline line reach down to a composite of 41 (rather than stopping at 60)
+  and widening the auto-approve risk tolerance. Almost the entire gain is on the
+  decline side: auto-approve-zone risk barely moved (~8%), while auto-decline
+  precision fell from 89% to **71%** — i.e. ~29% of auto-declines are applicants
+  who were not actually high-risk. That false-decline rate is the stated cost,
+  surfaced on the model card. The conflict, affordability and engine-disagreement
+  gates still force a referral regardless of score, so nothing here auto-approves
+  a case with a contradiction or an unaffordable premium.
 - The external-data prior is an **AUC-weighted** blend; dataset models at or
   near chance (AUC < 0.55) are excluded and shown as such on the model card.
 - Fairness is audited by **age band and by sex** — verdict mix plus per-group
@@ -161,7 +171,9 @@ web/                 the workbench — Vite + React + TypeScript, builds to one 
   src/lib/router.ts      hash routing, so every view is a shareable link
   src/data/source.ts     live API read with a bundled-snapshot fallback
   src/data/benchmarks.ts published industry figures, each with a source and a date
-  src/views/             Portfolio · Case file · How it decides · Evidence · Score
+  src/auth/              demo role sign-in (4 personas) — attributes recorded decisions
+  src/components/WhatIf.tsx   inline sensitivity tool on a case (not the new-application form)
+  src/views/             Portfolio · Case file · How it decides · Evidence · New application
   scripts/verify-port.mjs  replays the pipeline's cases through the browser engine
 dashboard/           built workbench, served by Streamlit
 docs/                the same file, served by GitHub Pages

@@ -1,0 +1,150 @@
+.signin {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: clamp(1rem, 4vw, 2.5rem);
+  background:
+    radial-gradient(120% 80% at 50% -10%, color-mix(in srgb, var(--engrave) 8%, transparent), transparent 60%),
+    var(--ink);
+}
+
+.signin__card {
+  width: min(46rem, 100%);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  background: var(--ink-raised);
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+}
+
+.signin__mark {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.signin__word {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.375rem;
+  line-height: 0.95;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.signin__sub {
+  font-family: var(--mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin-top: 3px;
+}
+
+.signin__lede {
+  margin: 1.25rem 0;
+  color: var(--muted);
+  font-size: var(--t-small);
+}
+
+.signin__roles {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  margin-bottom: 1.25rem;
+}
+
+.rolecard {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    'seal name'
+    'seal title'
+    'remit remit'
+    'user user';
+  gap: 0.125rem 0.75rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.875rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--ink-card);
+  transition: border-color 0.15s var(--ease-quick), background-color 0.15s var(--ease-quick);
+}
+
+.rolecard:hover {
+  border-color: var(--rule-bright);
+}
+
+.rolecard.is-picked {
+  border-color: var(--vellum);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.rolecard__seal {
+  grid-area: seal;
+  align-self: center;
+  color: var(--engrave);
+}
+
+.rolecard__name {
+  grid-area: name;
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.rolecard__title {
+  grid-area: title;
+  font-size: var(--t-micro);
+  font-family: var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--engrave);
+}
+
+.rolecard__remit {
+  grid-area: remit;
+  margin-top: 0.5rem;
+  font-size: var(--t-micro);
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.rolecard__user {
+  grid-area: user;
+  margin-top: 0.375rem;
+  font-size: var(--t-micro);
+  color: var(--faint);
+}
+
+.rolecard__user::before {
+  content: '@';
+  opacity: 0.6;
+}
+
+.signin__go {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: var(--radius);
+  background: var(--vellum);
+  color: var(--vellum-ink);
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 1rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  transition: opacity 0.15s var(--ease-quick);
+}
+
+.signin__go:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.signin__note {
+  margin-top: 1rem;
+  font-size: var(--t-micro);
+  line-height: 1.55;
+  color: var(--faint);
+}

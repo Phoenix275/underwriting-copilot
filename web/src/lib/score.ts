@@ -510,7 +510,40 @@ export function scoreApplication(a: Application): ScoreResult {
   }
 }
 
-/** Turn a portfolio case back into an Application so it can seed the form. */
+/** A neutral net-new applicant. New application starts here rather than seeded
+ *  from whatever case happened to be open — exploring a change to an existing
+ *  applicant is the case file's what-if, a different task. */
+export const BLANK_APPLICATION: Application = {
+  name: '',
+  sex: 'M',
+  age: 40,
+  income: 75000,
+  monthlyExpenses: 2800,
+  debt: 20000,
+  credit: 720,
+  coverage: 500000,
+  existingCoverage: 0,
+  policy: 'Term Life - 20yr',
+  bmi: 25,
+  systolic: 120,
+  cholesterol: 190,
+  smoker: 'Non-smoker',
+  conditions: 'None',
+  familyHistory: false,
+  hazard: 'None',
+  violations: 0,
+  alcohol: 'None',
+  priorDecline: false,
+  dangerousDriving: false,
+  drugUse: false,
+  criminalRecord: false,
+  bankruptcy: false,
+  foreignTravel: false,
+  weightChange: false,
+  unique: '',
+}
+
+/** Turn a portfolio case back into an Application so it can seed the what-if. */
 export function caseToApplication(c: Case): Application {
   return {
     name: c.name,

@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DataProvider, useData } from './data/DataContext'
+import { useAuth } from './auth/AuthContext'
+import SignIn from './auth/SignIn'
 import ErrorBoundary from './components/ErrorBoundary'
+import RoleBadge from './components/RoleBadge'
 import Seal from './components/Seal'
 import SourceBadge from './components/SourceBadge'
 import { IconEvidence, IconFile, IconFlow, IconPlane, IconScore } from './components/icons'
@@ -27,6 +30,10 @@ const NAV: {
 ]
 
 export default function App() {
+  const { persona } = useAuth()
+  // the sign-in gate is presentation only — it names the underwriter recording
+  // decisions, it is not a security boundary
+  if (!persona) return <SignIn />
   return (
     <DataProvider>
       <Workbench />
@@ -108,6 +115,7 @@ function Workbench() {
         </nav>
 
         <div className="rail__foot">
+          <RoleBadge />
           <SourceBadge />
           <div className="rail__stamp">
             Book of {report.n_applicants.toLocaleString('en-US')}
@@ -127,7 +135,7 @@ function Workbench() {
           {view === 'case' && <CaseFile c={selected} onOpen={openCase} onGo={go} />}
           {view === 'pipeline' && <Pipeline c={selected} onGo={go} />}
           {view === 'evidence' && <Evidence />}
-          {view === 'score' && <ScoreApplication seed={selected} />}
+          {view === 'score' && <ScoreApplication />}
         </ErrorBoundary>
       </main>
 

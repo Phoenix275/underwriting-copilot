@@ -3,6 +3,7 @@ import type { ViewId } from '../App'
 import { useData } from '../data/DataContext'
 import type { Case } from '../data/types'
 import DecisionPanel from '../components/DecisionPanel'
+import WhatIf from '../components/WhatIf'
 import DecisionStamp from '../components/DecisionStamp'
 import { IconArrow } from '../components/icons'
 import { affordClass, pct, shortDecision, usd, usdShort, verdictClass } from '../lib/format'
@@ -337,13 +338,16 @@ export default function CaseFile({
 
         <DecisionPanel caseId={c.id} />
 
+        <div className="srule">
+          <span className="eyebrow">Test a change to this case</span>
+        </div>
+
+        <WhatIf c={c} />
+
         <div className="caseout">
           <button type="button" className="btn" onClick={() => onGo('pipeline')}>
             See how this decision was reached
             <IconArrow className="btn__icon" />
-          </button>
-          <button type="button" className="btn btn--ghost" onClick={() => onGo('score')}>
-            Score a variation of this application
           </button>
         </div>
 

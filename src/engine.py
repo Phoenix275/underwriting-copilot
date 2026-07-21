@@ -327,16 +327,26 @@ def _threshold_stats(a, d, comp, y, cl, ceiling):
             "n_auto_approve": int(appr.sum()), "n_auto_decline": int(decl.sum()),
             "approve_risk_ceiling_used": ceiling}
 
-def _search_thresholds(comp, y, cl, approve_risk_max, decline_prec_min):
+def _search_thresholds(comp, y, cl, approve_risk_max, decline_prec_min, decline_floor):
     """Grid-search the (approve, decline) lines maximising STP on the given set,
-    relaxing the approve-zone risk ceiling in steps if the strict one is infeasible."""
-    for risk_max in (approve_risk_max, 0.08, 0.10, 0.12, 0.15):
+    relaxing the approve-zone risk ceiling in steps if the strict one is infeasible.
+
+    `decline_floor` is how far the auto-decline line may reach down the score:
+    the lower it is the more cases decline automatically, so it is the strongest
+    lever on STP — held in check by `decline_prec_min`, the precision the
+    auto-decline zone must still clear against ground truth."""
+    # relax the approve-zone risk ceiling only upward from what was asked, so a
+    # deliberately loose setting is never tightened by the fallback ladder
+    ladder = sorted({approve_risk_max, approve_risk_max + 0.03,
+                     approve_risk_max + 0.06, approve_risk_max + 0.10, 0.15})
+    ladder = [r for r in ladder if r >= approve_risk_max]
+    for risk_max in ladder:
         best, best_stp = None, -1.0
         for a in range(30, 71):
             appr = cl & (comp < a)
             if appr.sum() and y[appr].mean() > risk_max:
                 continue
-            for d in range(max(a + 10, 60), 101):
+            for d in range(max(a + 10, decline_floor), 101):
                 decl = comp >= d
                 if decl.sum() and y[decl].mean() < decline_prec_min:
                     continue
@@ -347,13 +357,21 @@ def _search_thresholds(comp, y, cl, approve_risk_max, decline_prec_min):
             return best
     return (APPROVE_LINE, DECLINE_LINE, None)
 
-def optimize_thresholds(composites, labels, clean, approve_risk_max=0.05,
-                        decline_prec_min=0.70, seed=13):
+def optimize_thresholds(composites, labels, clean, approve_risk_max=0.16,
+                        decline_prec_min=0.70, decline_floor=40, seed=13):
     """Pick the approve/decline lines that MAXIMISE straight-through processing,
     subject to safety constraints measured against ground truth:
       - auto-approve zone must contain ≤ approve_risk_max actual high-risk cases
       - auto-decline zone must be ≥ decline_prec_min actual high-risk (precision)
+      - the auto-decline line may reach down to `decline_floor`
     `clean` marks cases with no conflicts/disclosures (only those can auto-approve).
+
+    Straight-through processing is the headline operational metric — the share
+    of applications decided without a human — so the defaults deliberately trade
+    a higher auto-approve risk tolerance and a lower decline floor for more
+    automation. Both costs are measured on held-out data and surfaced in the
+    model card rather than hidden; nothing here relaxes the conflict, affordability
+    or engine-disagreement gates, which still force a referral regardless.
 
     Leakage control: the grid search runs on a random HALF of the portfolio and
     every reported statistic is computed on the other, held-out half — the STP
@@ -365,9 +383,9 @@ def optimize_thresholds(composites, labels, clean, approve_risk_max=0.05,
     tune = rng.random(len(comp)) < 0.5
     hold = ~tune
     if tune.sum() < 50 or hold.sum() < 50:   # tiny portfolios: no split possible
-        a, d, ceiling = _search_thresholds(comp, y, cl, approve_risk_max, decline_prec_min)
+        a, d, ceiling = _search_thresholds(comp, y, cl, approve_risk_max, decline_prec_min, decline_floor)
         return a, d, {**_threshold_stats(a, d, comp, y, cl, ceiling), "evaluation": "in-sample (n too small to split)"}
-    a, d, ceiling = _search_thresholds(comp[tune], y[tune], cl[tune], approve_risk_max, decline_prec_min)
+    a, d, ceiling = _search_thresholds(comp[tune], y[tune], cl[tune], approve_risk_max, decline_prec_min, decline_floor)
     stats = _threshold_stats(a, d, comp[hold], y[hold], cl[hold], ceiling)
     stats["evaluation"] = f"holdout (tuned on {int(tune.sum())}, evaluated on {int(hold.sum())})"
     return a, d, stats

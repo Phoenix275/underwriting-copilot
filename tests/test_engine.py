@@ -140,3 +140,16 @@ class TestOptimizeThresholds:
     def test_small_sample_falls_back_to_in_sample(self):
         a, d, stats = engine.optimize_thresholds([10, 80], [0, 1], [True, True])
         assert "in-sample" in stats["evaluation"]
+
+    def test_lower_decline_floor_raises_stp(self):
+        # the decline floor is the strongest STP lever: letting the auto-decline
+        # line reach further down the score should never *reduce* straight-through
+        import numpy as np
+        rng = np.random.default_rng(1)
+        comp = rng.integers(0, 100, 3000)
+        labels = (comp + rng.normal(0, 16, 3000) > 55).astype(int)
+        clean = rng.random(3000) < 0.6
+        _, d_hi, hi = engine.optimize_thresholds(comp, labels, clean, decline_floor=60)
+        _, d_lo, lo = engine.optimize_thresholds(comp, labels, clean, decline_floor=40)
+        assert d_lo <= d_hi
+        assert lo["stp_est"] >= hi["stp_est"]

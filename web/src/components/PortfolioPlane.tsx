@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useReducedMotion } from 'motion/react'
-import { report } from '../data'
+import { useData } from '../data/DataContext'
 import type { Case } from '../data/types'
 import { planePosition } from '../lib/plane'
 import {
@@ -20,19 +20,11 @@ import { verdictVar } from '../lib/format'
    so a case that has to leave the automated path is visibly standing on higher
    ground rather than merely tinted a different colour. */
 
-const A_LINE = report.decisioning.thresholds.a_line / 100
-const D_LINE = report.decisioning.thresholds.d_line / 100
 /** strainScore puts the affordability fail line at 80 of 100 */
 const FAIL_U = 0.8
 
 const H_DECLINE = 62
 const H_STRAIN = 26
-
-function terrainHeight(u: number, v: number): number {
-  if (v >= D_LINE) return H_DECLINE
-  if (u >= FAIL_U) return H_STRAIN
-  return 0
-}
 
 interface Props {
   items: Case[]
@@ -43,6 +35,13 @@ interface Props {
 }
 
 export default function PortfolioPlane({ items, selectedId, onOpen, onHover, hovered }: Props) {
+  const { report } = useData()
+  // read the live thresholds so the terrain matches whatever book is loaded
+  const A_LINE = report.decisioning.thresholds.a_line / 100
+  const D_LINE = report.decisioning.thresholds.d_line / 100
+  const terrainHeight = (u: number, v: number): number =>
+    v >= D_LINE ? H_DECLINE : u >= FAIL_U ? H_STRAIN : 0
+
   const reduced = useReducedMotion()
   const svgRef = useRef<SVGSVGElement>(null)
   const [rake, setRake] = useState(reduced ? 0.82 : 0.16)
@@ -118,7 +117,8 @@ export default function PortfolioPlane({ items, selectedId, onOpen, onHover, hov
         return { c, u, v, h, p }
       })
       .sort((a, b) => b.p.depth - a.p.depth)
-  }, [items, cam])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, cam, D_LINE])
 
   const gridLines = useMemo(() => {
     const lines: string[] = []

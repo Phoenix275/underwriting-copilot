@@ -1,18 +1,17 @@
 import { useMemo, useState } from 'react'
 import { motion } from 'motion/react'
-import type { Case } from '../data/types'
 import DecisionStamp from '../components/DecisionStamp'
 import {
+  BLANK_APPLICATION,
   POLICY_TYPES,
-  caseToApplication,
   scoreApplication,
   type Application,
 } from '../lib/score'
 import { affordClass, pct, usd, verdictClass } from '../lib/format'
 import '../styles/score.css'
 
-export default function ScoreApplication({ seed }: { seed: Case }) {
-  const [a, setA] = useState<Application>(() => caseToApplication(seed))
+export default function ScoreApplication() {
+  const [a, setA] = useState<Application>(BLANK_APPLICATION)
   const result = useMemo(() => scoreApplication(a), [a])
 
   const set = <K extends keyof Application>(k: K, v: Application[K]) =>
@@ -25,11 +24,12 @@ export default function ScoreApplication({ seed }: { seed: Case }) {
     <>
       <div className="viewhead">
         <p className="eyebrow">New application</p>
-        <h1 className="viewhead__title">Score it now</h1>
+        <h1 className="viewhead__title">Score a new applicant</h1>
         <p className="viewhead__lede">
-          The rule engine, the logistic model, the Framingham prior and the affordability screen all
-          run in this page — no server, no request. Change anything and the verdict re-derives
-          immediately. Seeded from {seed.name}.
+          Enter a brand-new application and the rule engine, the logistic model, the Framingham
+          prior and the affordability screen all run in this page — no server, no request. Change
+          anything and the verdict re-derives immediately. To explore a change to an existing case,
+          use the what-if on that case&rsquo;s file.
         </p>
       </div>
 
@@ -174,9 +174,9 @@ export default function ScoreApplication({ seed }: { seed: Case }) {
             <button
               type="button"
               className="btn btn--ghost"
-              onClick={() => setA(caseToApplication(seed))}
+              onClick={() => setA(BLANK_APPLICATION)}
             >
-              Reset to {seed.name}
+              Clear the form
             </button>
           </div>
         </form>

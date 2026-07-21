@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useAuth } from '../auth/AuthContext'
 import {
   API_URL,
   fetchDecisions,
@@ -19,10 +20,10 @@ const ACTIONS: { id: DecisionRecord['action']; label: string; cls: string }[] = 
  *  API and read back as an audit trail. A snapshot build has nowhere to write
  *  to and says so plainly instead of pretending the control works. */
 export default function DecisionPanel({ caseId }: { caseId: string }) {
+  const { persona } = useAuth()
   const [trail, setTrail] = useState<DecisionRecord[]>([])
   const [action, setAction] = useState<DecisionRecord['action']>('APPROVED')
   const [rationale, setRationale] = useState('')
-  const [who, setWho] = useState('')
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [error, setError] = useState<string | null>(null)
 
@@ -46,7 +47,11 @@ export default function DecisionPanel({ caseId }: { caseId: string }) {
     setStatus('saving')
     setError(null)
     try {
-      await recordDecision(caseId, { action, rationale: rationale.trim(), decided_by: who.trim() })
+      await recordDecision(caseId, {
+        action,
+        rationale: rationale.trim(),
+        decided_by: persona?.username ?? 'unknown',
+      })
       setRationale('')
       setStatus('saved')
       refresh()
@@ -56,7 +61,7 @@ export default function DecisionPanel({ caseId }: { caseId: string }) {
     }
   }
 
-  const ready = rationale.trim().length >= 5 && who.trim().length > 0
+  const ready = rationale.trim().length >= 5 && Boolean(persona)
 
   return (
     <section className="decide">
@@ -125,10 +130,10 @@ export default function DecisionPanel({ caseId }: { caseId: string }) {
               />
             </label>
 
-            <label className="field">
-              <span className="field__label">Your name</span>
-              <input value={who} onChange={(e) => setWho(e.target.value)} placeholder="mrivera" />
-            </label>
+            <p className="decide__as">
+              Recording as <b>{persona?.name}</b>
+              <span className="figure"> · @{persona?.username}</span>
+            </p>
 
             <div className="decide__submit">
               <button type="submit" className="btn" disabled={!ready || status === 'saving'}>

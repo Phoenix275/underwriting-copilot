@@ -112,6 +112,42 @@ export default function Evidence() {
           <span className="eyebrow">Straight-through rate in context</span>
         </div>
 
+        <p className="sectionlede">
+          Straight-through processing — the share of applications decided without a human — is the
+          headline operational metric, so the thresholds are tuned to maximise it. That is a choice
+          with a cost, and the cost is shown here rather than hidden. Nothing in this tuning touches
+          the conflict, affordability or engine-disagreement gates: those still force a referral
+          regardless of score.
+        </p>
+
+        <div className="tradeoff">
+          <div className="tradeoff__cell">
+            <span className="figure tradeoff__now v-pass">{pct(t.stp_est, 1)}</span>
+            <span className="tradeoff__label">Straight-through rate</span>
+            <span className="tradeoff__note">the lever was pulled for this</span>
+          </div>
+          <div className="tradeoff__cell">
+            <span className="figure tradeoff__now">{pct(t.approve_risk_rate, 1)}</span>
+            <span className="tradeoff__label">High-risk in the auto-approve zone</span>
+            <span className="tradeoff__note">essentially unchanged — approve-side safety held</span>
+          </div>
+          <div className="tradeoff__cell">
+            <span className="figure tradeoff__now v-watch">{pct(t.decline_precision, 1)}</span>
+            <span className="tradeoff__label">Auto-decline precision</span>
+            <span className="tradeoff__note">the metric that was sacrificed</span>
+          </div>
+        </div>
+
+        <p className="footnote">
+          The gain comes almost entirely from letting the auto-decline line reach down to a
+          composite of {t.d_line} rather than stopping at 60. That roughly doubles how many cases
+          decline automatically, and the price is auto-decline precision: about{' '}
+          {pct(1 - t.decline_precision, 0)} of auto-declines are applicants who were not actually
+          high-risk. In a real system those would still route to a decline rate class a person can
+          appeal, not a hard rejection — but the false-decline rate is real and is the reason to
+          watch this number. Auto-approve-zone risk, by contrast, barely moved.
+        </p>
+
         <div className="bench">
           {stpBenchmarks.map((b) => (
             <BenchRow key={b.label} b={b} />
@@ -119,7 +155,9 @@ export default function Evidence() {
           <div className="bench__row bench__row--ours">
             <div className="bench__main">
               <span className="bench__label">This build — auto-decided share of the book</span>
-              <span className="bench__src">{t.evaluation}</span>
+              <span className="bench__src">
+                {t.evaluation} · approve &lt;{t.a_line}, decline ≥{t.d_line}
+              </span>
             </div>
             <span className="figure bench__value">{pct(t.stp_est, 1)}</span>
           </div>
