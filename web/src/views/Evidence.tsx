@@ -2,6 +2,8 @@ import { useData } from '../data/DataContext'
 import type { FairnessRow, Report } from '../data/types'
 import {
   aucBenchmarks,
+  weightSources,
+  weightValidation,
   coverageMultiples,
   coverageSources,
   disclosureBenchmarks,
@@ -94,6 +96,43 @@ export default function Evidence() {
             </span>
           </div>
         </div>
+
+        {/* ---- where the weights come from ---- */}
+        <div className="srule">
+          <span className="eyebrow">Where the risk weights come from</span>
+        </div>
+
+        <p className="sectionlede">
+          The rule engine&rsquo;s medical weights are not hand-picked. Each is{' '}
+          <span className="figure">round(28 × ln(mortality multiple))</span> — so the ratio between
+          any two points is the ratio between two real relative-mortality figures, drawn from linked
+          death records and large published cohorts.
+        </p>
+
+        <div className="weights">
+          <div className="weights__head">
+            <span>Factor</span>
+            <span className="queue__num">Points</span>
+            <span className="queue__num">Real multiple</span>
+            <span>Source</span>
+          </div>
+          {weightSources.map((w) => (
+            <div key={w.factor} className="weights__row">
+              <span className="weights__factor">{w.factor}</span>
+              <span className="figure queue__num">{w.points}</span>
+              <span className="figure queue__num">{w.multiple}</span>
+              <span className="weights__src">
+                <a href={w.url} target="_blank" rel="noopener noreferrer">
+                  {w.source}
+                </a>
+                <span className="weights__detail">{w.detail}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <p className="footnote">{weightValidation.prudential}</p>
+        <p className="footnote">{weightValidation.note}</p>
 
         {/* ---- calibration ---- */}
         <div className="srule">

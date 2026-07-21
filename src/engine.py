@@ -4,6 +4,8 @@ import warnings
 import numpy as np
 import pandas as pd
 
+import calibration
+
 # ---------------- conflict detection (equal screening: every packet, same checks) --
 CHECKS = [
     ("income_mismatch", "major",
@@ -48,15 +50,20 @@ def rule_score(a):
     age = a["Age"]; bmi = a["BMI"]; dti = a["Debt-to-Income Ratio"]
     smoker = a["Smoker Status"]; credit = a["Credit Score"]
     conds = [] if a["Existing Conditions"] == "None" else [c.strip() for c in a["Existing Conditions"].split(",")]
-    p = 0 if age < 30 else 5 if age <= 45 else 10 if age <= 55 else 18
+    # Mortality factors: points come from calibration.py, where each is
+    # round(scale * ln(real relative-mortality multiple)) — anchored to NHANES
+    # linked-mortality data and large published cohorts, not hand-picked.
+    p = calibration.age_points(age)
     factors.append(("Applicant age", f"{age} years", p))
-    p = 25 if smoker == "Smoker" else 8 if smoker == "Former smoker" else 0
+    p = (calibration.points("smoker_current") if smoker == "Smoker"
+         else calibration.points("smoker_former") if smoker == "Former smoker" else 0)
     factors.append(("Tobacco use", smoker, p))
-    p = 15 if (bmi < 18.5 or bmi >= 35) else 8 if bmi >= 30 else 3 if bmi >= 25 else 0
+    p = calibration.bmi_points(bmi)
     factors.append(("Body mass index", f"{bmi} BMI", p))
-    p = sum(15 if "diabetes" in c.lower() else 8 for c in conds)
+    p = sum(calibration.points("diabetes") if "diabetes" in c.lower()
+            else calibration.points("condition_other") for c in conds)
     factors.append(("Medical conditions", ", ".join(conds) or "None", p))
-    p = 6 if a["Family History Flag"] else 0
+    p = calibration.points("family_history") if a["Family History Flag"] else 0
     factors.append(("Family medical history", "Notable" if p else "None disclosed", p))
     p = 0 if dti < 0.2 else 5 if dti < 0.35 else 12 if dti < 0.5 else 20
     factors.append(("Debt-to-income ratio", f"{dti*100:.1f}%", p))

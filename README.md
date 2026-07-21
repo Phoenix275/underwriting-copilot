@@ -113,6 +113,39 @@ groundedness check (every number must trace to a case fact); without a key
 the deterministic template summaries are used — the pipeline never requires
 network access or a paid key.
 
+## Where the risk weights come from
+
+The rule engine's medical weights are **not hand-picked** — each is
+`round(28 × ln(real relative-mortality multiple))`, so the ratio between any two
+point values is the ratio between two real mortality figures (`src/calibration.py`):
+
+| Factor | Points | Real multiple | Source |
+|---|---|---|---|
+| Current smoker | 24 | 2.37× | NHANES linked mortality (our fit, cotinine-confirmed) — matches published 2.2–2.3× |
+| Former smoker | 8 | 1.34× | NHIS Linked Mortality, Am J Prev Med 2018 |
+| Diabetes | 16 | 1.80× | Emerging Risk Factors Collaboration, NEJM 2011 (820k people) |
+| Other condition | 9 | 1.40× | NHANES linked mortality |
+| BMI ≥ 35 | 12 | 1.55× | Prospective Studies Collaboration, Lancet 2009 (900k) |
+| BMI < 18.5 | 15 | 1.70× | NHANES (2.27×, discounted for reverse causation) |
+| Family cardiac history | 8 | 1.35× | NHIS / EPIC-Norfolk |
+
+The multiples are derived in `src/derive_weights.py`, which downloads the
+**NHANES 2007–2014 exam/lab files joined to the NCHS Linked Mortality File**
+(20,435 real US adults, 2,293 linked deaths) and fits an age/sex-adjusted model —
+real people, real death outcomes, public-domain CDC data. The result is
+cross-validated against **59,381 real Prudential applicants** (Kaggle Prudential
+Life Insurance Assessment): applying these weights to the factors Prudential
+exposes agrees with the insurer's own 1–8 underwriting rating at **AUC 0.68**,
+and the same method scores **AUC 0.72–0.73 on real applicants** — squarely inside
+the published 0.71–0.74 band for real life-underwriting models.
+
+Financial and behavioural factors (debt, credit, driving, alcohol, Section-6
+declarations) are **not** mortality factors, so they are not in this table — they
+follow conventional underwriting debits and are labelled as such in the engine.
+Reproduce: `python src/derive_weights.py` then `python src/prudential_validate.py`.
+Raw datasets are gitignored (redistribution restricted); the derivation scripts
+and the resulting cited weight table are committed.
+
 ## Statistical honesty
 
 - **Thresholds are tuned on half the portfolio and every reported STP /

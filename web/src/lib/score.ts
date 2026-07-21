@@ -50,6 +50,24 @@ export interface Application {
 
 export type RuleFactorOut = { label: string; value: string; points: number }
 
+/* Mortality-factor points, mirrored from src/calibration.py — each is
+ * round(28 * ln(real relative-mortality multiple)), anchored to NHANES linked
+ * mortality + published cohorts. Kept in sync by scripts/verify-port.mjs. */
+const MORT = {
+  smokerCurrent: 24, // 2.37x  NHANES cotinine
+  smokerFormer: 8, //   1.34x  NHIS
+  diabetes: 16, //      1.80x  ERFC
+  conditionOther: 9, // 1.40x  NHANES
+  bmiLow: 15, //        <18.5   NHANES (discounted)
+  bmiObese2: 12, //     >=35    PSC
+  bmiOver: 4, //        30-35   PSC
+  bmiMild: 2, //        25-30   PSC
+  familyHistory: 8, //  1.35x  NHIS
+}
+const agePoints = (age: number) => (age < 30 ? 0 : age < 45 ? 5 : age < 55 ? 11 : 18)
+const bmiPoints = (bmi: number) =>
+  bmi < 18.5 ? MORT.bmiLow : bmi >= 35 ? MORT.bmiObese2 : bmi >= 30 ? MORT.bmiOver : bmi >= 25 ? MORT.bmiMild : 0
+
 /** Port of engine.rule_score — the explainable, weighted layer. */
 export function ruleScore(a: Application): { score: number; factors: RuleFactorOut[] } {
   const factors: RuleFactorOut[] = []
@@ -62,19 +80,23 @@ export function ruleScore(a: Application): { score: number; factors: RuleFactorO
       : a.conditions.split(',').map((c) => c.trim())
   const dti = a.income > 0 ? a.debt / a.income : 0
 
-  add('Applicant age', `${a.age} years`, a.age < 30 ? 0 : a.age <= 45 ? 5 : a.age <= 55 ? 10 : 18)
-  add('Tobacco use', a.smoker, a.smoker === 'Smoker' ? 25 : a.smoker === 'Former smoker' ? 8 : 0)
+  add('Applicant age', `${a.age} years`, agePoints(a.age))
   add(
-    'Body mass index',
-    `${a.bmi.toFixed(1)} BMI`,
-    a.bmi < 18.5 || a.bmi >= 35 ? 15 : a.bmi >= 30 ? 8 : a.bmi >= 25 ? 3 : 0,
+    'Tobacco use',
+    a.smoker,
+    a.smoker === 'Smoker' ? MORT.smokerCurrent : a.smoker === 'Former smoker' ? MORT.smokerFormer : 0,
   )
+  add('Body mass index', `${a.bmi.toFixed(1)} BMI`, bmiPoints(a.bmi))
   add(
     'Medical conditions',
     conds.join(', ') || 'None',
-    conds.reduce((s, c) => s + (c.toLowerCase().includes('diabetes') ? 15 : 8), 0),
+    conds.reduce((s, c) => s + (c.toLowerCase().includes('diabetes') ? MORT.diabetes : MORT.conditionOther), 0),
   )
-  add('Family medical history', a.familyHistory ? 'Notable' : 'None disclosed', a.familyHistory ? 6 : 0)
+  add(
+    'Family medical history',
+    a.familyHistory ? 'Notable' : 'None disclosed',
+    a.familyHistory ? MORT.familyHistory : 0,
+  )
   add(
     'Debt-to-income ratio',
     `${(dti * 100).toFixed(1)}%`,

@@ -52,6 +52,86 @@ export const stpBenchmarks: Benchmark[] = [
 
 /* ---- financial underwriting ------------------------------------------ */
 
+/* ---- risk-weight provenance ------------------------------------------ */
+
+export interface WeightSource {
+  factor: string
+  points: number
+  multiple: string
+  source: string
+  detail: string
+  url: string
+}
+
+/** Every mortality weight in the rule engine, and the real relative-mortality
+ *  multiple it is anchored to. points = round(28 × ln(multiple)). Mirrors
+ *  src/calibration.py. These are derived, not guessed. */
+export const weightSources: WeightSource[] = [
+  {
+    factor: 'Current smoker',
+    points: 24,
+    multiple: '2.37× mortality',
+    source: 'NHANES linked mortality',
+    detail: 'Our fit on 20,435 real US adults, 2,293 linked deaths, smoking confirmed by serum cotinine. Matches the published 2.2–2.3×.',
+    url: 'https://ftp.cdc.gov/pub/Health_Statistics/NCHS/datalinkage/linked_mortality/',
+  },
+  {
+    factor: 'Former smoker',
+    points: 8,
+    multiple: '1.34×',
+    source: 'NHIS Linked Mortality',
+    detail: 'Residual risk that declines with years since quitting.',
+    url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC6219821/',
+  },
+  {
+    factor: 'Diabetes',
+    points: 16,
+    multiple: '1.80×',
+    source: 'Emerging Risk Factors Collaboration, NEJM 2011',
+    detail: 'All-cause mortality across 820,000 people. Our own NHANES fit gives 1.50×; we take the larger published value.',
+    url: 'https://www.nejm.org/doi/full/10.1056/NEJMoa1008862',
+  },
+  {
+    factor: 'Other chronic condition',
+    points: 9,
+    multiple: '1.40×',
+    source: 'NHANES linked mortality',
+    detail: 'Typical non-diabetic chronic condition.',
+    url: 'https://wwwn.cdc.gov/nchs/nhanes/',
+  },
+  {
+    factor: 'BMI ≥ 35 (obese II+)',
+    points: 12,
+    multiple: '1.55×',
+    source: 'Prospective Studies Collaboration, Lancet 2009',
+    detail: '+30% mortality per 5 BMI units above 25, across 900,000 adults. Anchored to this rather than our short-follow-up NHANES estimate, which shows the known "obesity paradox".',
+    url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC2662372/',
+  },
+  {
+    factor: 'BMI < 18.5 (underweight)',
+    points: 15,
+    multiple: '1.70×',
+    source: 'NHANES linked mortality',
+    detail: 'NHANES shows 2.27× (frailty / illness); discounted for reverse causation.',
+    url: 'https://wwwn.cdc.gov/nchs/nhanes/',
+  },
+  {
+    factor: 'Family cardiac history',
+    points: 8,
+    multiple: '1.35×',
+    source: 'NHIS / EPIC-Norfolk',
+    detail: 'Premature cardiac family history; conservative end of the 1.4–1.8× published band.',
+    url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC3773915/',
+  },
+]
+
+export const weightValidation = {
+  prudential:
+    'Applying these weights to 59,381 real Prudential applicants agrees with the insurer’s own 1–8 underwriting rating at AUC 0.68 on the three factors Prudential exposes (age, BMI, condition count).',
+  note:
+    'Financial and behavioural factors (debt, credit, driving, alcohol, Section-6 declarations) are not mortality factors, so they are not in this table — they follow conventional underwriting debits and are labelled as such in the engine.',
+}
+
 export interface CoverageBand {
   age: string
   brighthouse: number

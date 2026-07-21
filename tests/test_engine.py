@@ -68,14 +68,18 @@ class TestRuleEngine:
         total, _ = engine.rule_score(ROW)
         assert total == 0
 
-    def test_smoker_adds_25_points(self):
+    def test_smoker_weight_matches_calibration(self):
+        # weight is round(28 * ln(2.37)) from real cotinine-confirmed mortality
+        import calibration
         total, _ = engine.rule_score({**ROW, "Smoker Status": "Smoker"})
-        assert total == 25
+        assert total == calibration.points("smoker_current") == 24
 
     def test_diabetes_weighs_more_than_other_conditions(self):
+        # diabetes anchored to ERFC 1.80x, generic condition to NHANES 1.40x
         diab, _ = engine.rule_score({**ROW, "Existing Conditions": "Type 2 Diabetes"})
         other, _ = engine.rule_score({**ROW, "Existing Conditions": "Asthma"})
-        assert diab == 15 and other == 8
+        assert diab > other
+        assert diab == 16 and other == 9
 
     def test_score_capped_at_100(self):
         worst = {**ROW, "Age": 60, "BMI": 44, "Smoker Status": "Smoker",
