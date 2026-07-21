@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, os.path.dirname(__file__))
-import datagen, docgen, engine, external_data, published_models
+import datagen, docgen, engine, external_data, published_models, summaries
 from extract import LocalTextExtractor
 
 OUT = os.path.join(os.path.dirname(__file__), "..", "output")
@@ -218,6 +218,10 @@ def main():
             "injected": truth.get(aid, {}).get("injected_conflicts", []),
             **d, **routing,
         })
+        # the narrative the underwriter reads first — the brief's "AI-generated
+        # financial summaries" deliverable (Claude-written when a key is set,
+        # deterministic template otherwise; both grounded in case fields only)
+        portfolio[-1]["ai_summary"] = summaries.summary_for(portfolio[-1], a_line, d_line)
 
     # fairness slices — verdict mix AND model error rates per group.
     # Verdict mix answers "who gets approved"; FPR/FNR answer "who does the

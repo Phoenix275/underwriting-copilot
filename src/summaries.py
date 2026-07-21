@@ -76,6 +76,78 @@ def llm_summary(case, timeout=30.0):
         return None   # caller falls back to the template summary
 
 
+def _money(n):
+    return "$" + format(int(round(float(n))), ",")
+
+
+def template_summary(c, a_line, d_line):
+    """Deterministic underwriter narrative, grounded strictly in case fields.
+    The zero-cost, zero-network fallback for llm_summary — same job: an
+    underwriter reads the exact situation in prose instead of reconstructing
+    it from twenty fields."""
+    risk = c["risk_score"]
+    smoker = c["smoker"].lower()
+    smoke_txt = ("a current smoker" if smoker == "smoker"
+                 else "a former smoker" if "former" in smoker else "a non-smoker")
+    cond = c["conditions"]
+    cond_txt = ("no declared medical conditions" if str(cond).strip().lower() in ("none", "nan", "")
+                else f"declared conditions of {cond}")
+    band = ("green approval band" if risk < a_line
+            else "yellow manual-review band" if risk < d_line else "red decline band")
+    life = []
+    if c.get("hazard") and c["hazard"] != "None":
+        life.append(f"participates in {c['hazard'].lower()}")
+    if c.get("violations"):
+        life.append(f"has {c['violations']} driving violation(s) in the last three years")
+    if c.get("alcohol") == "Heavy":
+        life.append("reports heavy alcohol use")
+    decl = c.get("decl") or {}
+    decl_names = {"prior_decline": "a previously declined/rated insurance application",
+                  "dangerous_driving": "careless or dangerous driving within five years",
+                  "drug_use": "drug use or alcohol/drug counselling",
+                  "criminal": "a criminal offence", "bankruptcy": "a declared bankruptcy",
+                  "foreign_travel": "planned foreign travel", "weight_change": "a >10 lb weight change this year"}
+    yes = [decl_names[k] for k, v in decl.items() if v and k in decl_names]
+    if yes:
+        life.append("answered Yes on the Section 6 declarations to " + ", ".join(yes))
+    s = [
+        f"{c['name']} is a {c['age']}-year-old {c['occupation']} applying for a "
+        f"{c['policy']} policy with {_money(c['coverage'])} in requested coverage.",
+        f"The applicant is {smoke_txt} with a BMI of {c['bmi']:.1f} and {cond_txt}"
+        + (", and " + "; ".join(life) if life else "") + ".",
+        f"Financially, the file shows a credit score of {c['credit']} and a "
+        f"debt-to-income ratio of {c['dti'] * 100:.1f}%.",
+        f"The composite risk score is {risk}/100 "
+        f"(rule engine {c['rule_score']}, gradient boosting {c['ml_score']:.0f}), "
+        f"placing the case in the {band}.",
+    ]
+    af = c.get("afford")
+    if af:
+        s.append(f"On financial viability, the estimated premium of {_money(af['premium'])}/yr "
+                 f"is {af['pti']*100:.1f}% of income and the coverage sought is "
+                 f"{af['cov_mult']:.1f}× income — the affordability screen reads {af['label']}."
+                 + (f" {af['reasons'][0]}." if af["verdict"] == "fail" and af.get("reasons") else ""))
+    if c.get("unique"):
+        s.append(f"The applicant disclosed unique circumstances — “{c['unique']}” — "
+                 f"which routes the file to a human underwriter for whole-person review.")
+    if c["conflicts"]:
+        det = "; ".join(f"{k['severity']} {k['type'].replace('_', ' ')} — {k['description']}"
+                        for k in c["conflicts"])
+        s.append(f"The cross-document screen flagged {len(c['conflicts'])} conflict(s): {det}. "
+                 f"These discrepancies independently support routing the file to a human underwriter.")
+    elif c.get("has_docs"):
+        s.append("The cross-document conflict screen found no discrepancies across the packet.")
+    s.append(f"System decision: {c['decision']} — {c['rate_class']} "
+             f"({'; '.join(c['reasons'])}).")
+    return " ".join(s)
+
+
+def summary_for(case, a_line, d_line):
+    """The case summary the underwriter reads: Claude-written when a key is
+    present (grounded by SYSTEM_PROMPT's hard rules), template otherwise."""
+    return llm_summary(case) or template_summary(case, a_line, d_line)
+
+
 def groundedness_check(summary, case):
     """Spot-check: every dollar figure in the summary must trace to a case fact.
     Returns (ok, untraceable_numbers) — the Week-4 groundedness metric."""

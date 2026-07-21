@@ -3,7 +3,6 @@ import type { ViewId } from '../App'
 import { useData } from '../data/DataContext'
 import type { Case } from '../data/types'
 import DecisionPanel from '../components/DecisionPanel'
-import WhatIf from '../components/WhatIf'
 import { DESK_LABEL } from '../lib/routing'
 import DecisionStamp from '../components/DecisionStamp'
 import { IconArrow } from '../components/icons'
@@ -101,6 +100,17 @@ export default function CaseFile({
             <span className="figure assignbar__score">{c.difficulty}</span>
           </div>
         )}
+
+        {/* ---- the situation, in prose — read this first ---- */}
+        <div className="srule">
+          <span className="eyebrow">The situation</span>
+        </div>
+
+        <div className="panel">
+          <div className="panel__body">
+            <p className="brief">{c.ai_summary}</p>
+          </div>
+        </div>
 
         {/* ---- the two questions, side by side ---- */}
         <div className="srule">
@@ -352,12 +362,6 @@ export default function CaseFile({
         </div>
 
         <DecisionPanel caseId={c.id} />
-
-        <div className="srule">
-          <span className="eyebrow">Test a change to this case</span>
-        </div>
-
-        <WhatIf c={c} />
 
         <div className="caseout">
           <button type="button" className="btn" onClick={() => onGo('pipeline')}>

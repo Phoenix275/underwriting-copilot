@@ -86,8 +86,33 @@ export interface DecisionRecord {
   decided_at?: string
 }
 
+/* Without an API the decision trail lives in the browser: localStorage when the
+ * embed allows it, an in-memory map when even that is blocked. The control
+ * always works — an underwriter should never meet a dead control with a shell
+ * command in it. The trade (local trail is per-browser, not shared) is stated
+ * in the panel, not hidden. */
+const LS_DECISIONS = 'uwc.decisions'
+let memoryTrail: Record<string, DecisionRecord[]> = {}
+
+function readLocalTrail(): Record<string, DecisionRecord[]> {
+  try {
+    return { ...memoryTrail, ...JSON.parse(localStorage.getItem(LS_DECISIONS) ?? '{}') }
+  } catch {
+    return memoryTrail
+  }
+}
+
+function writeLocalTrail(all: Record<string, DecisionRecord[]>) {
+  memoryTrail = all
+  try {
+    localStorage.setItem(LS_DECISIONS, JSON.stringify(all))
+  } catch {
+    /* private mode / blocked storage — the in-memory copy still serves the session */
+  }
+}
+
 export async function fetchDecisions(caseId: string): Promise<DecisionRecord[]> {
-  if (!API_URL) return []
+  if (!API_URL) return readLocalTrail()[caseId] ?? []
   const res = await fetch(`${API_URL}/cases/${encodeURIComponent(caseId)}/decisions`)
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
   return res.json()
@@ -97,7 +122,13 @@ export async function recordDecision(
   caseId: string,
   d: Omit<DecisionRecord, 'decided_at'>,
 ): Promise<void> {
-  if (!API_URL) throw new Error('No API configured — this build is a read-only snapshot.')
+  if (!API_URL) {
+    const all = readLocalTrail()
+    const stamp = new Date().toISOString().slice(0, 16).replace('T', ' ')
+    all[caseId] = [...(all[caseId] ?? []), { ...d, decided_at: stamp }]
+    writeLocalTrail(all)
+    return
+  }
   const res = await fetch(`${API_URL}/cases/${encodeURIComponent(caseId)}/decision`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

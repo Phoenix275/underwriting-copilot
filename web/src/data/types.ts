@@ -140,6 +140,10 @@ export interface Case {
   difficulty: number | null
   difficulty_drivers: string[]
   assigned_desk: Desk | null
+
+  /** the narrative the underwriter reads first — LLM-written when the pipeline
+   *  ran with a key, deterministic template otherwise */
+  ai_summary: string
 }
 
 /** which underwriter desk a referred case routes to, by difficulty */

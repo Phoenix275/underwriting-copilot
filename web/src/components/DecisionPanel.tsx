@@ -28,7 +28,6 @@ export default function DecisionPanel({ caseId }: { caseId: string }) {
   const [error, setError] = useState<string | null>(null)
 
   const refresh = useCallback(() => {
-    if (!API_URL) return
     fetchDecisions(caseId)
       .then(setTrail)
       .catch(() => setTrail([]))
@@ -95,14 +94,7 @@ export default function DecisionPanel({ caseId }: { caseId: string }) {
           </ol>
         )}
 
-        {!API_URL ? (
-          <p className="decide__readonly">
-            This build is a read-only snapshot, so there is nowhere to write a decision. Start the
-            API with <code>uvicorn api:app --app-dir src</code> and rebuild with{' '}
-            <code>VITE_API_URL</code> set to record against it.
-          </p>
-        ) : (
-          <form className="decide__form" onSubmit={submit}>
+        <form className="decide__form" onSubmit={submit}>
             <div className="decide__actions" role="radiogroup" aria-label="Decision">
               {ACTIONS.map((a) => (
                 <button
@@ -142,8 +134,14 @@ export default function DecisionPanel({ caseId }: { caseId: string }) {
               {status === 'saved' && <span className="v-pass decide__ok">Decision recorded.</span>}
               {error && <span className="v-fail decide__ok">{error}</span>}
             </div>
+
+            {!API_URL && (
+              <p className="decide__local">
+                Decisions are saved in this browser. A live deployment records them to the shared
+                audit trail instead.
+              </p>
+            )}
           </form>
-        )}
       </div>
     </section>
   )
