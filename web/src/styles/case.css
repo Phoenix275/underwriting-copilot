@@ -490,6 +490,37 @@
   color: var(--faint);
 }
 
+/* ---- assignment banner ------------------------------------------------- */
+
+.assignbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, currentColor 8%, var(--ink-raised));
+}
+
+.assignbar .eyebrow {
+  color: currentColor;
+}
+
+.assignbar__why {
+  margin-top: 0.25rem;
+  font-size: var(--t-small);
+  color: var(--vellum);
+}
+
+.assignbar__score {
+  flex: none;
+  font-size: 1.75rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
 /* ---- what-if ----------------------------------------------------------- */
 
 .whatif {

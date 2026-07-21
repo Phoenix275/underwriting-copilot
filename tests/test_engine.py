@@ -133,13 +133,25 @@ class TestOptimizeThresholds:
         labels = (comp + rng.normal(0, 18, 2000) > 60).astype(int)
         clean = rng.random(2000) < 0.7
         a, d, stats = engine.optimize_thresholds(comp, labels, clean)
-        assert 30 <= a <= 70 and a < d <= 100
+        # the search is unconstrained now, so the lines can land anywhere valid
+        assert 1 <= a < d <= 100
         assert stats["evaluation"].startswith("holdout")
         assert 0 <= stats["stp_est"] <= 1
 
     def test_small_sample_falls_back_to_in_sample(self):
         a, d, stats = engine.optimize_thresholds([10, 80], [0, 1], [True, True])
         assert "in-sample" in stats["evaluation"]
+
+    def test_unconstrained_default_beats_a_capped_search(self):
+        # the default search is uncapped, so its STP must be >= any constrained one
+        import numpy as np
+        rng = np.random.default_rng(2)
+        comp = rng.integers(0, 100, 3000)
+        labels = (comp + rng.normal(0, 16, 3000) > 55).astype(int)
+        clean = rng.random(3000) < 0.6
+        _, _, free = engine.optimize_thresholds(comp, labels, clean)
+        _, _, capped = engine.optimize_thresholds(comp, labels, clean, decline_prec_min=0.85)
+        assert free["stp_est"] >= capped["stp_est"]
 
     def test_lower_decline_floor_raises_stp(self):
         # the decline floor is the strongest STP lever: letting the auto-decline
@@ -153,3 +165,25 @@ class TestOptimizeThresholds:
         _, d_lo, lo = engine.optimize_thresholds(comp, labels, clean, decline_floor=40)
         assert d_lo <= d_hi
         assert lo["stp_est"] >= hi["stp_est"]
+
+
+class TestReferralRouting:
+    def _refer(self, **kw):
+        base = dict(rule_s=40, ml_s=45, composite=42, conflicts=[], unique=None,
+                    afford={"verdict": "pass"}, a_line=25, d_line=26)
+        base.update(kw)
+        return engine.route_referral(**base)
+
+    def test_harder_cases_route_to_senior(self):
+        easy = self._refer()
+        hard = self._refer(
+            conflicts=[{"type": "smoker_nondisclosure", "severity": "major"}],
+            unique="Recent job change", afford={"verdict": "fail"})
+        assert hard["difficulty"] > easy["difficulty"]
+        assert hard["assigned_desk"] == "senior"
+        assert hard["difficulty_drivers"]  # names why it is hard
+
+    def test_desk_thresholds_are_monotonic(self):
+        assert engine.assign_underwriter(10) == "analyst"
+        assert engine.assign_underwriter(28) == "review"
+        assert engine.assign_underwriter(60) == "senior"

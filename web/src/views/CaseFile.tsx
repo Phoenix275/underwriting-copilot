@@ -4,6 +4,7 @@ import { useData } from '../data/DataContext'
 import type { Case } from '../data/types'
 import DecisionPanel from '../components/DecisionPanel'
 import WhatIf from '../components/WhatIf'
+import { DESK_LABEL } from '../lib/routing'
 import DecisionStamp from '../components/DecisionStamp'
 import { IconArrow } from '../components/icons'
 import { affordClass, pct, shortDecision, usd, usdShort, verdictClass } from '../lib/format'
@@ -86,6 +87,20 @@ export default function CaseFile({
           </div>
           <DecisionStamp verdict={c.verdict} decision={c.decision} rateClass={c.rate_class} />
         </motion.header>
+
+        {c.referred && c.assigned_desk && (
+          <div className={`assignbar desk-${c.assigned_desk}`}>
+            <div>
+              <span className="eyebrow">Referred · routed to the {DESK_LABEL[c.assigned_desk].toLowerCase()}</span>
+              <p className="assignbar__why">
+                {c.difficulty_drivers.length
+                  ? `Difficulty ${c.difficulty}/100 — ${c.difficulty_drivers.join(', ')}.`
+                  : `Difficulty ${c.difficulty}/100.`}
+              </p>
+            </div>
+            <span className="figure assignbar__score">{c.difficulty}</span>
+          </div>
+        )}
 
         {/* ---- the two questions, side by side ---- */}
         <div className="srule">

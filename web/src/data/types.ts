@@ -135,7 +135,15 @@ export interface Case {
   tier: Tier
   reasons: string[]
   referred: boolean
+
+  /** referral routing — set only on MANUAL REVIEW cases; null when auto-decided */
+  difficulty: number | null
+  difficulty_drivers: string[]
+  assigned_desk: Desk | null
 }
+
+/** which underwriter desk a referred case routes to, by difficulty */
+export type Desk = 'senior' | 'review' | 'analyst'
 
 export interface DatasetCard {
   name: string
@@ -248,4 +256,8 @@ export interface Report {
   }
   fairness_by_age: FairnessRow[]
   fairness_by_sex: FairnessRow[]
+  routing: {
+    n_referred: number
+    by_desk: { desk: Desk; label: string; n: number; avg_difficulty: number }[]
+  }
 }

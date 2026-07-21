@@ -34,6 +34,19 @@ ACC_FIELDS = ["name", "form_dob", "paramed_dob", "form_income", "payslip_income"
               "form_debt", "bureau_debt", "form_tobacco_yes", "cotinine",
               "bank_deposit_monthly", "bank_outflow_monthly", "tax_income"]
 
+def _routing_summary(portfolio):
+    """Per-desk workload across the referral queue — what the manager view reads."""
+    desks = {"senior": "Senior underwriter", "review": "Review desk", "analyst": "New analyst"}
+    referred = [c for c in portfolio if c.get("referred")]
+    out = []
+    for desk, label in desks.items():
+        mine = [c for c in referred if c.get("assigned_desk") == desk]
+        diffs = [c["difficulty"] for c in mine if c["difficulty"] is not None]
+        out.append({"desk": desk, "label": label, "n": len(mine),
+                    "avg_difficulty": round(sum(diffs) / len(diffs), 1) if diffs else 0})
+    return {"n_referred": len(referred), "by_desk": out}
+
+
 def field_match(fname, ext, truth):
     if ext is None: return False
     if isinstance(truth, float):
@@ -165,6 +178,12 @@ def main():
         aid = a["Applicant ID"]
         d = engine.decide(rule_s, ml_s, conflicts, unique=unique, a_line=a_line, d_line=d_line,
                           afford=afford)
+        # only manual-review cases route to a person; auto decisions carry no desk
+        if d["referred"]:
+            routing = engine.route_referral(rule_s, ml_s, d["risk_score"], conflicts,
+                                            unique, afford, a_line, d_line)
+        else:
+            routing = {"difficulty": None, "difficulty_drivers": [], "assigned_desk": None}
         portfolio.append({
             "id": aid, "name": a["Full Name"], "sex": a["Sex"], "age": int(a["Age"]), "dob": a["Date of Birth"],
             "net_worth": float(a["Net Worth (USD)"]), "existing_cov": float(a["Existing Coverage (USD)"]),
@@ -197,7 +216,7 @@ def main():
             "has_docs": aid in extractions,
             "extraction": extractions.get(aid), "conflicts": conflicts,
             "injected": truth.get(aid, {}).get("injected_conflicts", []),
-            **d,
+            **d, **routing,
         })
 
     # fairness slices — verdict mix AND model error rates per group.
@@ -270,6 +289,7 @@ def main():
                          "thresholds": {"a_line": int(a_line), "d_line": int(d_line), **thr_stats}},
         "fairness_by_age": fairness,
         "fairness_by_sex": fairness_sex,
+        "routing": _routing_summary(portfolio),
     }
     with open(os.path.join(OUT, "evaluation_report.json"), "w") as f:
         json.dump(report, f, indent=2)

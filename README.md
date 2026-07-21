@@ -20,7 +20,8 @@ Pipeline: **PDF packet → extraction → conflict screen → dual risk engine +
 | Risk model | Logistic Regression AUC (held-out 20%) | **0.901** |
 | Risk model | Gradient Boosting AUC | **0.889** |
 | Affordability | Portfolio split (4-indicator financial screen) | **43% affordable · 35% strained · 22% not justified** |
-| Decisioning | Straight-through rate — **evaluated on a held-out half**, thresholds tuned on the other | **60.3%** |
+| Decisioning | Straight-through rate — **evaluated on a held-out half**, thresholds tuned on the other | **79.9%** |
+| Referral routing | Manual-review cases matched to underwriter desk by difficulty | **senior / review / analyst** |
 | Tests | Offline pytest suite (engine, affordability, doc round-trip, API), runs in CI | **54 passing** |
 | Front end | Browser scoring engine replayed against all 200 pipeline cases | **rule + affordability exact** |
 
@@ -117,16 +118,20 @@ network access or a paid key.
 - **Thresholds are tuned on half the portfolio and every reported STP /
   approve-zone-risk / decline-precision number comes from the held-out half**
   (`engine.optimize_thresholds`) — the headline rate is out-of-sample.
-- **Straight-through processing is deliberately maximised, and the trade is
-  shown, not hidden.** STP rose from 42.7% to **60.3%** by letting the
-  auto-decline line reach down to a composite of 41 (rather than stopping at 60)
-  and widening the auto-approve risk tolerance. Almost the entire gain is on the
-  decline side: auto-approve-zone risk barely moved (~8%), while auto-decline
-  precision fell from 89% to **71%** — i.e. ~29% of auto-declines are applicants
-  who were not actually high-risk. That false-decline rate is the stated cost,
-  surfaced on the model card. The conflict, affordability and engine-disagreement
-  gates still force a referral regardless of score, so nothing here auto-approves
-  a case with a contradiction or an unaffordable premium.
+- **Straight-through processing is maximised with no artificial cap, and the
+  trade is shown, not hidden.** The threshold search is unconstrained — there is
+  no ceiling on approve-zone risk and no floor under the decline line. The one
+  guard is a minimum auto-decline precision of 0.50, and it exists to stop the
+  optimiser from *gaming* the metric rather than to balance the model: with no
+  floor at all, the maximum is to auto-decline the entire book (STP≈100%, but it
+  rejects every customer and leaves nothing to underwrite). With that single
+  guard, held-out STP is **79.9%**. The cost is auto-decline precision at
+  **52%** — about half of auto-declines are applicants who were not actually
+  high-risk — which is the deliberately-accepted sacrifice, surfaced on the model
+  card. The conflict, affordability and engine-disagreement gates still force a
+  referral regardless of score, so nothing here auto-approves a contradicted or
+  unaffordable case, and the ~800 referrals it does produce are routed across
+  three underwriter desks by difficulty.
 - The external-data prior is an **AUC-weighted** blend; dataset models at or
   near chance (AUC < 0.55) are excluded and shown as such on the model card.
 - Fairness is audited by **age band and by sex** — verdict mix plus per-group

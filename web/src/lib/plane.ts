@@ -33,8 +33,16 @@ export function planePosition(c: Case): { u: number; v: number } {
   }
 }
 
-export type PortfolioFilter = 'all' | 'green' | 'yellow' | 'red' | 'conflicts' | 'unaffordable'
+export type PortfolioFilter =
+  | 'mine'
+  | 'all'
+  | 'green'
+  | 'yellow'
+  | 'red'
+  | 'conflicts'
+  | 'unaffordable'
 
+// 'mine' is added by the view because it depends on who is signed in
 export const FILTERS: { id: PortfolioFilter; label: string }[] = [
   { id: 'all', label: 'All' },
   { id: 'green', label: 'Approve' },

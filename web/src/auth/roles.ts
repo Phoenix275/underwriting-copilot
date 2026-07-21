@@ -3,8 +3,8 @@
  *  This is a role selector, not authentication — there is no password check and
  *  none is implied. It exists so a decision recorded in the workbench is
  *  attributed to a named underwriter with a seniority, which is what an audit
- *  trail needs. The usernames match the original prototype so the demo script
- *  is unchanged. rkubusada is the real GLP manager the project was built under. */
+ *  trail needs. All four are fictional demo personas — no real person's name is
+ *  used as a login. */
 
 export type RoleId = 'senior' | 'review' | 'analyst' | 'oversight'
 
@@ -40,8 +40,8 @@ export const PERSONAS: Persona[] = [
     remit: 'Triages the book; escalates anything outside appetite.',
   },
   {
-    username: 'rkubusada',
-    name: 'Rashmi Kubusada',
+    username: 'nsethi',
+    name: 'Nadia Sethi',
     role: 'oversight',
     title: 'Manager, oversight',
     remit: 'Reviews fairness and the decision trail across the portfolio.',

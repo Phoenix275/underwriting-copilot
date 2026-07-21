@@ -139,13 +139,17 @@ export default function Evidence() {
         </div>
 
         <p className="footnote">
-          The gain comes almost entirely from letting the auto-decline line reach down to a
-          composite of {t.d_line} rather than stopping at 60. That roughly doubles how many cases
-          decline automatically, and the price is auto-decline precision: about{' '}
+          The search is unconstrained — no ceiling on approve-zone risk, no floor under the decline
+          line. The one guard is a minimum auto-decline precision of 50%, and it is there to stop
+          the optimiser gaming the metric rather than to balance the model: with no floor at all the
+          maximum is to auto-decline the entire book (STP≈100%, but it rejects every customer and
+          leaves nothing to underwrite). With that single guard, STP settles at{' '}
+          {pct(t.stp_est, 1)}. The price is auto-decline precision: about{' '}
           {pct(1 - t.decline_precision, 0)} of auto-declines are applicants who were not actually
           high-risk. In a real system those would still route to a decline rate class a person can
           appeal, not a hard rejection — but the false-decline rate is real and is the reason to
-          watch this number. Auto-approve-zone risk, by contrast, barely moved.
+          watch this number. Auto-approve-zone risk, by contrast, stayed low, and the referrals it
+          leaves are routed to underwriters by difficulty.
         </p>
 
         <div className="bench">
