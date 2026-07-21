@@ -9,10 +9,17 @@ import { viteSingleFile } from 'vite-plugin-singlefile'
 export default defineConfig({
   plugins: [react(), viteSingleFile()],
   base: './',
+  // Escape every non-ASCII character (×, —, ≥, curly quotes …) to a \u sequence
+  // in the JS output. The bundle then decodes identically under any charset, so
+  // text renders correctly even where the <meta charset> is ignored — notably
+  // inside Streamlit's srcdoc iframe, which was showing mojibake (× -> Ã—).
+  esbuild: { charset: 'ascii' },
   build: {
     assetsInlineLimit: 100 * 1024 * 1024,
     cssCodeSplit: false,
     reportCompressedSize: false,
     chunkSizeWarningLimit: 4000,
+    // apply the same ASCII-only rule to the minified output
+    minify: 'esbuild',
   },
 })

@@ -17,9 +17,12 @@ export default function DecisionStamp({
 }) {
   const reduced = useReducedMotion()
   const color = verdictVar(verdict)
-  // the word above already says "declined" or "referred" — the stamp only has
-  // room for what made it so
-  const because = rateClass.replace(/^(Referred|Declined)\s*—\s*/, '')
+  // the word above already says "declined" or "referred", so the stamp only
+  // needs what made it so. The separator is an em dash (U+2014), built from its
+  // code point so no non-ASCII byte ends up in the bundle (keeps Streamlit's
+  // srcdoc iframe from rendering it as mojibake).
+  const dash = String.fromCharCode(0x2014)
+  const because = rateClass.replace(new RegExp(`^(Referred|Declined)\\s*${dash}\\s*`), '')
 
   return (
     <motion.div
