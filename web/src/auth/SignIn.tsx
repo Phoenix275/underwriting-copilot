@@ -4,7 +4,14 @@ import { PERSONAS, type RoleId } from './roles'
 import { useAuth } from './AuthContext'
 import '../styles/signin.css'
 
-const ROLE_SEAL: Record<RoleId, number> = { senior: 9, review: 7, analyst: 5, oversight: 11 }
+const ROLE_SEAL: Record<RoleId, number> = {
+  senior: 9,
+  review: 7,
+  analyst: 5,
+  oversight: 11,
+  executive: 13,
+  admin: 6,
+}
 
 export default function SignIn() {
   const { signIn } = useAuth()

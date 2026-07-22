@@ -1,12 +1,13 @@
-/** The four demo personas.
+/** The six demo personas.
  *
  *  This is a role selector, not authentication — there is no password check and
  *  none is implied. It exists so a decision recorded in the workbench is
- *  attributed to a named underwriter with a seniority, which is what an audit
- *  trail needs. All four are fictional demo personas — no real person's name is
- *  used as a login. */
+ *  attributed to a named person with a seniority, which is what an audit trail
+ *  needs. Four underwriting roles (senior/review/analyst desks + oversight
+ *  manager), plus an executive who owns the book's financials and an admin who
+ *  holds the audit trail. All fictional — no real person's name is a login. */
 
-export type RoleId = 'senior' | 'review' | 'analyst' | 'oversight'
+export type RoleId = 'senior' | 'review' | 'analyst' | 'oversight' | 'executive' | 'admin'
 
 export interface Persona {
   username: string
@@ -45,6 +46,20 @@ export const PERSONAS: Persona[] = [
     role: 'oversight',
     title: 'Manager, oversight',
     remit: 'Reviews fairness and the decision trail across the portfolio.',
+  },
+  {
+    username: 'mvale',
+    name: 'Marcus Vale',
+    role: 'executive',
+    title: 'Chief underwriting officer',
+    remit: 'Owns risk appetite — the exposure the book takes on and the approve/decline mix.',
+  },
+  {
+    username: 'panand',
+    name: 'Priya Anand',
+    role: 'admin',
+    title: 'Operations administrator',
+    remit: 'Receives every recorded decision — the full audit trail.',
   },
 ]
 

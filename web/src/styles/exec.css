@@ -1,0 +1,263 @@
+/* Executive dashboard + admin audit trail.
+   Reuses the shared tokens, srule, panel and viewbody rhythm; adds the
+   money-first layout the executive reads and the decision feed the admin holds. */
+
+/* ---- executive: the book as money ---- */
+.exectop {
+  display: grid;
+  gap: clamp(1.25rem, 3vw, 2.5rem);
+  align-items: center;
+  padding: clamp(1.5rem, 3.5vw, 2.5rem) var(--pad-view) 0;
+}
+.exectop__say {
+  min-width: 0;
+}
+@media (min-width: 900px) {
+  .exectop {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    align-items: end;
+  }
+}
+
+.exposure {
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg, 14px);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--pass) 8%, var(--ink-raised)), var(--ink-raised));
+  padding: clamp(1rem, 2.5vw, 1.5rem);
+}
+.exposure__figure {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(2rem, 5.5vw, 3.4rem);
+  line-height: 1;
+  color: var(--vellum);
+  margin: 0.4rem 0 0.5rem;
+}
+.exposure__sub {
+  color: var(--muted);
+  font-size: var(--t-small);
+  margin: 0;
+}
+.exposure__sub b {
+  color: var(--pass);
+  font-weight: 600;
+}
+
+/* ---- the approve / refer / decline split bar ---- */
+.mixbar {
+  display: flex;
+  height: 0.85rem;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  margin-bottom: 1rem;
+}
+.mixbar__seg {
+  display: block;
+  height: 100%;
+}
+.mixbar__seg.v-pass {
+  background: var(--pass);
+}
+.mixbar__seg.v-watch {
+  background: var(--watch);
+}
+.mixbar__seg.v-fail {
+  background: var(--fail);
+}
+
+/* ---- stat tiles ---- */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+.stat {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--rule);
+  border-left-width: 3px;
+  border-radius: var(--r-md, 10px);
+  background: var(--ink-raised);
+}
+.stat--pass {
+  border-left-color: var(--pass);
+}
+.stat--watch {
+  border-left-color: var(--watch);
+}
+.stat--fail {
+  border-left-color: var(--fail);
+}
+.stat__label {
+  font-size: var(--t-small);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.stat__pct {
+  font-size: 1.9rem;
+  font-weight: 600;
+  line-height: 1;
+}
+.stat__n {
+  font-size: var(--t-small);
+  color: var(--muted);
+}
+.stat__money {
+  font-size: 1.05rem;
+  color: var(--vellum);
+  margin-top: 0.2rem;
+}
+.stat__sub {
+  font-size: var(--t-small);
+  color: var(--faint);
+}
+
+/* ---- financial tiles ---- */
+.stats--fin {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+}
+.fintile {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md, 10px);
+  background: var(--ink-raised);
+}
+.fintile__label {
+  font-size: var(--t-small);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.fintile__value {
+  font-size: clamp(1.3rem, 3vw, 1.8rem);
+  font-weight: 600;
+  color: var(--vellum);
+  line-height: 1.05;
+}
+.fintile__sub {
+  font-size: var(--t-small);
+  color: var(--faint);
+}
+
+/* ---- appetite panel ---- */
+.appetite__lines {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  margin-bottom: 0.75rem;
+}
+.appetite__line {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 0.15rem 0.75rem;
+}
+.appetite__num {
+  grid-row: span 2;
+  font-size: 2.6rem;
+  font-weight: 600;
+  line-height: 0.9;
+}
+.appetite__cap {
+  font-size: var(--t-small);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.appetite__line p {
+  grid-column: 2;
+  margin: 0;
+  font-size: var(--t-small);
+  color: var(--muted);
+}
+.appetite__note {
+  margin: 0;
+  font-size: var(--t-small);
+  color: var(--faint);
+  max-width: 70ch;
+}
+
+/* ---- admin: the audit trail ---- */
+.auditcounts {
+  margin-bottom: 1.25rem;
+}
+.audit {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+.audit__row {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.5rem 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md, 10px);
+  background: var(--ink-raised);
+}
+.audit__action {
+  font-size: var(--t-small);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.audit__body {
+  min-width: 0;
+}
+.audit__case {
+  font-family: var(--mono, monospace);
+  font-size: 0.95rem;
+  color: var(--vellum);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+.audit__case:hover {
+  color: var(--engrave);
+  text-decoration: underline;
+}
+.audit__casemeta {
+  color: var(--muted);
+  font-family: var(--body);
+  font-size: var(--t-small);
+}
+.audit__rationale {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: var(--t-small);
+}
+.audit__who {
+  display: grid;
+  gap: 0.1rem;
+  justify-items: end;
+  text-align: right;
+  white-space: nowrap;
+}
+.audit__who .figure {
+  font-size: var(--t-small);
+  color: var(--muted);
+}
+.audit__when {
+  color: var(--faint) !important;
+}
+
+@media (max-width: 640px) {
+  .audit__row {
+    grid-template-columns: 1fr;
+  }
+  .audit__who {
+    justify-items: start;
+    text-align: left;
+  }
+}

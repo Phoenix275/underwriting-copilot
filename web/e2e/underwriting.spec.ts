@@ -23,10 +23,27 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/')
 })
 
-test('sign-in gate offers every underwriter persona', async ({ page }) => {
-  for (const name of [SENIOR, 'Evan Wong', 'Dana Park', 'Nadia Sethi']) {
+test('sign-in gate offers every persona', async ({ page }) => {
+  for (const name of ['Evan Wong', 'Dana Park', 'Nadia Sethi', 'Marcus Vale', 'Priya Anand', SENIOR]) {
     await expect(page.getByRole('button', { name: new RegExp(name) })).toBeVisible()
   }
+})
+
+async function signInPlain(page: Page, name: string) {
+  await page.getByRole('button', { name: new RegExp(name) }).first().click()
+  await page.getByRole('button', { name: new RegExp(`Sign in as ${name}`) }).click()
+}
+
+test('the executive lands on the money view', async ({ page }) => {
+  await signInPlain(page, 'Marcus Vale')
+  await expect(page.getByRole('heading', { name: /as money/i })).toBeVisible()
+  await expect(page.locator('.exposure__figure')).toBeVisible()
+  await expect(page.locator('.mixbar__seg')).toHaveCount(3)
+})
+
+test('the admin lands on the audit trail', async ({ page }) => {
+  await signInPlain(page, 'Priya Anand')
+  await expect(page.getByRole('heading', { name: 'Recorded decisions' })).toBeVisible()
 })
 
 test('an underwriter lands on the full 200-case plane', async ({ page }) => {

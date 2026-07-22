@@ -118,6 +118,35 @@ export async function fetchDecisions(caseId: string): Promise<DecisionRecord[]> 
   return res.json()
 }
 
+/** Every recorded decision across the whole book, newest first — the admin's
+ *  audit feed. Each entry carries the case id it was recorded against. */
+export interface DecisionEntry extends DecisionRecord {
+  caseId: string
+}
+
+export async function fetchAllDecisions(): Promise<DecisionEntry[]> {
+  let byCase: Record<string, DecisionRecord[]>
+  if (!API_URL) {
+    byCase = readLocalTrail()
+  } else {
+    try {
+      const res = await fetch(`${API_URL}/decisions`)
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
+      byCase = await res.json()
+    } catch {
+      // the API is unreachable — fall back to whatever this browser recorded,
+      // rather than showing the admin an empty trail
+      byCase = readLocalTrail()
+    }
+  }
+  const flat: DecisionEntry[] = []
+  for (const [caseId, records] of Object.entries(byCase)) {
+    for (const r of records) flat.push({ ...r, caseId })
+  }
+  // newest first; entries without a stamp sort last
+  return flat.sort((a, b) => (b.decided_at ?? '').localeCompare(a.decided_at ?? ''))
+}
+
 export async function recordDecision(
   caseId: string,
   d: Omit<DecisionRecord, 'decided_at'>,

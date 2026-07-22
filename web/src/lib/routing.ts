@@ -27,9 +27,10 @@ export function difficultyBand(d: number | null): 'complex' | 'standard' | 'stra
   return d >= 33 ? 'complex' : d >= 24 ? 'standard' : 'straightforward'
 }
 
-/** the desk a signed-in role works; null for the manager, who sees everything */
+/** the desk a signed-in role works; null for anyone who owns no desk
+ *  (the oversight manager, and the executive/admin who have their own screens) */
 export function deskForRole(role: RoleId): Desk | null {
-  return role === 'oversight' ? null : (role as Desk)
+  return role === 'senior' || role === 'review' || role === 'analyst' ? (role as Desk) : null
 }
 
 /** is this case in the signed-in person's queue?

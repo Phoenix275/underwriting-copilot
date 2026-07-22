@@ -107,6 +107,19 @@ def test_batch_case_is_addressable_and_decidable(client):
     assert trail[-1]["decided_by"] == "ewong"
 
 
+def test_all_decisions_feeds_the_admin_audit(client):
+    """The admin screen reads GET /decisions — every recorded decision grouped
+    by case. A decision recorded on one case must show up in that feed."""
+    client.post("/cases/APP-9001/decision",
+                json={"action": "DECLINED", "rationale": "outside appetite",
+                      "decided_by": "mrivera"})
+    feed = client.get("/decisions").json()
+    assert isinstance(feed, dict)
+    assert "APP-9001" in feed
+    assert any(d["action"] == "DECLINED" and d["decided_by"] == "mrivera"
+               for d in feed["APP-9001"])
+
+
 def test_decision_on_unknown_case_404s(client):
     r = client.post("/cases/APP-0000/decision",
                     json={"action": "APPROVED", "rationale": "no such case", "decided_by": "x"})

@@ -39,6 +39,14 @@ trap 'rm -rf "$PUBLISH"' EXIT
 cp "$ROOT/web/dist/index.html" "$PUBLISH/"
 cp "$ROOT/web/deploy/robots.txt" "$ROOT/web/deploy/llms.txt" "$PUBLISH/"
 
-# Upload. script(1) gives wrangler the TTY it insists on for pages deploy.
-script -q /dev/null npx --yes wrangler@latest pages deploy "$PUBLISH" \
-  --project-name "$PROJECT" --branch main --commit-dirty=true
+# Upload. `wrangler pages deploy` refuses to run without a TTY, so it is wrapped
+# in script(1) to present a pseudo-terminal. The BSD (macOS) and util-linux
+# calling conventions differ, so branch on the platform.
+WRANGLER="npx --yes wrangler@latest pages deploy '$PUBLISH' --project-name '$PROJECT' --branch main --commit-dirty=true"
+if [ "$(uname)" = "Darwin" ]; then
+  script -q /dev/null npx --yes wrangler@latest pages deploy "$PUBLISH" \
+    --project-name "$PROJECT" --branch main --commit-dirty=true
+else
+  # util-linux: -e returns the command's exit code, -c passes the command
+  script -qec "$WRANGLER" /dev/null
+fi

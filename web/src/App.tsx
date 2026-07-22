@@ -13,6 +13,8 @@ import CaseFile from './views/CaseFile'
 import Pipeline from './views/Pipeline'
 import Evidence from './views/Evidence'
 import ScoreApplication from './views/ScoreApplication'
+import ExecutiveDashboard from './views/ExecutiveDashboard'
+import DecisionsAudit from './views/DecisionsAudit'
 
 export type { ViewId }
 
@@ -43,8 +45,17 @@ export default function App() {
 
 function Workbench() {
   const { cases, report } = useData()
+  const { persona } = useAuth()
+  const role = persona?.role
   const [route, navigate] = useRoute()
   const view = route.view
+
+  // the "home" landing means different things by role: underwriters and the
+  // manager get the portfolio plane; the executive gets the money view; the
+  // admin gets the audit trail. The nav label follows.
+  const homeLabel =
+    role === 'executive' ? 'Overview' : role === 'admin' ? 'Decisions' : 'Portfolio'
+  const homeShort = role === 'executive' ? 'Money' : role === 'admin' ? 'Trail' : 'Book'
 
   // opening straight onto a case that both needs a human and has a document
   // packet means the first file anyone reads shows the whole evidence chain
@@ -105,7 +116,7 @@ function Workbench() {
               aria-current={view === id ? 'page' : undefined}
             >
               <Icon className="rail__icon" />
-              <span>{label}</span>
+              <span>{id === 'portfolio' ? homeLabel : label}</span>
               {id === 'portfolio' && <span className="rail__count figure">{cases.length}</span>}
               {id === 'case' && (
                 <span className="rail__count figure">{selected.id.replace('APP-', '')}</span>
@@ -129,9 +140,14 @@ function Workbench() {
 
       <main className="view" ref={scroller}>
         <ErrorBoundary key={view}>
-          {view === 'portfolio' && (
-            <Portfolio onOpen={openCase} selectedId={selected.id} route={route} navigate={navigate} />
-          )}
+          {view === 'portfolio' &&
+            (role === 'executive' ? (
+              <ExecutiveDashboard />
+            ) : role === 'admin' ? (
+              <DecisionsAudit onOpen={openCase} />
+            ) : (
+              <Portfolio onOpen={openCase} selectedId={selected.id} route={route} navigate={navigate} />
+            ))}
           {view === 'case' && <CaseFile c={selected} onOpen={openCase} onGo={go} />}
           {view === 'pipeline' && <Pipeline c={selected} onGo={go} />}
           {view === 'evidence' && <Evidence />}
@@ -148,7 +164,7 @@ function Workbench() {
             aria-current={view === id ? 'page' : undefined}
           >
             <Icon className="dock__icon" />
-            <span>{short}</span>
+            <span>{id === 'portfolio' ? homeShort : short}</span>
           </a>
         ))}
       </nav>

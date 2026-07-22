@@ -287,6 +287,21 @@ def case_decisions(case_id: str):
     return [dict(r) for r in rows]
 
 
+@app.get("/decisions")
+def all_decisions():
+    """Every recorded decision across the whole book, grouped by case — the
+    operations admin's audit feed."""
+    with _db() as con:
+        rows = con.execute(
+            "SELECT case_id, action, rationale, decided_by, decided_at FROM decisions "
+            "ORDER BY id").fetchall()
+    grouped: dict[str, list] = {}
+    for r in rows:
+        d = dict(r)
+        grouped.setdefault(d.pop("case_id"), []).append(d)
+    return grouped
+
+
 @app.get("/health")
 def health():
     with _db() as con:
