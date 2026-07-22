@@ -31,8 +31,8 @@ Portfolio · Case file · How it decides · Evidence · New application. It runs
   bundled book and shows an amber warning in the rail rather than an empty page.
 
 Routing is **hash-based** (`web/src/lib/router.ts`) — `#/case/APP-1008`,
-`#/portfolio?filter=red` — because the same file must resolve on GitHub Pages, inside a
-Streamlit iframe, and from `file://`, and only hashes work in all three.
+`#/portfolio?filter=red` — because the same file must resolve on Cloudflare Pages, on
+GitHub Pages, and from `file://`, and only hashes work in all three.
 
 Three things to know before editing it:
 

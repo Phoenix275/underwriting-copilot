@@ -2,13 +2,14 @@ import { useCallback, useEffect, useState } from 'react'
 
 /** Hash routing, deliberately — with a memory-mode fallback.
  *
- *  The workbench is served four ways: GitHub Pages, a dev server, straight off
- *  disk, and inlined into a Streamlit iframe via srcdoc. The first three have a
+ *  The workbench is served four ways: Cloudflare Pages, a dev server, straight
+ *  off disk, and inlined into a page via srcdoc. The first three have a
  *  real URL, so routes live in the hash and are shareable links. Inside a
  *  srcdoc iframe the document's URL is `about:srcdoc`, and Chrome throws a
  *  SecurityError on any history.replaceState / location.hash write there —
  *  which, uncaught, unmounts the whole React tree (the "black screen after
- *  sign-in" bug on Streamlit Cloud). So: if the document has no real URL,
+ *  sign-in" bug inside a sandboxed srcdoc iframe). So: if the document has no
+ *  real URL,
  *  routing runs in memory instead. Same API, no shareable links (there is no
  *  URL bar inside an iframe to share anyway), and back/forward simply don't
  *  apply.
@@ -29,7 +30,7 @@ export interface Route {
 
 const VIEWS: ViewId[] = ['portfolio', 'case', 'pipeline', 'evidence', 'score']
 
-/** Can this document carry state in its URL? about:srcdoc (Streamlit) cannot. */
+/** Can this document carry state in its URL? A srcdoc iframe (about:srcdoc) cannot. */
 const HAS_URL = (() => {
   try {
     return ['http:', 'https:', 'file:'].includes(window.location.protocol)

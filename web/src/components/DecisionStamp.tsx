@@ -19,7 +19,7 @@ export default function DecisionStamp({
   const color = verdictVar(verdict)
   // the word above already says "declined" or "referred", so the stamp only
   // needs what made it so. The separator is an em dash (U+2014), built from its
-  // code point so no non-ASCII byte ends up in the bundle (keeps Streamlit's
+  // code point so no non-ASCII byte ends up in the bundle (keeps a sandboxed
   // srcdoc iframe from rendering it as mojibake).
   const dash = String.fromCharCode(0x2014)
   const because = rateClass.replace(new RegExp(`^(Referred|Declined)\\s*${dash}\\s*`), '')

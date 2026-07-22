@@ -2,7 +2,7 @@
 """Vendor the three webfonts as base64 into src/styles/fonts.css.
 
 The dashboard ships as one self-contained HTML file that has to render
-identically on GitHub Pages, inside a Streamlit iframe, and from a local
+identically on GitHub Pages, inside an embedded iframe, and from a local
 file:// path with no network. Linking Google Fonts would break the last two,
 so the latin subsets are inlined once, here, and committed.
 

@@ -43,7 +43,7 @@ jobs:
         run: |
           test -f dist/index.html
           # a stray asset means something escaped the inliner and would 404
-          # on GitHub Pages and inside the Streamlit iframe
+          # on GitHub Pages and inside an embedded iframe
           extra=$(find dist -type f ! -name index.html | wc -l)
           if [ "$extra" -ne 0 ]; then
             echo "expected only dist/index.html, found $extra other file(s):"

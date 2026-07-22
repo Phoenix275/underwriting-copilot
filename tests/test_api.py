@@ -115,7 +115,7 @@ def test_decision_on_unknown_case_404s(client):
 
 def test_cors_allows_the_workbench_origin(client):
     """The workbench is always a different origin from the API — a bundle on
-    Pages or in a Streamlit iframe cannot read it without this header."""
+    Pages or in an embedded iframe cannot read it without this header."""
     r = client.get("/portfolio", headers={"Origin": "http://localhost:5173"})
     assert r.headers["access-control-allow-origin"] == "http://localhost:5173"
 

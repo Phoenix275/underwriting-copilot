@@ -2,8 +2,8 @@ import { defineConfig, devices } from '@playwright/test'
 
 /* End-to-end tests run against the SNAPSHOT build — VITE_API_URL is forced
  * empty by `.env.snapshot`, so the app takes its localStorage decision path and
- * needs no running API. That is exactly the artifact that ships to Streamlit and
- * GitHub Pages, so these tests exercise what users actually get. A dedicated
+ * needs no running API. That is exactly the artifact that ships to Cloudflare
+ * Pages and GitHub Pages, so these tests exercise what users actually get. A dedicated
  * port keeps this independent of any dev server already running on 5173. */
 const PORT = 4321
 

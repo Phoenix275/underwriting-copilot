@@ -48,8 +48,8 @@ app = FastAPI(title="Underwriting Copilot API", version="0.6",
               description="AI-assisted financial viability assessment — dual risk engine + affordability screen",
               lifespan=lifespan)
 
-# The workbench is a static bundle that may be served from GitHub Pages, a
-# Streamlit iframe or localhost, so it is always a different origin from this
+# The workbench is a static bundle that may be served from Cloudflare Pages,
+# GitHub Pages, an embedded iframe or localhost, so it is always a different origin from this
 # API. Origins are read from COPILOT_ALLOWED_ORIGINS (comma separated); the
 # default is local development only — a deployment must name its own origins
 # rather than inherit a wildcard.

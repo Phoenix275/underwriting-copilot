@@ -5,7 +5,7 @@ import type { Case, Report } from './types'
 /** Where the workbench gets its data.
  *
  *  Two tiers, and the offline one is not a degraded mode — it is the artifact
- *  that ships to Streamlit, GitHub Pages and a USB stick. When VITE_API_URL is
+ *  that ships to Cloudflare Pages, GitHub Pages and a USB stick. When VITE_API_URL is
  *  set the app reads the live book from the FastAPI service instead; if that
  *  call fails for any reason it falls back to the bundle and says so in the
  *  interface rather than showing an empty page.
