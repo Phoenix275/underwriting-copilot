@@ -35,8 +35,9 @@ export default function Portfolio({
 
   // the filter lives in the URL so "here are the declines" is a link you can
   // paste to a colleague, and the back button steps through what you looked at.
-  // an underwriter with no filter set lands on their own referral queue.
-  const defaultFilter: PortfolioFilter = 'mine'
+  // everyone lands on the whole book so the plane opens full, not on a handful
+  // of queue cases collapsed into one band; "My queue" narrows to your own.
+  const defaultFilter: PortfolioFilter = 'all'
   const validFilters = new Set<string>([...FILTERS.map((f) => f.id), 'mine'])
   const filter = (validFilters.has(route.params.filter) ? route.params.filter : defaultFilter) as
     PortfolioFilter
@@ -154,7 +155,7 @@ export default function Portfolio({
             {mine.length} manual-review case{mine.length === 1 ? '' : 's'} routed to you by
             difficulty — the workbench matches each referral to the right level of underwriter, so
             you see the {role === 'senior' ? 'hardest' : role === 'analyst' ? 'most routine' : 'mid-complexity'}{' '}
-            files. Switch filters to see the rest of the book.
+            files. The plane opens on the whole book — hit <b>My queue</b> to focus on just yours.
           </p>
         )}
 

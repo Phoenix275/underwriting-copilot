@@ -15,3 +15,9 @@ web/.vite/
 web/.env.local
 data/prudential/
 data/nhanes/
+
+# Playwright
+web/test-results/
+web/playwright-report/
+web/blob-report/
+web/.playwright/
