@@ -11,7 +11,7 @@ export default function SignIn() {
   const [picked, setPicked] = useState<string | null>(null)
 
   return (
-    <div className="signin">
+    <main className="signin">
       <div className="signin__card">
         <div className="signin__mark">
           <Seal size={44} petals={9} copies={4} />
@@ -59,6 +59,6 @@ export default function SignIn() {
           carries a name and seniority. Do not treat this as a security boundary.
         </p>
       </div>
-    </div>
+    </main>
   )
 }

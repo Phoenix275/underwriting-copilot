@@ -21,10 +21,10 @@
   --vellum: #e8e4d8;       /* certificate stock, primary text */
   --vellum-ink: #101720;   /* text printed on vellum */
   --muted: #8a94a2;        /* secondary text */
-  --faint: #5d6773;        /* tertiary, captions */
+  --faint: #808b99;        /* tertiary, captions — AA 4.5:1 on ink/raised */
 
   /* ---- engraving ---- */
-  --engrave: #2c7c86;      /* guilloché line, axes, structure */
+  --engrave: #3f9ea9;      /* guilloché line, axes, structure — AA 4.5:1 as text */
   --engrave-dim: #1b4e56;
 
   /* ---- verdict (the only permitted colour) ---- */

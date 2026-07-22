@@ -31,6 +31,14 @@ echo "node $(node -v)  ·  deploying $PROJECT"
 # Rebuild the shipping artifact so what we upload matches source.
 npm --prefix "$ROOT/web" run release
 
+# Stage the upload: the build output stays a single index.html (CI enforces
+# that), so robots.txt / llms.txt live outside it in web/deploy and are copied
+# in only at publish time.
+PUBLISH="$(mktemp -d)"
+trap 'rm -rf "$PUBLISH"' EXIT
+cp "$ROOT/web/dist/index.html" "$PUBLISH/"
+cp "$ROOT/web/deploy/robots.txt" "$ROOT/web/deploy/llms.txt" "$PUBLISH/"
+
 # Upload. script(1) gives wrangler the TTY it insists on for pages deploy.
-script -q /dev/null npx --yes wrangler@latest pages deploy "$ROOT/web/dist" \
+script -q /dev/null npx --yes wrangler@latest pages deploy "$PUBLISH" \
   --project-name "$PROJECT" --branch main --commit-dirty=true

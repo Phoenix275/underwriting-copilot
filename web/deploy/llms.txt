@@ -1,0 +1,16 @@
+# Underwriting Copilot
+
+> AI-assisted financial viability assessment for life-insurance underwriting. A single-page workbench that reads an application packet, screens it for contradictions, and answers two questions separately: is this risk insurable, and is this much cover financially justified. Manual-review cases are scored for difficulty and routed to the matching underwriter desk.
+
+The whole app ships as one self-contained static HTML file (data, fonts, styles inlined). Sign-in is a demo role selector only — no password, no real authentication — so a recorded decision carries a name and seniority. Decisions persist in the browser unless a live FastAPI backend is configured.
+
+## Links
+
+- [Live workbench](https://underwriting-copilot.pages.dev): the deployed single-page app
+- [Source code](https://github.com/Phoenix275/underwriting-copilot): pipeline, risk engine, and web app
+- [Evidence view](https://underwriting-copilot.pages.dev/#/evidence): where the model's risk weights come from, each with a source
+
+## Notes
+
+- Built for the Tech Mahindra Global Learning Program internship (Finance Project 1). Prototype only, not a production system, not affiliated with any insurer.
+- Risk weights are anchored to public mortality and underwriting datasets (NHANES + Linked Mortality File, Kaggle Prudential).
