@@ -3,6 +3,8 @@
 AI-assisted financial viability assessment for life insurance underwriting.
 Pipeline: **PDF packet → extraction → conflict screen → dual risk engine + affordability screen → decision → grounded AI summary.**
 
+**Live workbench:** [underwriting-copilot.pages.dev](https://underwriting-copilot.pages.dev) (Cloudflare Pages).
+
 > **Tech Mahindra — Global Learning Program (GLP) Internship · Finance Project 1**
 > *AI-Powered Financial Viability Assessment Copilot.* Built during the Tech Mahindra GLP
 > internship under managers **Rashmi Kubusada** and **Vasu Bheema Rao**. The applicant schema
@@ -54,7 +56,7 @@ python src/run_pipeline.py        # ~7s: data → docs → extract → score →
 python src/webdata.py             # export results into web/src/data/
 uvicorn api:app --app-dir src     # REST API (POST /score, GET /cases, SQLite-backed)
 pytest tests/ -q                  # 54 offline tests (also run in GitHub Actions CI)
-docker build -t underwriting-copilot . && docker run -p 8501:8501 underwriting-copilot
+docker build -t underwriting-copilot-api . && docker run -p 8000:8000 underwriting-copilot-api
 ```
 
 The workbench front end is a Vite + React app in `web/`:
@@ -66,6 +68,12 @@ npm --prefix web run verify    # replay all 200 cases through the browser engine
 npm --prefix web run release   # verify → snapshot build → copy into dashboard/ and docs/
 ```
 
+Deploy the workbench to Cloudflare Pages (rebuilds, then uploads the single file):
+
+```bash
+./scripts/deploy-cloudflare.sh   # one-time setup: npx wrangler login
+```
+
 ## Two tiers: a snapshot and a live service
 
 The same React app runs in two modes, and the offline one is not a degraded
@@ -73,9 +81,9 @@ fallback — it is the artifact that ships.
 
 **Snapshot (default).** `npm run release` builds with `--mode snapshot`, which forces
 `VITE_API_URL` empty. The result is **one** self-contained `dist/index.html` with data,
-fonts and styles inlined — served by Streamlit, by GitHub Pages from `docs/`, or opened
-straight off disk with no server and no network. CI fails the build if a second asset
-appears, if any tag references an external origin, or if a developer's local API URL
+fonts and styles inlined — served by Cloudflare Pages, by GitHub Pages from `docs/`, or
+opened straight off disk with no server and no network. CI fails the build if a second
+asset appears, if any tag references an external origin, or if a developer's local API URL
 leaks in.
 
 **Live.** Point the app at the FastAPI service and it reads the book over HTTP instead:
@@ -99,13 +107,11 @@ silently reading yesterday's data is the worse failure.
 
 Every view is deep-linkable — `#/case/APP-1008`, `#/portfolio?filter=red`, `#/evidence`.
 Hash routing rather than paths, because the same file has to resolve identically on
-GitHub Pages, inside a Streamlit iframe, and from `file://`.
+Cloudflare Pages, on GitHub Pages, and from `file://`.
 
-Dependency files: `requirements.txt` is **deployment-only** (just Streamlit —
-the hosted dashboard is a pre-built static HTML file and does no modelling at
-runtime, so cloud builds stay fast and wheel-independent);
-`requirements-pipeline.txt` is the pipeline + REST API stack;
-`requirements-dev.txt` adds pytest.
+Dependency files: `requirements-pipeline.txt` is the pipeline + REST API stack;
+`requirements-dev.txt` adds pytest. The frontend deploys as a static file and needs no
+Python at runtime.
 
 Env knobs: `N_APPLICANTS` (default 4000), `N_PACKETS` (default 60).
 Set `ANTHROPIC_API_KEY` to have case summaries written by Claude with a
@@ -213,7 +219,7 @@ web/                 the workbench — Vite + React + TypeScript, builds to one 
   src/components/WhatIf.tsx   inline sensitivity tool on a case (not the new-application form)
   src/views/             Portfolio · Case file · How it decides · Evidence · New application
   scripts/verify-port.mjs  replays the pipeline's cases through the browser engine
-dashboard/           built workbench, served by Streamlit
+dashboard/           built workbench (the single-file artifact deployed to Cloudflare Pages)
 docs/                the same file, served by GitHub Pages
 ```
 

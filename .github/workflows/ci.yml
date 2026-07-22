@@ -15,8 +15,6 @@ jobs:
           python-version: "3.13"
           cache: pip
       - run: pip install -r requirements-dev.txt
-      - name: Streamlit deployment deps must stay minimal and installable
-        run: pip install -r requirements.txt
       - name: Run test suite (offline — no dataset downloads needed)
         run: pytest tests/ -q
 
