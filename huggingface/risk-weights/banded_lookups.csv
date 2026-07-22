@@ -1,0 +1,10 @@
+dimension,band,points,note
+age,age<30,0,baseline
+age,age<45,5,~1.7x baseline mortality
+age,age<55,11,~3x baseline
+age,age>=55,18,~5x+ baseline
+bmi,bmi<18.5,15,
+bmi,18.5-25,0,
+bmi,25-30,2,
+bmi,30-35,4,
+bmi,bmi>=35,12,

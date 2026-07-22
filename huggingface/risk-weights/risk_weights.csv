@@ -1,0 +1,10 @@
+factor,relative_mortality_multiple,points,source,note
+smoker_current,2.37,24,NHANES,cotinine-confirmed; matches NHIS 2.2-2.3x
+smoker_former,1.34,8,NHIS,residual risk; declines with years quit
+diabetes,1.80,16,ERFC,"all-cause, 820k people (our NHANES fit 1.50)"
+condition_other,1.40,9,NHANES,typical non-diabetic chronic condition
+bmi_obese_2,1.55,12,PSC,BMI>=35; +30% per 5 units above 25
+bmi_over,1.15,4,PSC,BMI 30-35
+bmi_mild,1.08,2,PSC,BMI 25-30
+bmi_low,1.70,15,NHANES,"BMI<18.5; NHANES 2.27, discounted for reverse causation"
+family_history,1.35,8,NHIS,"premature cardiac family history, conservative"
