@@ -353,9 +353,11 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 <script>
 const DATA = /*__DATA__*/;
 const M = DATA.metrics, CASES = DATA.cases;
-// approve/decline lines are STP-optimised by the pipeline (fallback 50/90)
-const _THR=(M.decisioning||{}).thresholds||{};
-const A_LINE=_THR.a_line||50, D_LINE=_THR.d_line||90;
+// Fixed decision bands (product owner): 0–50 APPROVE · 51–89 MANUAL REVIEW · 90–100 DECLINE.
+// A_LINE=51 → approve is score<51 (0–50); D_LINE=90 → review is 51–89, decline is ≥90.
+// The pipeline's STP-optimised export is intentionally ignored so the traffic-light lines
+// stay on these round numbers; recomputeVerdicts() re-scores every case against them.
+const A_LINE=51, D_LINE=90;
 const VM={green:["APPROVE","ok"],yellow:["MANUAL REVIEW","warn"],red:["DECLINE","bad"]};
 const AFF={pass:["AFFORDABLE","ok"],strain:["STRAINED","warn"],fail:["NOT JUSTIFIED","bad"]};
 const bandOf=s=>s<A_LINE?"green":s<D_LINE?"yellow":"red";
