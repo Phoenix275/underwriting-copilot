@@ -73,22 +73,15 @@ export default function CaseFile({
             <p className="eyebrow">
               {c.id} · {c.policy}
             </p>
-            <h1 className="casehead__ask">
-              {usd(c.coverage)} <span className="casehead__askcap">of cover</span>
-            </h1>
-            <p className="casehead__terms">
-              indicative premium <b>{usd(c.premium)}</b>/yr
-              {c.existing_cov > 0 && <> · {usdShort(c.existing_cov)} already in force</>}
+            <h1 className="casehead__name">{c.name}</h1>
+            <p className="casehead__meta">
+              {c.age}, {c.sex === 'M' ? 'male' : 'female'} · {c.occupation} at {c.employer} ·{' '}
+              {c.city}, {c.state}
             </p>
-            <ul className="casefacts" aria-label="Underwriting facts">
-              {caseFacts(c).map((f) => (
-                <li key={f.t} className={`casefacts__chip${f.flag ? ' is-flag' : ''}`}>
-                  {f.t}
-                </li>
-              ))}
-            </ul>
-            <p className="casehead__applicant">
-              <span className="casehead__name">{c.name}</span> · {c.occupation}, {c.city}, {c.state}
+            <p className="casehead__meta">
+              Applying for <b>{usd(c.coverage)}</b> of cover
+              {c.existing_cov > 0 && <> alongside {usdShort(c.existing_cov)} already in force</>} ·
+              indicative premium <b>{usd(c.premium)}</b> a year
             </p>
           </div>
           <DecisionStamp verdict={c.verdict} decision={c.decision} rateClass={c.rate_class} />
@@ -385,28 +378,6 @@ export default function CaseFile({
       </div>
     </>
   )
-}
-
-/** The facts an underwriter reads first, as chips. Risk-elevating ones are
- *  flagged; age and sex are shown but neutral. */
-function caseFacts(c: Case): { t: string; flag?: boolean }[] {
-  const facts: { t: string; flag?: boolean }[] = [
-    { t: `${c.age} yrs` },
-    { t: c.sex === 'M' ? 'male' : 'female' },
-    { t: c.smoker.toLowerCase(), flag: c.smoker !== 'Non-smoker' },
-    { t: `BMI ${c.bmi.toFixed(1)}`, flag: c.bmi < 18.5 || c.bmi >= 30 },
-    {
-      t: c.conditions && c.conditions !== 'None' ? c.conditions : 'no conditions',
-      flag: Boolean(c.conditions) && c.conditions !== 'None',
-    },
-  ]
-  if (c.alcohol && c.alcohol !== 'None')
-    facts.push({ t: `${c.alcohol.toLowerCase()} alcohol use`, flag: c.alcohol === 'Heavy' })
-  if (c.violations > 0)
-    facts.push({ t: `${c.violations} violation${c.violations > 1 ? 's' : ''}`, flag: true })
-  if (c.family > 0) facts.push({ t: 'family history', flag: true })
-  if (c.hazard && c.hazard !== 'None') facts.push({ t: `${c.hazard.toLowerCase()} hazard`, flag: true })
-  return facts
 }
 
 function money(v: unknown) {
