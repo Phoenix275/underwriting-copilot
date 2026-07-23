@@ -351,6 +351,29 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 /* =================== LIGHT MODE (toggle) =================== */
 #themeToggle{position:fixed;top:14px;right:16px;z-index:2000;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:17px;line-height:1;cursor:pointer;box-shadow:0 6px 18px rgba(20,20,40,.28);display:flex;align-items:center;justify-content:center}
 #themeToggle:hover{filter:brightness(1.08)}
+/* interactive tutorial */
+#tourBtn{position:fixed;top:14px;right:66px;z-index:2000;height:40px;padding:0 16px;border-radius:999px;border:none;background:var(--acc);color:#fff;font:600 12.5px 'Poppins',sans-serif;cursor:pointer;box-shadow:0 6px 18px rgba(87,84,240,.4);display:flex;align-items:center;gap:6px}
+#tourBtn:hover{filter:brightness(1.07)}
+#tourPanel{position:fixed;bottom:20px;right:20px;z-index:2100;width:372px;max-width:calc(100vw - 40px);background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 22px 60px rgba(0,0,0,.45);padding:18px 20px;display:none;font-family:'Poppins',sans-serif}
+#tourPanel.on{display:block}
+.tour-step{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.6px;text-transform:uppercase;color:var(--acc)}
+.tour-title{font-size:16px;font-weight:700;color:var(--ink);margin:4px 0 9px;line-height:1.25}
+.tour-do{background:var(--acc-soft);border-radius:10px;padding:9px 12px;font-size:12.5px;color:var(--ink);margin-bottom:9px;line-height:1.5}
+.tour-do b{color:var(--acc)}
+.tour-learn{font-size:12.5px;color:var(--mut);line-height:1.6}
+.tour-actions{display:flex;gap:8px;align-items:center;margin-top:14px}
+.tour-actions .sp{flex:1}
+.tour-btn{font:600 12px 'Poppins',sans-serif;border:none;border-radius:999px;padding:8px 15px;cursor:pointer;background:#26262E;color:#fff}
+.tour-btn.prim{background:var(--acc)}
+.tour-btn.ghost{background:transparent;color:var(--mut);padding-left:0}
+.tour-btn.doit{background:var(--ok);color:#fff;margin-top:11px}
+.tour-btn:disabled{opacity:.4;cursor:default}
+.tour-prog{height:4px;background:var(--line);border-radius:999px;overflow:hidden;margin-top:13px}
+.tour-prog>div{height:100%;background:var(--acc);border-radius:999px;transition:width .2s}
+:root[data-theme="light"] .tour-btn{background:#EAECF2;color:var(--ink)}
+:root[data-theme="light"] .tour-btn.prim{background:var(--acc);color:#fff}
+:root[data-theme="light"] .tour-btn.doit{background:var(--ok);color:#fff}
+:root[data-theme="light"] #tourPanel{box-shadow:0 22px 60px rgba(30,32,60,.22)}
 :root[data-theme="light"]{
  --bg:#E7E8F0;--card:#FFFFFF;--ink:#1B1B26;--mut:#5B5C69;--line:#E4E6EE;
  --rail:#F5F6F9;--rail-2:#ECEEF3;
@@ -394,6 +417,8 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 :root[data-theme="light"] .login-card input{background:#F3F4F8 !important;color:var(--ink) !important}
 </style>
 <button id="themeToggle" onclick="toggleTheme()" title="Toggle light / dark mode" aria-label="Toggle light or dark mode">🌙</button>
+<button id="tourBtn" onclick="tourStart()" title="Interactive tutorial — learn every feature">🎓 Tutorial</button>
+<div id="tourPanel"></div>
 <div id="login">
  <div class="login-card">
   <div class="brandmark">◆ UNDERWRITING COPILOT</div>
@@ -430,6 +455,95 @@ function toggleTheme(){var root=document.documentElement;var light=root.getAttri
  root.setAttribute('data-theme',light?'light':'dark');
  try{localStorage.setItem('uw_theme',light?'light':'dark');}catch(e){}applyThemeIcon();}
 (function(){try{if(localStorage.getItem('uw_theme')==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}applyThemeIcon();})();
+/* ---------- interactive tutorial (learn every feature hands-on) ---------- */
+let tourIdx=0;
+function tourLogin(u,p){if(typeof CURRENT_ROLE!=='undefined'&&CURRENT_ROLE)signOut();
+ document.getElementById('loginUser').value=u;document.getElementById('loginPass').value=p;doLogin();}
+function tourOpenConflictCase(){const c=CASES.find(x=>(x.conflicts||[]).some(k=>k.type==='dob_mismatch'))||CASES.find(x=>(x.conflicts||[]).length);if(c)sel(c.id);}
+const TUTORIAL_STEPS=[
+ {title:`Welcome to the Underwriting Copilot`,
+  learn:`This tour walks you through every feature — you drive, it explains. The Copilot scores each life-insurance application 0–100, auto-approves the clean ones (0–50), auto-declines the risky ones (90–100), and sends the 51–89 middle band to a human. Click <b>Next</b> to begin.`},
+ {title:`Sign in — it's a role selector`,
+  do:`We'll sign you in as a senior underwriter.`,
+  learn:`Sign-in is an honest role selector (no real passwords) — every role sees a different product. You'll become Marcus Rivera, senior underwriter.`,
+  action:{label:`Sign me in as an underwriter`,fn:()=>tourLogin('mrivera','senior')}},
+ {title:`The Review Queue`,
+  do:`Look at the main table — the underwriter's queue.`,
+  learn:`Only the 51–89 cases that need a human land here. It's ranked by <b>coverage + time-in-queue</b> (not risk score, so the model never decides who gets looked at first). Each row carries an actionable <b>AI recommendation</b> on the right. Auto-approvals and auto-declines are filed in the spaces on the left rail.`},
+ {title:`Open a flagged case`,
+  do:`We'll open a case the system flagged for a conflict.`,
+  learn:`This applicant was declined for a <b>date-of-birth mismatch</b>. Notice the red <b>conflict alert</b> at the top — it names exactly what's wrong (the two mismatched dates). "Top drivers of this decision" explains why, right under the name — no hunting.`,
+  action:{label:`Open a flagged case`,fn:()=>tourOpenConflictCase()}},
+ {title:`Application tab — read-only`,
+  do:`Click the <b>Application</b> tab.`,
+  learn:`The full application. It's <b>read-only for every role</b> — it's evidence, not a working document. The conflicting field (Date of Birth) is highlighted red so you see the discrepancy in context.`,
+  action:{label:`Show the Application tab`,fn:()=>{selTab(1);}}},
+ {title:`Documents — open them inline`,
+  do:`Click the <b>Documents</b> tab, then click a document to open it.`,
+  learn:`Each parsed document opens inline. Below the packet is the <b>Requirements grid</b> (which evidence this age/amount needs) and "Request more information".`,
+  action:{label:`Show the Documents tab`,fn:()=>{selTab(2);}}},
+ {title:`Request more evidence (with AI pre-check)`,
+  do:`In "Request more information", tick <b>APS</b> and type a reason.`,
+  learn:`Underwriters order evidence — APS, labs, MVR, pharmacy, MIB — with a <b>mandatory reason</b>. An AI pre-check flags duplicate or non-indicated orders <i>before</i> they cost ~$350 and weeks. Requests land in the admin's queue.`},
+ {title:`Extraction & Conflicts`,
+  do:`Click <b>Extraction & Conflicts</b>.`,
+  learn:`Every extracted value across the 5 documents, with the <b>conflicting rows highlighted red</b>, and the 6-check conflict screen explaining each discrepancy.`,
+  action:{label:`Show the Extraction tab`,fn:()=>{selTab(3);}}},
+ {title:`Risk Score`,
+  do:`Click <b>Risk Score</b>.`,
+  learn:`The composite-score gauge, the rule-engine vs ML sub-scores (50/50 blend), and the full factor breakdown. The generic "how scoring works" explainer lives <b>once</b> on the manager's Model Card — not repeated on every case.`,
+  action:{label:`Show the Risk Score tab`,fn:()=>{selTab(4);}}},
+ {title:`Decision + audit trail`,
+  do:`Click <b>Decision</b>.`,
+  learn:`The system decision and rationale, the affordability screen, the case desk where you <b>Approve / Decline</b> (with a required reason) or request info — and the full <b>audit trail</b> of everything that happened.`,
+  action:{label:`Show the Decision tab`,fn:()=>{selTab(5);}}},
+ {title:`Move through cases fast`,
+  do:`Use the <b>‹ Prev / Next ›</b> buttons at the top of the case (or the ← / → keys).`,
+  learn:`Work the queue case-by-case without returning to the list. The back button restores your place in the queue.`},
+ {title:`Bulk approve / decline`,
+  do:`We'll take you to the Auto-Approved space.`,
+  learn:`For straight-through decisions, the <b>top-right "Bulk approve all"</b> button batch-records them under one rationale — but each case is written to the audit trail individually.`,
+  action:{label:`Go to Auto-Approved`,fn:()=>{if(CURRENT_ROLE!=='underwriter')tourLogin('mrivera','senior');goSpace('auto_approved');}}},
+ {title:`Now as the Manager`,
+  do:`We'll sign you in as the manager.`,
+  learn:`Nadia Sethi, manager. She gets an oversight dashboard, a <b>"Decided cases"</b> list, and can <b>reopen or override</b> any underwriter's decision — with a logged reason. Open a decided case to see the override controls.`,
+  action:{label:`Sign in as the manager`,fn:()=>tourLogin('nsethi','oversight')}},
+ {title:`The Model Card (regulator-facing)`,
+  do:`Open <b>Portfolio & Model Card</b> in the left nav.`,
+  learn:`The score formula & bands, feature importance, calibration, <b>fairness by group</b>, and the evidence-anchored weights (<span class="mono">28 × ln(mortality multiple)</span>). This is what makes the model defensible in an exam.`,
+  action:{label:`Open the Model Card`,fn:()=>{if(CURRENT_ROLE!=='manager')tourLogin('nsethi','oversight');goOverview();}}},
+ {title:`The Executive view`,
+  do:`We'll sign you in as the Chief Underwriting Officer.`,
+  learn:`Marcus Vale, CUO. A <b>money-only</b> view — coverage accepted vs declined, YoY approval, total risk underwritten this month vs last year, and how the book tracks against its monthly <b>appetite</b>. No other role sees this, and it shows no individual cases.`,
+  action:{label:`Sign in as the executive`,fn:()=>tourLogin('mvale','executive')}},
+ {title:`The Operations Admin`,
+  do:`We'll sign you in as operations admin.`,
+  learn:`Priya Anand, ops. The full <b>decision feed</b> — every recorded decision, attributed and timestamped, <b>exportable to CSV/JSON</b> for compliance — plus the outstanding evidence-request queue raised by underwriters.`,
+  action:{label:`Sign in as the admin`,fn:()=>tourLogin('panand','admin')}},
+ {title:`Two more touches`,
+  do:`Try the <b>☀️/🌙 toggle</b> (top-right) and the <b>✕</b> on the review-queue banner.`,
+  learn:`Light/dark mode persists across visits, and the queue banner is dismissable. That's the whole product — you now know every feature.`},
+ {title:`You're ready 🎉`,
+  learn:`Re-launch this tour anytime from the <b>🎓 Tutorial</b> button. For talking points and a timed 5-minute demo script, see <span class="mono">docs/PRESENTATION_GUIDE.pdf</span>. Good luck!`}
+];
+function tourStart(){tourIdx=0;const p=document.getElementById('tourPanel');if(p)p.classList.add('on');tourRender();}
+function tourExit(){const p=document.getElementById('tourPanel');if(p)p.classList.remove('on');}
+function tourGo(d){tourIdx=Math.max(0,Math.min(TUTORIAL_STEPS.length-1,tourIdx+d));tourRender();}
+function tourAct(){const s=TUTORIAL_STEPS[tourIdx];if(s&&s.action&&s.action.fn){s.action.fn();document.getElementById('tourPanel').classList.add('on');}}
+function tourRender(){
+ const s=TUTORIAL_STEPS[tourIdx];const p=document.getElementById('tourPanel');if(!p||!s)return;
+ const last=tourIdx===TUTORIAL_STEPS.length-1;
+ p.innerHTML=`<div class="tour-step">Step ${tourIdx+1} of ${TUTORIAL_STEPS.length} · Interactive tour</div>
+  <div class="tour-title">${s.title}</div>
+  ${s.do?`<div class="tour-do"><b>Try it:</b> ${s.do}</div>`:''}
+  <div class="tour-learn">${s.learn}</div>
+  ${s.action?`<button class="tour-btn doit" onclick="tourAct()">▶ ${s.action.label}</button>`:''}
+  <div class="tour-prog"><div style="width:${(tourIdx+1)/TUTORIAL_STEPS.length*100}%"></div></div>
+  <div class="tour-actions">
+   <button class="tour-btn ghost" onclick="tourExit()">Exit tour</button><span class="sp"></span>
+   <button class="tour-btn" onclick="tourGo(-1)" ${tourIdx===0?'disabled':''}>‹ Back</button>
+   <button class="tour-btn prim" onclick="${last?'tourExit()':'tourGo(1)'}">${last?'Finish ✓':'Next ›'}</button></div>`;
+}
 // Fixed decision bands (product owner): 0–50 APPROVE · 51–89 MANUAL REVIEW · 90–100 DECLINE.
 // A_LINE=51 → approve is score<51 (0–50); D_LINE=90 → review is 51–89, decline is ≥90.
 // The pipeline's STP-optimised export is intentionally ignored so the traffic-light lines
