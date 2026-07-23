@@ -372,19 +372,23 @@ function recomputeVerdicts(){
   const majors=conf.filter(k=>k.severity==='major');
   const misrep=majors.filter(k=>MISREP.has(k.type));
   const reasons=[];let verdict,decision,rate;
+  // Score-driven bands: the composite score alone sets the decision. Material
+  // misrepresentation is the one hard override (fraud → decline regardless of
+  // score). Conflicts, affordability and disclosed circumstances are surfaced
+  // as flags for the reviewer but no longer change the band.
   if(misrep.length){verdict='red';decision='DECLINE';rate='Declined — Material Misrepresentation';
-    reasons.push('Application contradicts medical/identity evidence: '+misrep.map(k=>k.type.replace(/_/g,' ')).join('; '));}
+    reasons.push('Application materially contradicts medical/identity evidence: '+misrep.map(k=>k.type.replace(/_/g,' ')).join('; '));}
   else if(comp>=D_LINE){verdict='red';decision='DECLINE';rate='Declined — Risk Exceeds Appetite';
-    reasons.push(`Composite risk score ${comp}/100 is in the ${D_LINE}+ decline band`);}
-  else if(majors.length||c.unique||(c.afford&&c.afford.verdict==='fail')||comp>=A_LINE||Math.abs(c.rule_score-c.ml_score)>20){verdict='yellow';decision='MANUAL REVIEW';rate='Referred — Senior Underwriter Review';
-    if(majors.length)reasons.push(`${majors.length} major data conflict(s): `+majors.map(k=>k.type.replace(/_/g,' ')).join('; '));
-    if(c.unique){rate='Referred — Unique Circumstances Disclosed';reasons.push('Applicant disclosed unique circumstances: '+c.unique);}
-    if(c.afford&&c.afford.verdict==='fail'){rate='Referred — Financial Underwriting Review';(c.afford.reasons||[]).forEach(r=>reasons.push(r));}
-    if(comp>=A_LINE)reasons.push(`Composite score ${comp} sits in the ${A_LINE}–${D_LINE-1} referral band`);
-    if(Math.abs(c.rule_score-c.ml_score)>20)reasons.push(`Rule engine (${c.rule_score}) and ML model (${Math.round(c.ml_score)}) disagree materially`);}
+    reasons.push(`Composite risk score ${comp}/100 is at or above the ${D_LINE}-point decline line`);}
+  else if(comp>=A_LINE){verdict='yellow';decision='MANUAL REVIEW';rate='Referred — Senior Underwriter Review';
+    reasons.push(`Composite score ${comp} sits in the ${A_LINE}–${D_LINE-1} manual-review band`);}
   else{verdict='green';decision='APPROVE';rate=comp<=25?'Preferred Rate Class':'Standard Rate Class';
-    reasons.push(`Composite score ${comp} is below the ${A_LINE}-point approval line; engines agree and no conflicts or special circumstances were found`);
-    if(c.afford&&c.afford.verdict==='strain')reasons.push('Affordability is strained but within tolerance — flagged on the financial viability panel');}
+    reasons.push(`Composite score ${comp} is below the ${A_LINE}-point approval line`);}
+  if(verdict!=='red'){   // informational flags — do not change the band
+    if(majors.length)reasons.push(`Flag: ${majors.length} major data conflict(s) for the reviewer — `+majors.map(k=>k.type.replace(/_/g,' ')).join('; '));
+    if(c.unique)reasons.push('Flag: applicant disclosed unique circumstances — '+c.unique);
+    if(c.afford&&c.afford.verdict==='fail')reasons.push('Flag: affordability screen refers this case to financial underwriting');
+    else if(c.afford&&c.afford.verdict==='strain')reasons.push('Affordability is strained but within tolerance');}
   c.verdict=verdict;c.decision=decision;c.rate_class=rate;c.reasons=reasons;c.referred=verdict==='yellow';
   if(c.ai_summary){ // keep the baked narrative consistent with the recomputed verdict
    const bandTxt=verdict==='green'?'green approval band':verdict==='yellow'?'yellow manual-review band':'red decline band';
@@ -702,8 +706,8 @@ function rail(){
   const sc=c.verdict==='red'?'sc-bad':c.verdict==='yellow'?'sc-warn':'sc-ok';
   const st=wfGet(c.id);const isRev=space==='review';
   let meta='';
-  if(isRev){const pb=priorityBand(priorityScore(c));
-   meta=`<div class="ci-meta"><span class="pri-chip" style="background:${pb[1]}">${pb[0]}</span>${slaChip(c)}</div>
+  if(isRev){
+   meta=`<div class="ci-meta">${slaChip(c)}</div>
     <div class="ci-meta">${queueScope==='team'&&st.tier?`<span class="tier-tag">${st.assignee} · ${(UWS[st.tier]||{}).label}</span>`:wfChip(c.id)}</div>`;
   }else{meta=`<div class="ci-id" style="margin-top:2px">${wfChip(c.id)}</div>`;}
   const rank=isRev?`<span class="rank-num">${page*PAGE+i+1}</span> `:'';
@@ -726,8 +730,8 @@ function spaceView(){
     <button class="${queueScope==='team'?'on':''}" onclick="setScope('team')">Whole team</button></div>`:'';
  let head,rows;
  if(isRev){
-  head=`<tr><th>#</th><th>Applicant</th><th>Case ID</th><th>Coverage</th><th>Time in queue</th><th>Requirements</th><th>Priority</th><th>AI recommendation</th><th></th></tr>`;
-  rows=list.slice(0,300).map((c,i)=>{const st=wfGet(c.id);const pb=priorityBand(priorityScore(c));
+  head=`<tr><th>#</th><th>Applicant</th><th>Case ID</th><th>Coverage</th><th>Time in queue</th><th>Requirements</th><th>AI recommendation</th><th></th></tr>`;
+  rows=list.slice(0,300).map((c,i)=>{const st=wfGet(c.id);
     return `<tr onclick="sel('${c.id}')" style="cursor:pointer">
       <td class="rank-num">${i+1}</td>
       <td><b>${c.name}</b><div style="font-size:11px;color:var(--mut)">${c.policy}</div></td>
@@ -735,7 +739,6 @@ function spaceView(){
       <td class="mono" style="white-space:nowrap">${fmt$(c.coverage)}</td>
       <td>${slaChip(c)}</td>
       <td>${reqOutstanding(c)}</td>
-      <td><span class="pri-chip" style="background:${pb[1]}">${pb[0]}</span></td>
       <td>${aiRecoCol(c)}</td>
       <td style="text-align:right"><button class="ai-btn" onclick="event.stopPropagation();sel('${c.id}')">Review</button></td></tr>`;}).join('');
  }else{
@@ -763,7 +766,7 @@ function spaceView(){
       <td style="text-align:right"><button class="ai-btn" onclick="event.stopPropagation();sel('${c.id}')">Open</button></td></tr>`;}).join('');
  }
  const breaches=isRev?list.filter(c=>ageHours(c)>=8).length:0;
- const banner=isRev?`<div class="verdict-banner v-yellow" style="margin-top:16px"><div class="vb-word">${list.length} case(s) ranked by priority${breaches?` · ${breaches} over the 8h SLA`:''}</div><div class="vb-sub">Work top-down — most important first. These are the only cases needing a human; auto-approvals and auto-declines are filed separately. Anything over 8 hours in the queue is flagged red.</div></div>`:'';
+ const banner=isRev?`<div class="verdict-banner v-yellow" style="margin-top:16px"><div class="vb-word">${list.length} case(s) ranked by coverage &amp; time in queue${breaches?` · ${breaches} over the 8h SLA`:''}</div><div class="vb-sub">Work top-down — most important first. These are the only cases needing a human; auto-approvals and auto-declines are filed separately. Anything over 8 hours in the queue is flagged red.</div></div>`:'';
  return `<div class="case-head"><div><h2>${meta[1]}</h2>
     <div class="case-meta"><span>${list.length} case(s)</span><span>${meta[3]}</span></div>${toggle}</div></div>
    ${banner}
@@ -863,7 +866,7 @@ function overview(){
  <div class="card" style="margin-top:16px"><h3>Composite Risk Score Distribution</h3>
   ${Object.entries(tc).map(([t,n],i)=>`<div class="hist-bar-row"><div class="hist-label">${t}</div>
    <div class="hist-track"><div class="hist-fill" style="width:${n/mx*100}%;background:${cols[i]}"></div></div><div class="hist-count">${n}</div></div>`).join('')}
-  <div class="note">Below ${A_LINE} with clean signals → green auto-approve. ${A_LINE}–${D_LINE-1}, any major conflict, model disagreement, or disclosed unique circumstances → yellow manual review. At or above ${D_LINE}, or material misrepresentation → red decline.</div></div>
+  <div class="note">Score-driven bands: below ${A_LINE} → green auto-approve. ${A_LINE}–${D_LINE-1} → yellow manual review. At or above ${D_LINE}, or material misrepresentation → red decline. Conflicts, affordability and disclosed circumstances are shown as flags but no longer change the band.</div></div>
  <div class="card"><h3>Continuous Learning — real datasets & run-over-run improvement</h3>
   ${(()=>{const el=M.external_learning||{datasets:[]};const hist=M.model_history||[];
    const ds=el.datasets.filter(d=>!d.error);
@@ -1233,7 +1236,7 @@ function panel(c){
      </div></div></div></div>
   <div class="card explain"><h3>How this score works</h3>
    <p><b>Formula:</b> Risk Score = 50% × Rule Engine score + 50% × ML probability. The rule engine is fully auditable — every point traces to a documented factor weight below. The ML component is a gradient-boosting model trained on ${M.risk_models.n_train.toLocaleString()} records (AUC ${(M.risk_models.gradient_boosting.auc*100).toFixed(1)}% on ${M.risk_models.n_test.toLocaleString()} held-out cases), which captures factor interactions the rules miss. Blending them means one bad model can never single-handedly approve a risky case.</p>
-   <p><b>The traffic light:</b> below ${A_LINE} with clean signals the case is <b style="color:var(--ok)">GREEN — APPROVE</b>, clear-cut and auto-approved. From ${A_LINE} to ${D_LINE-1}, or whenever there is a major data conflict, model disagreement, or the applicant disclosed unique circumstances, the case is <b style="color:var(--warn)">YELLOW — MANUAL REVIEW</b>: a human underwriter must look at the application and the person as a whole. At ${D_LINE} or above, or when the application materially contradicts the medical/identity evidence, the case is <b style="color:var(--bad)">RED — DECLINE</b>.</p>
+   <p><b>The traffic light:</b> the composite score alone sets the band. Below ${A_LINE} the case is <b style="color:var(--ok)">GREEN — APPROVE</b>, clear-cut and auto-approved. From ${A_LINE} to ${D_LINE-1} it is <b style="color:var(--warn)">YELLOW — MANUAL REVIEW</b>: a human underwriter looks at the application and the person as a whole. At ${D_LINE} or above — or when the application materially misrepresents the medical/identity evidence — it is <b style="color:var(--bad)">RED — DECLINE</b>. Conflicts, affordability and disclosed circumstances are surfaced as flags for the reviewer, but they no longer change the band.</p>
    <div class="scale-wrap">
     <div class="scale-ticks"><span style="left:0%">0</span><span style="left:${A_LINE}%">${A_LINE}</span><span style="left:${D_LINE}%">${D_LINE}</span><span style="left:100%">100</span></div>
     <div class="scale-track">
@@ -1245,7 +1248,7 @@ function panel(c){
      <div class="slab" style="width:${D_LINE-A_LINE}%"><div class="sl-word" style="color:var(--warn)">MANUAL REVIEW</div><div class="sl-sub">a human sees the whole person</div></div>
      <div class="slab" style="width:${100-D_LINE}%"><div class="sl-word" style="color:var(--bad)">DECLINE</div><div class="sl-sub">exceeds appetite / misrepresentation</div></div></div>
    </div>
-   <div class="override-note"><span class="on-ic">⚠</span><div><b>Override:</b> any major cross-document conflict, model disagreement over 20 points, or a disclosed unique circumstance forces manual review — regardless of score.</div></div></div>
+   <div class="override-note"><span class="on-ic">⚠</span><div><b>Score-driven bands:</b> the composite score sets the decision. Material misrepresentation is the one hard override — it declines regardless of score. Other flags (conflicts, affordability, disclosed circumstances) are shown to the reviewer without changing the band.</div></div></div>
   <div class="card"><h3>Rule Engine — Factor Breakdown</h3>
    ${c.rule_factors.map(f=>`<div class="factor-row"><div><div class="factor-label">${f[0]}</div><div class="factor-detail">${f[1]}</div></div>
     <div class="factor-pts">${f[2]>0?'+':''}${f[2]}</div></div>`).join('')}
@@ -1422,17 +1425,17 @@ function decideJS(rule,ml,unique,afford){
  const comp=Math.round(0.5*rule+0.5*ml);const reasons=[];
  const affFail=afford&&afford.verdict==="fail";
  let verdict,decision,rate;
+ // Score-driven bands (same rule as the portfolio): the composite score sets
+ // the decision; disclosed circumstances and affordability are shown as flags.
  if(comp>=D_LINE){verdict="red";decision="DECLINE";rate="Declined — Risk Exceeds Appetite";
-  reasons.push(`Composite risk score ${comp}/100 is in the ${D_LINE}+ decline band`);}
- else if(unique||affFail||comp>=A_LINE||Math.abs(rule-ml)>20){verdict="yellow";decision="MANUAL REVIEW";
-  rate="Referred — Senior Underwriter Review";
-  if(unique){rate="Referred — Unique Circumstances Disclosed";reasons.push("Applicant disclosed unique circumstances: "+unique);}
-  if(affFail){rate="Referred — Financial Underwriting Review";afford.reasons.forEach(r=>reasons.push(r));}
-  if(comp>=A_LINE)reasons.push(`Composite score ${comp} sits in the ${A_LINE}–${D_LINE-1} referral band`);
-  if(Math.abs(rule-ml)>20)reasons.push(`Rule engine (${rule}) and ML model (${ml.toFixed(0)}) disagree materially`);}
+  reasons.push(`Composite risk score ${comp}/100 is at or above the ${D_LINE}-point decline line`);}
+ else if(comp>=A_LINE){verdict="yellow";decision="MANUAL REVIEW";rate="Referred — Senior Underwriter Review";
+  reasons.push(`Composite score ${comp} sits in the ${A_LINE}–${D_LINE-1} manual-review band`);}
  else{verdict="green";decision="APPROVE";rate=comp<=25?"Preferred Rate Class":"Standard Rate Class";
-  reasons.push(`Composite score ${comp} is below the ${A_LINE}-point approval line; engines agree and no special circumstances were disclosed`);
-  if(afford&&afford.verdict==="strain")reasons.push("Affordability is strained but within tolerance — see the financial viability screen");}
+  reasons.push(`Composite score ${comp} is below the ${A_LINE}-point approval line`);}
+ if(unique)reasons.push("Flag: applicant disclosed unique circumstances: "+unique);
+ if(affFail){reasons.push("Flag: affordability screen refers to financial underwriting");afford.reasons.forEach(r=>reasons.push(r));}
+ else if(afford&&afford.verdict==="strain")reasons.push("Affordability is strained but within tolerance");
  return {verdict,decision,rate,comp,reasons};
 }
 let pdfLoaded=false;
