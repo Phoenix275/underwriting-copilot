@@ -299,6 +299,29 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 .hist-track,.coef-track{background:#1C1C21 !important}
 .legend-chip{border-radius:12px}
 .stat{border-radius:18px !important}
+/* =================== PRD v2 — exec / admin / evidence / requirements =================== */
+.mix-bar{display:flex;height:34px;border-radius:999px;overflow:hidden;margin:6px 0 4px}
+.mix-seg{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#0A0A0C;white-space:nowrap}
+.appetite{display:flex;gap:20px;align-items:center;flex-wrap:wrap;margin-top:4px}
+.appetite .lever{flex:1;min-width:200px;background:#1C1C21;border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.appetite .lever b{font-size:13px}
+.gauge-line{height:10px;background:#1C1C21;border-radius:999px;overflow:hidden;margin:8px 0 4px}
+.gauge-line .fill{height:100%;border-radius:999px}
+.feed-row{display:flex;gap:14px;align-items:baseline;padding:11px 0;border-bottom:1px solid var(--line);font-size:13px}
+.feed-row:last-child{border-bottom:none}
+.feed-when{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--mut);white-space:nowrap;min-width:104px}
+.feed-what{flex:1;line-height:1.5}.feed-who{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--acc);white-space:nowrap}
+.ev-form{border-top:1px solid var(--line);margin-top:14px;padding-top:14px}
+.ev-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.ev-opt{display:flex;gap:8px;align-items:baseline;background:#1C1C21;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:12.5px;cursor:pointer}
+.ev-opt input{margin-top:2px}
+.ev-rat{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#1C1C21;color:var(--ink);font:13px 'Poppins',sans-serif;outline:none;margin-bottom:10px}
+.ev-flags{background:var(--warn-soft);border-radius:12px;padding:12px 14px;margin-bottom:10px;font-size:12.5px}
+.ev-flags ul{margin:6px 0 0;padding-left:18px}.ev-flags li{margin:3px 0}
+.imm-note{display:flex;gap:10px;align-items:flex-start;background:#1C1C21;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:12.5px;color:var(--mut)}
+.imm-note b{color:var(--ink)}
+.prov{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.4px;text-transform:uppercase;color:#6B6B76;margin-top:3px}
+@media(max-width:900px){.ev-grid{grid-template-columns:1fr}}
 </style>
 <div id="login">
  <div class="login-card">
@@ -311,7 +334,7 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
   <input id="loginPass" type="password" placeholder="password" onkeydown="if(event.key==='Enter')doLogin()">
   <div id="loginError" class="login-error"></div>
   <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign in →</button>
-  <div class="login-foot"><b>Demo accounts</b><br>Senior underwriter — <span class="mono">mrivera / senior</span><br>Mid-tier underwriter — <span class="mono">ewong / review</span><br>New analyst — <span class="mono">dpark / analyst</span><br>Manager — <span class="mono">nsethi / oversight</span></div>
+  <div class="login-foot"><b>Demo accounts</b><br>Senior underwriter — <span class="mono">mrivera / senior</span><br>Mid-tier underwriter — <span class="mono">ewong / review</span><br>New analyst — <span class="mono">dpark / analyst</span><br>Manager — <span class="mono">nsethi / oversight</span><br>Executive (CUO) — <span class="mono">mvale / executive</span><br>Operations admin — <span class="mono">panand / admin</span></div>
  </div>
 </div>
 <div id="app">
@@ -321,7 +344,7 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
   <div id="navLinks"></div>
   <div class="rail-sub"><span id="listTitle">Review Queue</span><span id="queueCount"></span></div>
   <input class="search-box" id="searchBox" placeholder="Search name or ID…" oninput="onSearch(this.value)">
-  <div class="case-list" id="caseList"></div>
+  <div class="case-list" id="caseList" onscroll="railScroll=this.scrollTop"></div>
   <div class="pagination"><button id="prevBtn" onclick="pg(-1)">‹ Prev</button><span id="pageLabel"></span><button id="nextBtn" onclick="pg(1)">Next ›</button></div>
  </div>
  <div class="main"><div id="mainContent"></div></div>
@@ -368,14 +391,22 @@ function recomputeVerdicts(){
  });
 }
 recomputeVerdicts();
+// §3.6 — no display label may assert a risk judgement. Neutralise the legacy
+// "Notable" family-history value baked into portfolio.json (engine.py is fixed
+// at source; this keeps the already-exported data clean without a pipeline rerun).
+CASES.forEach(c=>{(c.rule_factors||[]).forEach(f=>{if(f[1]==='Notable')f[1]='Family history disclosed';});});
 let filtered=CASES.slice(),page=0,activeId=CASES[0].id,view="case",activeTab=4;const PAGE=20;
+let railScroll=0;                              // preserved list scroll (§3.3 back-button restores context)
+let prev={view:'space',space:'review'};        // where "back" returns to
 const fmt$=n=>n==null?"—":"$"+Math.round(n).toLocaleString();
 /* ---------- workbench login (credential auth) ---------- */
 const ACCOUNTS={
  dpark:{pw:"analyst",name:"Dana Park",role:"underwriter",tier:"analyst"},
  ewong:{pw:"review",name:"Erin Wong",role:"underwriter",tier:"mid"},
  mrivera:{pw:"senior",name:"Marcus Rivera",role:"underwriter",tier:"senior"},
- nsethi:{pw:"oversight",name:"Nadia Sethi",role:"manager"}
+ nsethi:{pw:"oversight",name:"Nadia Sethi",role:"manager"},
+ mvale:{pw:"executive",name:"Marcus Vale",role:"executive"},      // Chief Underwriting Officer (fictional persona)
+ panand:{pw:"admin",name:"Priya Anand",role:"admin"}              // Operations administrator (fictional persona)
 };
 // the three underwriters cases get routed to, by experience tier
 const UWS={senior:{uid:"mrivera",name:"Marcus Rivera",label:"Senior"},
@@ -392,12 +423,17 @@ function doLogin(){
  seedReview();
  document.getElementById('login').style.display='none';
  applyRole();
- if(CURRENT_ROLE==='manager'){queueScope='team';view='manager';}else{queueScope='mine';space='review';view='space';}
+ if(CURRENT_ROLE==='manager'){queueScope='team';view='manager';}
+ else if(CURRENT_ROLE==='executive'){queueScope='team';view='executive';}
+ else if(CURRENT_ROLE==='admin'){queueScope='team';view='admin';}
+ else{queueScope='mine';space='review';view='space';}
  render();}
 function applyRole(){
  // nav (buildNav) shows the oversight links only for managers
  const badge=document.getElementById('roleBadge');
- const sub=CURRENT_ROLE==='underwriter'?((UWS[CURRENT_TIER]||{}).label||'Underwriter'):'Manager';
+ const sub=CURRENT_ROLE==='underwriter'?((UWS[CURRENT_TIER]||{}).label||'Underwriter')
+   :CURRENT_ROLE==='executive'?'Chief Underwriting Officer'
+   :CURRENT_ROLE==='admin'?'Operations Administrator':'Manager';
  badge.innerHTML=`<div><div class="rb-name">${CURRENT_USER}</div><div class="rb-role">${sub}</div></div><span class="signout" onclick="signOut()">Sign out</span>`;}
 function signOut(){CURRENT_ROLE=null;CURRENT_USER="";CURRENT_UID="";
  document.getElementById('loginUser').value='';document.getElementById('loginPass').value='';loginErr('');
@@ -416,22 +452,23 @@ let queueScope='mine';   // 'mine' = cases assigned to me · 'team' = all
 function idHash(id){let h=2166136261;for(let i=0;i<id.length;i++){h^=id.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
 function ageHours(c){const st=wfGet(c.id);const r=(st.receivedAt!=null)?st.receivedAt:(Date.now()-(idHash(c.id)%17)*3600000);return (Date.now()-r)/3600000;}
 function priorityScore(c){
- let p=0;
- p+=Math.min((c.coverage||0)/1000000,1)*32;              // exposure / face amount
- p+=(c.risk_score/100)*34;                                 // risk severity
- const conf=c.conflicts||[];
- p+=conf.filter(k=>k.severity==='major').length*12;        // hard conflicts
- p+=conf.filter(k=>k.severity==='minor').length*4;
- if(c.unique)p+=8;                                          // disclosed circumstances
- p+=Math.min(ageHours(c)/8,1)*12;                          // ageing in the queue
- return Math.round(Math.min(p,100));
+ // PRD §3.1.1 — queue order is a composite of coverage and time in queue only.
+ // Risk score is deliberately EXCLUDED: ordering by the model's opinion would
+ // invert the human-oversight relationship and bury large, ageing cases that
+ // happen to score mid-band. Score informs the underwriter; it doesn't decide
+ // who gets looked at first.
+ const cov=Math.min((c.coverage||0)/1000000,1);   // exposure, normalised, capped at $1M
+ const age=Math.min(ageHours(c)/16,1);            // ageing (demo clock spans ~0–16h)
+ return Math.round(100*(0.60*cov+0.40*age));
 }
 function priorityBand(p){return p>=68?['CRITICAL','var(--bad)']:p>=46?['HIGH','var(--warn)']:p>=26?['MEDIUM','var(--acc)']:['LOW','var(--mut)'];}
 function assignTier(c){
- const majors=(c.conflicts||[]).filter(k=>k.severity==='major').length;const p=priorityScore(c);
- if(p>=64||majors>=1||(c.coverage||0)>=750000)return 'senior';   // complex/high-exposure → experienced
- if(p>=34)return 'mid';
- return 'analyst';                                                // simplest → new analyst
+ // Authority-based routing (PRD §4.5): tier follows face amount and conflict
+ // load, NOT the priority score — a junior analyst never gets a high-coverage case.
+ const majors=(c.conflicts||[]).filter(k=>k.severity==='major').length;const cov=c.coverage||0;
+ if(cov>=750000||majors>=1)return 'senior';   // high exposure / hard conflicts → experienced
+ if(cov>=250000)return 'mid';
+ return 'analyst';                              // ≤ $250k, clean → new analyst
 }
 function seedReview(){
  // once per case: stamp a clock-start and route to an underwriter by experience tier
@@ -448,6 +485,57 @@ function fmtAge(h){const H=Math.floor(h);const M=Math.floor((h-H)*60);return H+'
 function slaChip(c){const h=ageHours(c);const cls=h>=8?'sla-breach':h>=6?'sla-warn':'sla-ok';
  return `<span class="sla-chip ${cls}">${h>=8?'⚠ SLA · ':''}${fmtAge(h)}</span>`;}
 function tierTag(st){const t=UWS[st.tier];return t?`<span class="tier-tag">${st.assignee} · ${t.label}</span>`:'';}
+/* ---------- PRD v2 additions: AI recommendation, requirements grid, risk drivers, back-nav ---------- */
+function aiRecChip(c){
+ // AI RECOMMENDATION column (§3.1): band + score together, never band alone.
+ const sc=c.verdict==='red'?'sc-bad':c.verdict==='yellow'?'sc-warn':'sc-ok';
+ return `<span class="score-chip ${sc}" style="white-space:nowrap">${c.decision} · ${c.risk_score}</span>`;
+}
+function requirementsFor(c){
+ // Simplified age × amount A&A grid from the meeting notes (§6.1) — which
+ // evidence a case of this age/face amount typically requires. Demo-grade,
+ // versionable later into a real rule table.
+ const a=c.age||0, amt=c.coverage||0, r=[];
+ if(a>=50||amt>=250000){r.push('Paramed exam');r.push('Blood profile');}
+ if(a>=50&&amt>=1000000)r.push('EKG');
+ if(amt>=1000000||a>=66)r.push('APS');
+ if(a>=61&&amt>=1000000)r.push('Cognitive assessment');
+ return r;
+}
+function reqOutstanding(c){
+ // REQUIREMENTS OUTSTANDING column (§3.1): required evidence minus what the
+ // packet already satisfies, so blocked cases don't read as underwriter delay.
+ const req=requirementsFor(c);
+ const satisfied=c.has_docs?new Set(['Paramed exam','Blood profile']):new Set();
+ const out=req.filter(x=>!satisfied.has(x));
+ if(!out.length)return '<span class="tier-tag">— none pending</span>';
+ const short={'Paramed exam':'Exam','Blood profile':'Labs','EKG':'EKG','APS':'APS','Cognitive assessment':'Cognitive'};
+ return `<span class="sla-chip sla-warn" title="${out.join(' · ')}">${out.map(x=>short[x]||x).join(' · ')}</span>`;
+}
+function requirementsCardHTML(c){
+ // The requirement set that applied, satisfied vs outstanding (§6.1).
+ const req=requirementsFor(c);
+ const satisfied=c.has_docs?new Set(['Paramed exam','Blood profile']):new Set();
+ if(!req.length)return `<div class="card"><h3>Requirements — Age × Amount grid</h3><div class="note" style="margin:0">No standard evidence is triggered for a ${c.age}-year-old at ${fmt$(c.coverage)} of cover under the current A&amp;A grid.</div></div>`;
+ const rows=req.map(r=>{const ok=satisfied.has(r);
+   return `<div class="doc-row"><div class="dot ${ok?'':'miss'}"></div><div class="dname">${r}</div><div class="dstatus" style="color:${ok?'var(--ok)':'var(--warn)'}">${ok?'In packet ✓':'Outstanding'}</div></div>`;}).join('');
+ return `<div class="card"><h3>Requirements — Age &times; Amount grid</h3>${rows}
+   <div class="note">The requirement set that applies to a <b>${c.age}</b>-year-old requesting <b>${fmt$(c.coverage)}</b>, from a simplified version of the meeting's age &times; amount grid. Outstanding items are ordered from the Decision tab with a rationale and an AI pre-check; grid-triggered orders are distinguished from discretionary “for cause” orders in the record.</div></div>`;
+}
+function topDriversHTML(c){
+ // Top-3 risk drivers at the top of the case file (§4.2), generated from the
+ // rule engine's factor weights — never hand-authored — with clean signals
+ // listed so the explanation isn't one-sided.
+ if(!c.rule_factors)return '';
+ const drivers=c.rule_factors.filter(f=>f[2]>0).sort((a,b)=>b[2]-a[2]).slice(0,3);
+ const clean=c.rule_factors.filter(f=>f[2]===0).slice(0,3);
+ const dr=drivers.map((f,i)=>`<div class="factor-row"><div><div class="factor-label">${i+1}. ${f[0]}</div><div class="factor-detail">${f[1]}</div></div><div class="factor-pts" style="color:var(--warn)">+${f[2]}</div></div>`).join('');
+ const off=clean.length?`<div class="note" style="margin-top:10px"><b>Offsetting / clean signals:</b> ${clean.map(f=>f[0].toLowerCase()+' ('+f[1]+')').join(' · ')}</div>`:'';
+ return `<div class="card"><h3>Top drivers of this score</h3>${drivers.length?dr:'<div class="note" style="margin:0">No positive risk contributors — every rule factor is clean.</div>'}${off}
+  <div class="note">The three largest positive contributors to this applicant's composite score, straight from the rule engine's documented factor weights. Full breakdown on the Risk Score tab.</div></div>`;
+}
+function backLabel(){if(prev.view==='manager')return 'Manager Overview';if(prev.view==='overview')return 'Portfolio & Model Card';return SPACE_LABEL[prev.space]||'Queue';}
+function goBack(){view=prev.view;if(prev.space)space=prev.space;render();}
 function wfClaim(id){const st=wfGet(id);st.assignee=CURRENT_USER;if(st.status==='new')st.status='in_review';
  st.history.push({by:CURRENT_USER,role:CURRENT_ROLE,at:nowStr(),action:'Claimed case → In Review'});wfSave(id,st);render();}
 function wfSetStatus(id,s){const st=wfGet(id);st.status=s;
@@ -527,9 +615,10 @@ function caseDeskHTML(c){
    <div class="desk-actions" style="margin-top:14px">
      <button class="ai-btn" style="background:var(--ok)" onclick="wfDecide('${c.id}','approve')">✓ Approve</button>
      <button class="ai-btn" style="background:var(--bad)" onclick="wfDecide('${c.id}','decline')">✕ Decline</button>
-     <button class="ai-btn" style="background:var(--warn)" onclick="wfRequestInfo('${c.id}')">Request info</button>
+     <button class="ai-btn" style="background:var(--warn)" onclick="toggleEvidence('${c.id}')">Request information</button>
      <button class="ai-btn" onclick="wfNote('${c.id}')">+ Note</button></div>
-   <div class="note">This case is in your queue because the system flagged it for a human. Approve or decline with a rationale — it's logged to the audit trail and moves the case to Completed.</div>`;
+   ${evidenceFormHTML(c)}
+   <div class="note">This case is in your queue because the system flagged it for a human. Approve or decline with a rationale — it's logged to the audit trail and moves the case to Completed. Use <b>Request information</b> to order evidence (APS, labs, MVR…) with an AI pre-check that flags duplicate or non-indicated orders before dispatch.</div>`;
  } else if(isUW&&resolved){
   controls=`<div class="desk-actions" style="margin-top:2px">
      <button class="ai-btn" style="background:var(--acc)" onclick="downloadMemo('${c.id}')">⬇ Decision memo</button>
@@ -547,25 +636,40 @@ function pg(d){const mx=Math.max(0,Math.ceil(currentList().length/PAGE)-1);page=
 function goSpace(sp){space=sp;view="space";page=0;render();}
 function goOverview(){view="overview";render();}
 function goManager(){view="manager";render();}
+function goExec(){view="executive";render();}
+function goAdmin(){view="admin";render();}
 function goScore(){view="score";render();}
-function sel(id){activeId=id;view="case";const c=CASES.find(x=>x.id===id);activeTab=(c&&bucketOf(c)==='review')?5:4;render();}
+function sel(id){if(view!=='case')prev={view,space};activeId=id;view="case";const c=CASES.find(x=>x.id===id);activeTab=(c&&bucketOf(c)==='review')?5:4;render();}
 function selTab(n){activeTab=n;render();}
 function render(){rail();main();}
 function buildNav(){
  const nav=document.getElementById('navLinks');if(!nav)return;
  // underwriters work case spaces; managers only oversee — no case records at all
- const isMgr=CURRENT_ROLE==='manager';
- if(isMgr){
+ if(CURRENT_ROLE==='manager'){
   nav.innerHTML=`<div class="nav-head">Oversight</div>
     <div class="overview-link ${view==='overview'?'active':''}" onclick="goOverview()"><span>⌂ &nbsp;Portfolio & Model Card</span></div>
     <div class="overview-link ${view==='manager'?'active':''}" onclick="goManager()"><span>▦ &nbsp;Manager Overview</span></div>`;
   return;
  }
+ if(CURRENT_ROLE==='executive'){
+  nav.innerHTML=`<div class="nav-head">Executive</div>
+    <div class="overview-link ${view==='executive'?'active':''}" onclick="goExec()"><span>◆ &nbsp;Executive Overview</span></div>
+    <div class="overview-link ${view==='overview'?'active':''}" onclick="goOverview()"><span>⌂ &nbsp;Portfolio & Model Card</span></div>`;
+  return;
+ }
+ if(CURRENT_ROLE==='admin'){
+  const ev=evidenceAll().filter(e=>e.status==='PENDING EVIDENCE').length;
+  nav.innerHTML=`<div class="nav-head">Operations</div>
+    <div class="overview-link ${view==='admin'?'active':''}" onclick="goAdmin()"><span>▤ &nbsp;Decision Feed</span>${ev?`<span class="nav-badge">${ev}</span>`:''}</div>
+    <div class="overview-link ${view==='overview'?'active':''}" onclick="goOverview()"><span>⌂ &nbsp;Portfolio & Model Card</span></div>`;
+  return;
+ }
  const sp=SPACES.map(s=>{const n=spaceCases(s[0]).length;
    const badge=s[0]==='review'?`<span class="nav-badge">${n}</span>`:`<span class="nav-count">${n}</span>`;
    return `<div class="overview-link ${space===s[0]&&view==='space'?'active':''}" onclick="goSpace('${s[0]}')"><span>${s[2]} &nbsp;${s[1]}</span>${badge}</div>`;}).join('');
- const tools=`<div class="overview-link ${view==='score'?'active':''}" onclick="goScore()"><span>＋ &nbsp;Score New Application</span></div>`;
- nav.innerHTML=`<div class="nav-head">Case spaces</div>${sp}<div class="nav-head">Tools</div>${tools}`;
+ // New-application intake removed (PRD §3.4): the Copilot is a review tool, not
+ // an intake/point-of-sale system. No route, no nav slot.
+ nav.innerHTML=`<div class="nav-head">Case spaces</div>${sp}`;
 }
 function rail(){
  buildNav();
@@ -582,13 +686,16 @@ function rail(){
     <div class="ci-meta">${queueScope==='team'&&st.tier?`<span class="tier-tag">${st.assignee} · ${(UWS[st.tier]||{}).label}</span>`:wfChip(c.id)}</div>`;
   }else{meta=`<div class="ci-id" style="margin-top:2px">${wfChip(c.id)}</div>`;}
   const rank=isRev?`<span class="rank-num">${page*PAGE+i+1}</span> `:'';
+  // Case ID is the primary identifier (§3.1) — mono, prominent, above the name;
+  // applicant name demotes to a secondary line.
   return `<div class="case-item ${c.id===activeId&&view==='case'?'active':''}" onclick="sel('${c.id}')">
-   <div style="min-width:0"><div class="ci-name">${rank}${c.name}</div>
-    <div class="ci-id">${c.id}${c.has_docs?' <span class="doctag">· PDF</span>':''}</div>${meta}</div>
+   <div style="min-width:0"><div class="ci-id" style="font-size:12.5px;font-weight:700;color:#E9EDF4;margin:0">${rank}${c.id}${c.has_docs?' <span class="doctag">· PDF</span>':''}</div>
+    <div class="ci-name" style="font-size:11.5px;font-weight:500;color:var(--mut)">${c.name}</div>${meta}</div>
    <div class="score-chip ${sc}">${c.risk_score}</div></div>`;}).join(''):'<div class="note" style="padding:16px 12px;color:#9AA0A8">No cases in this space.</div>';
  const mx=Math.max(0,Math.ceil(list.length/PAGE)-1);
  document.getElementById('pageLabel').textContent=(page+1)+" / "+(mx+1);
  document.getElementById('prevBtn').disabled=page<=0;document.getElementById('nextBtn').disabled=page>=mx;
+ const cl=document.getElementById('caseList');if(cl)cl.scrollTop=railScroll;   // §3.3 preserve list position
 }
 function spaceView(){
  const meta=SPACES.find(s=>s[0]===space)||SPACES[0];const list=currentList();
@@ -598,28 +705,39 @@ function spaceView(){
     <button class="${queueScope==='team'?'on':''}" onclick="setScope('team')">Whole team</button></div>`:'';
  let head,rows;
  if(isRev){
-  head=`<tr><th>#</th><th>Priority</th><th>Applicant</th><th>Risk</th><th>Coverage</th><th>Time in queue</th><th>Assigned to</th><th></th></tr>`;
+  head=`<tr><th>#</th><th>Case ID</th><th>AI recommendation</th><th>Coverage</th><th>Time in queue</th><th>Requirements</th><th>Priority</th><th></th></tr>`;
   rows=list.slice(0,300).map((c,i)=>{const st=wfGet(c.id);const pb=priorityBand(priorityScore(c));
-    const sc=c.verdict==='red'?'sc-bad':c.verdict==='yellow'?'sc-warn':'sc-ok';
     return `<tr onclick="sel('${c.id}')" style="cursor:pointer">
       <td class="rank-num">${i+1}</td>
-      <td><span class="pri-chip" style="background:${pb[1]}">${pb[0]}</span></td>
-      <td><b>${c.name}</b><div style="font-size:11px;color:var(--mut)">${c.id} · ${c.policy}</div></td>
-      <td><span class="score-chip ${sc}">${c.risk_score}</span></td>
+      <td><span class="mono" style="font-weight:700;font-size:13px;white-space:nowrap">${c.id}</span><div style="font-size:11px;color:var(--mut)">${c.name} · ${c.policy}</div></td>
+      <td>${aiRecChip(c)}</td>
       <td class="mono" style="white-space:nowrap">${fmt$(c.coverage)}</td>
       <td>${slaChip(c)}</td>
-      <td><span class="tier-tag">${st.assignee||'—'}${st.tier?' · '+(UWS[st.tier]||{}).label:''}</span></td>
+      <td>${reqOutstanding(c)}</td>
+      <td><span class="pri-chip" style="background:${pb[1]}">${pb[0]}</span></td>
       <td style="text-align:right"><button class="ai-btn" onclick="event.stopPropagation();sel('${c.id}')">Review</button></td></tr>`;}).join('');
  }else{
-  head=`<tr><th>ID</th><th>Applicant</th><th>Risk</th><th>${space==='completed'?'Decision':'Status'}</th><th></th></tr>`;
+  const isDone=space==='completed';
+  head=isDone
+   ?`<tr><th>Case ID</th><th>AI recommendation</th><th>Human decision</th><th>Agreement</th><th></th></tr>`
+   :`<tr><th>Case ID</th><th>AI recommendation</th><th>Status</th><th></th></tr>`;
   rows=list.slice(0,300).map(c=>{const st=wfGet(c.id);
-    const sc=c.verdict==='red'?'sc-bad':c.verdict==='yellow'?'sc-warn':'sc-ok';
-    const right=space==='completed'&&st.decision?`<span class="status-chip wf-${st.status}">${st.decision.action}</span>`:`<span class="status-chip wf-${st.status}">${WF_LABEL[st.status]}</span>`;
+    if(isDone&&st.decision){
+     // Model recommendation vs human decision, side by side, with the delta made
+     // obvious (§3.2) — the agreement/override record an examiner asks for first.
+     const human=st.decision.action;                       // APPROVED / DECLINED
+     const lean=c.verdict==='green'?'APPROVED':c.verdict==='red'?'DECLINED':null;  // yellow = referred, no auto-lean
+     const agree=lean==null?['Human-decided','var(--acc)']:(human===lean?['Agreed with AI','var(--ok)']:['Overrode AI','var(--warn)']);
+     return `<tr onclick="sel('${c.id}')" style="cursor:pointer">
+      <td class="mono" style="white-space:nowrap">${c.id}<div style="font-size:11px;color:var(--mut)">${c.name}</div></td>
+      <td>${aiRecChip(c)}</td>
+      <td><span class="status-chip wf-${st.status}">${human}</span></td>
+      <td><span class="pri-chip" style="background:${agree[1]}">${agree[0]}</span></td>
+      <td style="text-align:right"><button class="ai-btn" onclick="event.stopPropagation();sel('${c.id}')">Open</button></td></tr>`;}
     return `<tr onclick="sel('${c.id}')" style="cursor:pointer">
-      <td class="mono" style="white-space:nowrap">${c.id}</td>
-      <td><b>${c.name}</b><div style="font-size:11px;color:var(--mut)">${c.occupation} · ${c.policy}</div></td>
-      <td><span class="score-chip ${sc}">${c.risk_score}</span></td>
-      <td>${right}</td>
+      <td class="mono" style="white-space:nowrap">${c.id}<div style="font-size:11px;color:var(--mut)">${c.name}</div></td>
+      <td>${aiRecChip(c)}</td>
+      <td><span class="status-chip wf-${st.status}">${WF_LABEL[st.status]}</span></td>
       <td style="text-align:right"><button class="ai-btn" onclick="event.stopPropagation();sel('${c.id}')">Open</button></td></tr>`;}).join('');
  }
  const breaches=isRev?list.filter(c=>ageHours(c)>=8).length:0;
@@ -634,18 +752,24 @@ function main(){
  if(view==="space"){el.innerHTML=spaceView();return;}
  if(view==="overview"){el.innerHTML=overview();return;}
  if(view==="manager"){el.innerHTML=managerView();return;}
+ if(view==="executive"){el.innerHTML=executiveView();return;}
+ if(view==="admin"){el.innerHTML=adminView();return;}
  if(view==="score"){el.innerHTML=scoreView();wireScoreForm();return;}
  const c=CASES.find(x=>x.id===activeId);if(!c){el.innerHTML=spaceView();return;}
  const vm=VM[c.verdict];
  const afvm=c.afford?AFF[c.afford.verdict]:null;
- el.innerHTML=`<div class="case-head">
+ el.innerHTML=`
+  <div style="margin-bottom:14px"><button class="ai-btn" style="background:var(--rail-2)" onclick="goBack()">← ${backLabel()}</button></div>
+  <div class="case-head">
    <div><h2>${c.name}</h2>
-    <div class="case-meta"><span>${c.id}</span><span>${c.occupation}</span><span>${c.city}, ${c.state}</span><span>${c.policy}</span></div></div>
+    <div class="case-meta"><span class="mono" style="font-weight:700;color:var(--ink)">${c.id}</span><span>${c.occupation}</span><span>${c.city}, ${c.state}</span><span>${c.policy}</span></div></div>
    <div class="headline-score">
     <div><div class="hs-num" style="color:var(--${vm[1]})">${c.risk_score}<span style="font-size:16px;color:var(--mut)">/100</span></div>
      <div class="hs-lab">Composite Risk Score</div></div>
     <div class="hs-class cls-${vm[1]}">${vm[0]}</div>
+    <div style="text-align:center"><div class="hs-num" style="font-size:22px">${fmt$(c.coverage)}</div><div class="hs-lab" style="margin-top:4px">Coverage requested</div></div>
     ${afvm?`<div style="text-align:center"><div class="hs-class cls-${afvm[1]}" style="font-size:13px">${c.afford.label}</div><div class="hs-lab" style="margin-top:4px">Financial Viability</div></div>`:''}</div></div>
+  ${topDriversHTML(c)}
   <div class="tabs">${[[1,'Application'],[2,'Documents'],[3,'Extraction & Conflicts'],[4,'Risk Score'],[5,'Decision']]
    .map(t=>`<div class="tab ${t[0]===activeTab?'active':''}" onclick="selTab(${t[0]})">${t[1]}</div>`).join('')}</div>
   ${panel(c)}`;
@@ -689,6 +813,14 @@ function overview(){
    <div class="legend-chip cls-warn"><span class="swatch" style="background:var(--warn)"></span>MANUAL REVIEW · ${vc.yellow} — a human underwriter looks at the person as a whole</div>
    <div class="legend-chip cls-bad"><span class="swatch" style="background:var(--bad)"></span>DECLINE · ${vc.red} — application contradicts evidence or risk exceeds appetite</div>
   </div></div>
+ <div class="card"><h3>Rules layer &amp; model governance</h3>
+  <div class="note" style="margin:0 0 10px">Every score is <b>50% auditable rule engine + 50% ML</b> — not rules alone. Hard knockouts (material misrepresentation, appetite) evaluate as <b>rules</b> before the model; the model produces a score; versioned thresholds (${A_LINE}/${D_LINE}) convert score to band. The case file's Decision tab labels which layer produced each outcome.</div>
+  <div class="legend-row">
+   <div class="legend-chip" style="background:var(--acc-soft);color:var(--acc)"><span class="swatch" style="background:var(--acc)"></span>Feature register — each factor's source &amp; whether its weight is learned or hand-set</div>
+   <div class="legend-chip" style="background:var(--acc-soft);color:var(--acc)"><span class="swatch" style="background:var(--acc)"></span>Model versions immutable &amp; revertible — each decision records the version that produced it</div>
+   <div class="legend-chip" style="background:var(--acc-soft);color:var(--acc)"><span class="swatch" style="background:var(--acc)"></span>Drift watch — input &amp; score distributions monitored against the training baseline</div>
+  </div>
+  <div class="note">Medical rule-engine weights are evidence-anchored: <b>points = round(28 × ln(relative-mortality multiple))</b> derived from NHANES + NCHS Linked Mortality data and cross-validated against real applicants — not hand-picked. Gradient boosting is chosen over a GLM for interaction capture, with logistic regression retained as the auditable in-browser stand-in. The rules layer is also the shock absorber for regime change (e.g. a 2020-style shift): a new knockout or threshold ships in days without a full retrain.</div></div>
  <div class="grid3">
   <div class="stat"><div class="sv">${(M.extraction.field_level_accuracy*100).toFixed(1)}%</div><div class="sl">Extraction accuracy — field level vs ground truth</div></div>
   <div class="stat"><div class="sv">${(M.conflict_screening.detection_recall*100).toFixed(0)}%</div><div class="sl">Injected-conflict detection recall (${M.conflict_screening.tp}/${M.conflict_screening.tp+M.conflict_screening.fn} caught, ${M.conflict_screening.fp} false alarms)</div></div>
@@ -803,13 +935,185 @@ function managerView(){
   </div>
   <div class="note">Full evidence — calibration, fairness by age band, feature importance, and dataset provenance — lives on the Portfolio &amp; Model Card page.</div></div>`;
 }
+/* =================== PRD v2: executive + admin + evidence flow =================== */
+const APPETITE_MONTHLY=45000000;   // §5.1 monthly coverage the book wants to take on (config lever)
+function finalOf(c){
+ // the case's effective disposition: a recorded human decision wins; otherwise
+ // the straight-through verdict; referred-but-undecided reads as pending.
+ const st=wfGet(c.id);
+ if(st.decision)return st.decision.action==='APPROVED'?'approve':'decline';
+ if(c.verdict==='green')return 'approve';
+ if(c.verdict==='red')return 'decline';
+ return 'pending';
+}
+function allDecisions(){
+ // every recorded human decision across the book, newest first (§5.2)
+ const wb=wfAll(),out=[];
+ CASES.forEach(c=>{const st=wb[c.id];if(st&&st.decision)out.push({id:c.id,name:c.name,coverage:c.coverage,
+   action:st.decision.action,by:st.decision.by,role:st.decision.role,at:st.decision.at,
+   rationale:st.decision.rationale,model:c.decision});});
+ out.sort((a,b)=>(a.at<b.at?1:-1));return out;
+}
+function evidenceAll(){try{return JSON.parse(localStorage.getItem('uw_evidence')||'[]');}catch(e){return [];}}
+function fmtBigMoney(v){return "$"+(v>=1e6?(v/1e6).toFixed(1)+"M":Math.round(v/1e3)+"k");}
+function executiveView(){
+ // A money view, not a queue (§5.1). Built from the whole book + recorded decisions.
+ const n=CASES.length;
+ const appr=CASES.filter(c=>finalOf(c)==='approve'),decl=CASES.filter(c=>finalOf(c)==='decline'),pend=CASES.filter(c=>finalOf(c)==='pending');
+ const sum=(a,f)=>a.reduce((s,c)=>s+(f(c)||0),0);
+ const covAppr=sum(appr,c=>c.coverage),covDecl=sum(decl,c=>c.coverage),covPend=sum(pend,c=>c.coverage),covAll=covAppr+covDecl+covPend;
+ const premAppr=sum(appr,c=>c.premium||0);
+ const avgCover=appr.length?covAppr/appr.length:0;
+ const stp=(M.decisioning.straight_through_rate*100);
+ const apprRate=n?appr.length/n*100:0;
+ const priorApprRate=Math.max(0,apprRate-4.6);   // illustrative 2025 baseline (see note)
+ const avgCycle=CASES.reduce((s,c)=>s+ageHours(c),0)/n;
+ const ov=getOverrides();const nOv=Object.keys(ov).filter(id=>CASES.some(c=>c.id===id)).length;
+ const nDecided=appr.length+decl.length-pend.length*0; const decidedManual=allDecisions().length;
+ const overrideRate=decidedManual?(nOv/decidedManual*100):0;
+ const appetitePct=APPETITE_MONTHLY?Math.min(covAppr/APPETITE_MONTHLY*100,100):0;
+ const pctG=covAll?covAppr/covAll*100:0,pctP=covAll?covPend/covAll*100:0,pctR=covAll?covDecl/covAll*100:0;
+ const tile=(v,l,accent)=>`<div class="stat"${accent?` style="border-top:4px solid ${accent}"`:''}><div class="sv">${v}</div><div class="sl">${l}</div></div>`;
+ return `<div class="case-head"><div><h2>Executive Overview</h2>
+   <div class="case-meta"><span>Chief Underwriting Officer</span><span>${n} cases in the current book</span><span>evaluated ${M.generated_at}</span></div></div></div>
+  <div class="grid3" style="margin-top:18px">
+   ${tile(fmtBigMoney(covAppr),'<b>Exposure taken on</b> — total approved cover in the current book','var(--ok)')}
+   ${tile(fmtMoneyK(premAppr)+'/yr','<b>Approved premium</b> — annualised, the revenue side of the book','var(--acc)')}
+   ${tile(stp.toFixed(0)+'%','<b>Straight-through rate</b> — decided with no human touch')}
+  </div>
+  <div class="grid3" style="margin-top:14px">
+   ${tile(apprRate.toFixed(0)+'%','<b>Approval rate</b> — share of the book approved · <span style="color:var(--mut)">vs. '+priorApprRate.toFixed(0)+'% illustrative 2025 baseline</span>')}
+   ${tile(fmtBigMoney(avgCover),'Average approved cover per policy')}
+   ${tile(fmtAge(avgCycle),'Average time in queue — proxy for cycle time')}
+   ${tile(overrideRate.toFixed(0)+'%','<b>Override rate</b> — human decisions against the model lean ('+nOv+' of '+decidedManual+')')}
+   ${tile(appr.length+' / '+pend.length+' / '+decl.length,'Approved / referred-pending / declined (count)')}
+   ${tile(fmtBigMoney(covAll),'Total coverage requested across the book')}
+  </div>
+  <div class="card" style="margin-top:16px"><h3>Decision mix — cover per bucket</h3>
+   <div class="mix-bar">
+    <div class="mix-seg" style="width:${pctG}%;background:var(--ok)">${pctG>7?fmtBigMoney(covAppr):''}</div>
+    <div class="mix-seg" style="width:${pctP}%;background:var(--warn)">${pctP>7?fmtBigMoney(covPend):''}</div>
+    <div class="mix-seg" style="width:${pctR}%;background:var(--bad)">${pctR>7?fmtBigMoney(covDecl):''}</div></div>
+   <div class="legend-row" style="margin-top:10px">
+    <div class="legend-chip cls-ok"><span class="swatch" style="background:var(--ok)"></span>Approved · ${appr.length} · ${fmtBigMoney(covAppr)}</div>
+    <div class="legend-chip cls-warn"><span class="swatch" style="background:var(--warn)"></span>Referred / pending · ${pend.length} · ${fmtBigMoney(covPend)}</div>
+    <div class="legend-chip cls-bad"><span class="swatch" style="background:var(--bad)"></span>Declined · ${decl.length} · ${fmtBigMoney(covDecl)}</div></div></div>
+  <div class="card"><h3>Risk appetite — the levers you own</h3>
+   <div class="note" style="margin:0 0 10px">Approved cover this book is <b>${fmtBigMoney(covAppr)}</b> against a monthly appetite target of <b>${fmtBigMoney(APPETITE_MONTHLY)}</b> — <b style="color:${appetitePct>=100?'var(--bad)':'var(--ok)'}">${appetitePct.toFixed(0)}%</b> of appetite. ${appetitePct<80?'The book is running below appetite — the acceptance lines could be loosened.':appetitePct>100?'The book is over appetite — tighten the acceptance lines.':'The book is tracking to appetite.'}</div>
+   <div class="gauge-line"><div class="fill" style="width:${appetitePct}%;background:${appetitePct>=100?'var(--bad)':'var(--ok)'}"></div></div>
+   <div class="appetite" style="margin-top:14px">
+    <div class="lever"><b>Approval line — score < ${A_LINE}</b><div class="note" style="margin:6px 0 0">Below this, cases auto-approve. Lowering it tightens the book; raising it takes on more volume and exposure.</div></div>
+    <div class="lever"><b>Decline line — score ≥ ${D_LINE}</b><div class="note" style="margin:6px 0 0">At or above this, cases auto-decline. These two lines are configuration, versioned, and owned by underwriting leadership — not baked into the model.</div></div></div></div>
+  <div class="note">YoY figures are illustrative: the synthetic book has no dated prior-year cohort, so the 2025 baseline is a placeholder pending a real historical book. Every other number is computed live from the current cases and recorded decisions.</div>`;
+}
+function fmtMoneyK(v){return "$"+(v>=1e6?(v/1e6).toFixed(2)+"M":Math.round(v/1e3)+"k");}
+function adminView(){
+ // Receives every recorded decision, attributed, timestamped, linked (§5.2).
+ const dec=allDecisions();
+ const wb=wfAll();
+ const nApproved=Object.values(wb).filter(s=>s.decision&&s.decision.action==='APPROVED').length;
+ const nDeclined=Object.values(wb).filter(s=>s.decision&&s.decision.action==='DECLINED').length;
+ const nInfo=Object.values(wb).filter(s=>s.status==='info_requested').length;
+ const ev=evidenceAll().slice().reverse();
+ const tile=(v,l,accent)=>`<div class="stat"${accent?` style="border-top:4px solid ${accent}"`:''}><div class="sv">${v}</div><div class="sl">${l}</div></div>`;
+ const feed=dec.length?dec.map(d=>{const badge=d.model&&d.action?((d.model==='APPROVE'&&d.action==='APPROVED')||(d.model==='DECLINE'&&d.action==='DECLINED')?'<span class="pri-chip" style="background:var(--ok)">AGREED</span>':d.model==='MANUAL REVIEW'?'':'<span class="pri-chip" style="background:var(--warn)">OVERRIDE</span>'):'';
+   return `<div class="feed-row"><span class="feed-when">${d.at}</span>
+    <span class="feed-what"><b>${d.action}</b> — <span class="mono" style="cursor:pointer;color:var(--acc)" onclick="sel('${d.id}')">${d.id}</span> ${d.name}, ${fmt$(d.coverage)} ${badge}<div style="color:var(--mut);font-size:12px;margin-top:2px">AI: ${d.model} · “${d.rationale||''}”</div></span>
+    <span class="feed-who">${d.by||''}</span></div>`;}).join(''):'<div class="note" style="margin:0">No decisions recorded yet. Underwriter decisions land here in real time.</div>';
+ const evList=ev.length?ev.map(e=>`<div class="feed-row"><span class="feed-when">${e.at}</span>
+    <span class="feed-what"><span class="status-chip wf-info_requested">${e.status}</span> <span class="mono" style="cursor:pointer;color:var(--acc)" onclick="sel('${e.caseId}')">${e.caseId}</span> ${e.name} — ${e.labels}<div style="color:var(--mut);font-size:12px;margin-top:2px">“${e.rationale}”${e.flags&&e.flags.length?` · <span style="color:var(--warn)">${e.flags.length} pre-check flag(s) acknowledged</span>`:''}</div></span>
+    <span class="feed-who">${e.by||''}</span></div>`).join(''):'<div class="note" style="margin:0">No outstanding evidence requests.</div>';
+ return `<div class="case-head"><div><h2>Decision Feed</h2>
+   <div class="case-meta"><span>Operations administrator</span><span>${dec.length} recorded decision(s)</span><span>${ev.length} evidence request(s)</span></div></div></div>
+  <div class="grid3" style="margin-top:18px">
+   ${tile(nApproved,'<b>Approved</b> — decisions recorded this session','var(--ok)')}
+   ${tile(nInfo,'<b>Info / evidence requested</b> — awaiting third parties','var(--warn)')}
+   ${tile(nDeclined,'<b>Declined</b> — decisions recorded this session','var(--bad)')}
+  </div>
+  <div class="card" style="margin-top:16px"><div class="ai-head"><h3 style="margin:0">Decision trail — every recorded decision, newest first</h3>
+    <div><button class="ai-btn" onclick="exportDecisions('csv')">⬇ CSV</button> <button class="ai-btn" style="background:var(--acc)" onclick="exportDecisions('json')">⬇ JSON</button></div></div>
+   ${feed}
+   <div class="note">This is the regulator-ready package — attributed, timestamped, and linked to each case, with the model recommendation beside the human decision. Export as CSV or JSON for compliance.</div></div>
+  <div class="card"><h3>Outstanding evidence requests</h3>${evList}
+   <div class="note">Raised by underwriters from the case file (§4.3). Each carries the requesting underwriter, a mandatory rationale, and any pre-check flags they proceeded over — so operations can chase the right provider.</div></div>`;
+}
+function exportDecisions(fmt){
+ const d=allDecisions();
+ if(!d.length){alert('No decisions recorded yet.');return;}
+ let blob,name;
+ if(fmt==='csv'){
+  const hdr='case_id,applicant,coverage,ai_recommendation,human_decision,decided_by,role,decided_at,rationale\n';
+  const rows=d.map(x=>[x.id,'"'+x.name+'"',x.coverage,x.model,x.action,x.by,x.role,x.at,'"'+(x.rationale||'').replace(/"/g,'""')+'"'].join(',')).join('\n');
+  blob=new Blob([hdr+rows],{type:'text/csv'});name='decision_trail.csv';
+ }else{blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});name='decision_trail.json';}
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();
+}
+/* ---------- evidence request flow with AI pre-check (§4.3) ---------- */
+const EVIDENCE_TYPES=[
+ ["APS","Attending Physician Statement","Physician / records vendor","Weeks",350,"APS"],
+ ["Employment","Employment records","Verification vendor","Days",40,""],
+ ["Rx","Pharmacy / prescription history","Rx database vendor","Hours–days",15,""],
+ ["MIB","Past insurance history (MIB)","MIB","Hours",8,""],
+ ["MVR","Motor vehicle record","State DMV vendor","Hours–days",12,""],
+ ["Paramed","Paramedical exam","Paramed vendor","Days–weeks",150,"Paramed exam"],
+ ["Labs","Blood profile / labs","Lab vendor","Days",120,"Blood profile"],
+ ["EKG","EKG","Paramed vendor","Days–weeks",180,"EKG"],
+ ["Cognitive","Cognitive assessment","Paramed / telephonic","Days",90,"Cognitive assessment"],
+ ["Financial","Financial questionnaire","Applicant / agent","Days",0,""],
+ ["Other","Other (free text — manual routing)","Manual routing","Varies",0,""]
+];
+function evidenceFormHTML(c){
+ const req=new Set(requirementsFor(c));
+ const rows=EVIDENCE_TYPES.map(e=>{const [k,label,provider,turn,cost,grid]=e;
+  const indicated=grid&&req.has(grid);
+  return `<label class="ev-opt"><input type="checkbox" value="${k}"><span><b>${label}</b><div class="prov">${provider} · ${turn}${cost?` · ~$${cost}`:''}${indicated?' · A&A-INDICATED':''}</div></span></label>`;}).join('');
+ return `<div id="evForm-${c.id}" class="ev-form" style="display:none">
+   <h3 style="margin:0 0 12px">Request additional evidence</h3>
+   <div class="ev-grid">${rows}</div>
+   <textarea id="evRat-${c.id}" class="ev-rat" rows="2" placeholder="Rationale — required for every request (logged to the audit trail, visible to operations)"></textarea>
+   <div id="evCheck-${c.id}"></div>
+   <div class="desk-actions"><button class="ai-btn" style="background:var(--acc)" onclick="submitEvidence('${c.id}')">Run pre-check &amp; dispatch</button>
+    <button class="ai-btn" style="background:var(--mut)" onclick="toggleEvidence('${c.id}')">Cancel</button></div></div>`;
+}
+function toggleEvidence(id){const f=document.getElementById('evForm-'+id);if(!f)return;
+ const show=f.style.display==='none';f.style.display=show?'block':'none';if(!show)f.dataset.ack='';}
+function submitEvidence(id){
+ const c=CASES.find(x=>x.id===id);const form=document.getElementById('evForm-'+id);
+ const items=Array.from(form.querySelectorAll('input:checked')).map(i=>i.value);
+ const rationale=(document.getElementById('evRat-'+id).value||'').trim();
+ if(!items.length){alert('Select at least one evidence type.');return;}
+ if(!rationale){alert('A rationale is required for every evidence request (§4.3).');return;}
+ // AI pre-check — advises, never blocks (§4.3)
+ const req=new Set(requirementsFor(c));
+ const satisfied=c.has_docs?new Set(['Paramed exam','Blood profile']):new Set();
+ const flags=[];
+ items.forEach(k=>{const e=EVIDENCE_TYPES.find(x=>x[0]===k)||[];const grid=e[5],cost=e[4]||0;
+  if(grid&&satisfied.has(grid))flags.push(`${k}: equivalent evidence is already in the packet — likely a duplicate order.`);
+  else if(grid&&!req.has(grid))flags.push(`${k}: not indicated by the A&A grid for this age/amount — recorded as a discretionary “for cause” order.`);
+  if(cost&&c.coverage&&cost/c.coverage>0.0025)flags.push(`${k}: ~$${cost} is large relative to the ${fmt$(c.coverage)} face amount — confirm it is proportionate.`);});
+ const checkEl=document.getElementById('evCheck-'+id);
+ if(flags.length&&form.dataset.ack!=='1'){
+  checkEl.innerHTML=`<div class="ev-flags"><b>⚠ Pre-check — advisory only</b><ul>${flags.map(f=>`<li>${f}</li>`).join('')}</ul>
+    <div class="note" style="margin:6px 0 0">You can proceed over any flag — click dispatch again to confirm. The flags and your rationale are logged together.</div></div>`;
+  form.dataset.ack='1';return;
+ }
+ const st=wfGet(id);st.status='info_requested';st.notes=st.notes||[];
+ const labels=items.map(k=>(EVIDENCE_TYPES.find(e=>e[0]===k)||[k,k])[1]).join(', ');
+ st.notes.push({by:CURRENT_USER||'?',at:nowStr(),text:'EVIDENCE REQUESTED: '+labels+' — '+rationale+(flags.length?' [pre-check flags acknowledged]':'')});
+ st.history.push({by:CURRENT_USER,role:CURRENT_ROLE,at:nowStr(),action:'Requested evidence — '+labels});
+ wfSave(id,st);
+ const ev=evidenceAll();ev.push({caseId:id,name:c.name,items,labels,rationale,flags,by:CURRENT_USER,at:nowStr(),status:'PENDING EVIDENCE'});
+ localStorage.setItem('uw_evidence',JSON.stringify(ev));
+ render();
+}
 function panel(c){
  if(activeTab===1){
   const sec=(title,fields)=>`<div class="card"><h3>${title}</h3><div class="grid2">
    ${fields.map(f=>`<div class="field"><label>${f[0]}</label><div class="val">${f[1]}</div></div>`).join('')}</div></div>`;
   const yn=v=>v?'<b style="color:var(--warn)">Yes</b>':'No';
   const d=c.decl||{};
-  return sec("Section 1 — Applicant Information",[
+  const imm=`<div class="imm-note">🔒 <div><b>Application is read-only for every role.</b> Submitted values are evidence, not a working document — there is no edit path in this product, by design (§3.5). A correction is an appended amendment with author, timestamp and reason; the original value is never overwritten. Fields are marked <span class="prov" style="display:inline">declared by applicant</span> or <span class="prov" style="display:inline">extracted from documents</span>.</div></div>`;
+  return imm+sec("Section 1 — Applicant Information",[
     ["Full Name",c.name],["Sex",c.sex==="M"?"Male":"Female"],
     ["Date of Birth",c.dob+" (age "+c.age+")"],["Smoker Status (last 12 months)",c.smoker],
     ["Occupation",c.occupation],["Employer",c.employer],
@@ -841,7 +1145,8 @@ function panel(c){
   const docs=c.has_docs?[["Application Form (Parts A–B, health questionnaire)","Parsed ✓"],["Payslip / Earnings Statement","Parsed ✓"],["Paramedical Exam Report + consumer report","Parsed ✓"],["Bank Statement (3-month, deposits & expense categories)","Parsed ✓"],["Tax Slip — 2025 Statement of Income","Parsed ✓"]]
    :[["Application Form","Not in packet sample"],["Payslip / Earnings Statement","Not in packet sample"],["Paramedical Exam Report","Not in packet sample"],["Bank Statement (3-month)","Not in packet sample"],["Tax Slip — Statement of Income","Not in packet sample"]];
   return `<div class="card"><h3>Document Packet</h3>`+docs.map(d=>`<div class="doc-row"><div class="dot ${c.has_docs?'':'miss'}"></div><div class="dname">${d[0]}</div><div class="dstatus">${d[1]}</div></div>`).join('')
-   +(c.has_docs?'':'<div class="note">This applicant is in the scored portfolio but outside the PDF-packet sample; scores are computed from structured data. In production, every case flows through document extraction.</div>')+`</div>`;
+   +(c.has_docs?'<div class="note">Documents are read-only (§3.5). In the live tier each row opens an inline viewer, and clicking an extracted value on the Extraction tab jumps to the page it was read from.':'<div class="note">This applicant is in the scored portfolio but outside the PDF-packet sample; scores are computed from structured data. In production, every case flows through document extraction.')+`</div></div>`
+   +requirementsCardHTML(c);
  }
  if(activeTab===3){
   if(!c.has_docs)return '<div class="card"><div class="note">No PDF packet for this applicant in the sample — open a case tagged · PDF in the queue for the full extraction view.</div></div>';
@@ -981,7 +1286,7 @@ function ruleScoreJS(f){
  p=(f.bmi<18.5||f.bmi>=35)?15:f.bmi>=30?8:f.bmi>=25?3:0;factors.push(["Body mass index",f.bmi.toFixed(1)+" BMI",p]);
  const conds=f.conditions.trim()&&f.conditions.trim().toLowerCase()!=="none"?f.conditions.split(",").map(s=>s.trim()).filter(Boolean):[];
  p=conds.reduce((s,c)=>s+(c.toLowerCase().includes("diabetes")?15:8),0);factors.push(["Medical conditions",conds.join(", ")||"None",p]);
- p=f.family?6:0;factors.push(["Family medical history",f.family?"Notable":"None disclosed",p]);
+ p=f.family?6:0;factors.push(["Family medical history",f.family?"Family history disclosed":"None disclosed",p]);
  const dti=f.income>0?f.debt/f.income:0;
  p=dti<0.2?0:dti<0.35?5:dti<0.5?12:20;factors.push(["Debt-to-income ratio",(dti*100).toFixed(1)+"%",p]);
  p=f.credit>750?0:f.credit>=700?3:f.credit>=650?8:15;factors.push(["Credit score",String(f.credit),p]);
@@ -1238,6 +1543,8 @@ function scoreNow(){
  document.getElementById('scoreResult').scrollIntoView({behavior:'smooth'});
 }
 render();
+// Esc returns from a case file to the queue with its context intact (§3.3).
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&view==='case'&&CURRENT_ROLE){goBack();}});
 // keep SLA timers + priority ranking live (queue/case views only, so forms aren't disturbed)
 setInterval(()=>{if(CURRENT_ROLE&&(view==='space'||view==='case'))render();},60000);
 </script>
@@ -1325,6 +1632,12 @@ def build():
                     n_llm += 1
         c["ai_summary"] = text or case_summary(c)
         c["summary_source"] = "llm" if text else "template"
+        # §3.6 — neutralise the legacy "Notable" family-history value baked into
+        # portfolio.json (engine.py is fixed at source; this cleans already-exported
+        # data without a stateful pipeline rerun).
+        for f in c.get("rule_factors", []):
+            if f[1] == "Notable":
+                f[1] = "Family history disclosed"
     if use_llm:
         print(f"LLM summaries: {n_llm}/{len(data['cases'])} generated (grounded), rest templated")
     html = TEMPLATE.replace("/*__DATA__*/", json.dumps(data))

@@ -94,7 +94,7 @@ export function ruleScore(a: Application): { score: number; factors: RuleFactorO
   )
   add(
     'Family medical history',
-    a.familyHistory ? 'Notable' : 'None disclosed',
+    a.familyHistory ? 'Family history disclosed' : 'None disclosed',
     a.familyHistory ? MORT.familyHistory : 0,
   )
   add(

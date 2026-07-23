@@ -64,7 +64,7 @@ def rule_score(a):
             else calibration.points("condition_other") for c in conds)
     factors.append(("Medical conditions", ", ".join(conds) or "None", p))
     p = calibration.points("family_history") if a["Family History Flag"] else 0
-    factors.append(("Family medical history", "Notable" if p else "None disclosed", p))
+    factors.append(("Family medical history", "Family history disclosed" if p else "None disclosed", p))
     p = 0 if dti < 0.2 else 5 if dti < 0.35 else 12 if dti < 0.5 else 20
     factors.append(("Debt-to-income ratio", f"{dti*100:.1f}%", p))
     p = 0 if credit > 750 else 3 if credit >= 700 else 8 if credit >= 650 else 15
