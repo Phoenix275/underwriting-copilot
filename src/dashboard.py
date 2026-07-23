@@ -41,7 +41,7 @@ TEMPLATE = r"""
 .case-head{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap}
 .case-head h2{font-family:'Space Grotesk',sans-serif;font-size:26px;margin:0 0 4px;font-weight:700}
 .case-meta{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--mut);display:flex;gap:14px;flex-wrap:wrap}
-.headline-score{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 20px;display:flex;align-items:center;gap:16px;box-shadow:0 1px 2px rgba(14,21,38,.05)}
+.headline-score{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;box-shadow:0 1px 2px rgba(14,21,38,.05)}
 .hs-num{font-family:'Space Grotesk',sans-serif;font-size:34px;font-weight:700;line-height:1}
 .hs-lab{font-size:11px;color:var(--mut)}.hs-class{font-size:12px;font-weight:700;padding:5px 12px;border-radius:99px}
 .cls-ok{background:var(--ok-soft);color:var(--ok)}.cls-bad{background:var(--bad-soft);color:var(--bad)}.cls-warn{background:var(--warn-soft);color:var(--warn)}
@@ -120,7 +120,12 @@ table.xt td{padding:10px 10px 10px 0;border-bottom:1px solid var(--line);font-si
 .legend-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
 .legend-chip{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;padding:8px 14px;border-radius:10px}
 .legend-chip .swatch{width:12px;height:12px;border-radius:50%}
-@media(max-width:900px){#app{flex-direction:column}.rail{width:100%}.grid2,.grid3,.form-grid{grid-template-columns:1fr}.main{padding:20px}}
+/* Wide tables scroll inside their own card so nothing is clipped by #app's
+   overflow:hidden on narrow / half-screen windows. */
+@media(max-width:1200px){.card{overflow-x:auto;-webkit-overflow-scrolling:touch}table.xt{min-width:560px}}
+/* Below ~1024 the two-pane layout stacks: the rail moves on top so the main
+   content gets the full width (half-screen friendly). */
+@media(max-width:1024px){#app{flex-direction:column}.rail{width:100%}.grid2,.grid3,.form-grid{grid-template-columns:1fr}.main{padding:20px}}
 /* ---- login screen (demo role select) ---- */
 #login{position:fixed;inset:0;z-index:1000;background:linear-gradient(135deg,#0E1526,#1A2336);display:flex;align-items:center;justify-content:center;font-family:Inter,system-ui,sans-serif;padding:20px}
 .login-card{background:var(--card);border-radius:18px;padding:34px 34px 28px;width:400px;max-width:94vw;box-shadow:0 24px 70px rgba(0,0,0,.45)}
