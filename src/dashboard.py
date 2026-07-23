@@ -321,6 +321,8 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 .imm-note{display:flex;gap:10px;align-items:flex-start;background:#1C1C21;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:12.5px;color:var(--mut)}
 .imm-note b{color:var(--ink)}
 .prov{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.4px;text-transform:uppercase;color:#6B6B76;margin-top:3px}
+.doc-view{background:#141417;border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:-4px 0 12px}
+.doc-row.open .dstatus{color:var(--acc)}
 @media(max-width:900px){.ev-grid{grid-template-columns:1fr}}
 </style>
 <div id="login">
@@ -504,16 +506,33 @@ function requirementsFor(c){
  if(a>=61&&amt>=1000000)r.push('Cognitive assessment');
  return r;
 }
-function reqOutstanding(c){
- // REQUIREMENTS OUTSTANDING column (§3.1): required evidence minus what the
- // packet already satisfies, so blocked cases don't read as underwriter delay.
+function reqOutstandingList(c){
+ // required evidence minus what the packet already satisfies (short labels)
  const req=requirementsFor(c);
  const satisfied=c.has_docs?new Set(['Paramed exam','Blood profile']):new Set();
- const out=req.filter(x=>!satisfied.has(x));
- if(!out.length)return '<span class="tier-tag">— none pending</span>';
  const short={'Paramed exam':'Exam','Blood profile':'Labs','EKG':'EKG','APS':'APS','Cognitive assessment':'Cognitive'};
- return `<span class="sla-chip sla-warn" title="${out.join(' · ')}">${out.map(x=>short[x]||x).join(' · ')}</span>`;
+ return req.filter(x=>!satisfied.has(x)).map(x=>short[x]||x);
 }
+function reqOutstanding(c){
+ // REQUIREMENTS OUTSTANDING column (§3.1): blocked cases don't read as underwriter delay.
+ const out=reqOutstandingList(c);
+ if(!out.length)return '<span class="tier-tag">— none pending</span>';
+ return `<span class="sla-chip sla-warn" title="${out.join(' · ')}">${out.join(' · ')}</span>`;
+}
+function caseRecommendation(c){
+ // The AI's suggested next step for a manual-review case — an actionable
+ // recommendation, not just the band (every queue case is "manual review").
+ const out=reqOutstandingList(c);
+ if(c.afford&&c.afford.verdict==='fail')return ['Refer — financial underwriting','affordability fails'];
+ if((c.conflicts||[]).some(k=>k.severity==='major'))return ['Resolve conflict first','major document conflict'];
+ if(out.length)return ['Order '+out[0],'A&A requirement outstanding'];
+ if(c.unique)return ['Whole-person review','unique circumstances disclosed'];
+ if(c.risk_score<=A_LINE+8)return ['Lean approve','near the approval line'];
+ if(c.risk_score>=D_LINE-8)return ['Lean decline','near the decline line'];
+ return ['Manual review','mid-band score'];
+}
+function aiRecoCol(c){const r=caseRecommendation(c);
+ return `<div style="font-weight:600;font-size:12.5px;color:var(--ink)">${r[0]}</div><div style="font-size:10.5px;color:var(--mut)">${r[1]} · score ${c.risk_score}</div>`;}
 function requirementsCardHTML(c){
  // The requirement set that applied, satisfied vs outstanding (§6.1).
  const req=requirementsFor(c);
@@ -707,16 +726,17 @@ function spaceView(){
     <button class="${queueScope==='team'?'on':''}" onclick="setScope('team')">Whole team</button></div>`:'';
  let head,rows;
  if(isRev){
-  head=`<tr><th>#</th><th>Case ID</th><th>AI recommendation</th><th>Coverage</th><th>Time in queue</th><th>Requirements</th><th>Priority</th><th></th></tr>`;
+  head=`<tr><th>#</th><th>Applicant</th><th>Case ID</th><th>Coverage</th><th>Time in queue</th><th>Requirements</th><th>Priority</th><th>AI recommendation</th><th></th></tr>`;
   rows=list.slice(0,300).map((c,i)=>{const st=wfGet(c.id);const pb=priorityBand(priorityScore(c));
     return `<tr onclick="sel('${c.id}')" style="cursor:pointer">
       <td class="rank-num">${i+1}</td>
-      <td><span class="mono" style="font-weight:700;font-size:13px;white-space:nowrap">${c.id}</span><div style="font-size:11px;color:var(--mut)">${c.name} · ${c.policy}</div></td>
-      <td>${aiRecChip(c)}</td>
+      <td><b>${c.name}</b><div style="font-size:11px;color:var(--mut)">${c.policy}</div></td>
+      <td><span class="mono" style="font-weight:700;font-size:13px;white-space:nowrap">${c.id}</span></td>
       <td class="mono" style="white-space:nowrap">${fmt$(c.coverage)}</td>
       <td>${slaChip(c)}</td>
       <td>${reqOutstanding(c)}</td>
       <td><span class="pri-chip" style="background:${pb[1]}">${pb[0]}</span></td>
+      <td>${aiRecoCol(c)}</td>
       <td style="text-align:right"><button class="ai-btn" onclick="event.stopPropagation();sel('${c.id}')">Review</button></td></tr>`;}).join('');
  }else{
   const isDone=space==='completed';
@@ -1064,21 +1084,39 @@ const EVIDENCE_TYPES=[
  ["Financial","Financial questionnaire","Applicant / agent","Days",0,""],
  ["Other","Other (free text — manual routing)","Manual routing","Varies",0,""]
 ];
-function evidenceFormHTML(c){
+function evidenceFormHTML(c,open){
  const req=new Set(requirementsFor(c));
  const rows=EVIDENCE_TYPES.map(e=>{const [k,label,provider,turn,cost,grid]=e;
   const indicated=grid&&req.has(grid);
   return `<label class="ev-opt"><input type="checkbox" value="${k}"><span><b>${label}</b><div class="prov">${provider} · ${turn}${cost?` · ~$${cost}`:''}${indicated?' · A&A-INDICATED':''}</div></span></label>`;}).join('');
- return `<div id="evForm-${c.id}" class="ev-form" style="display:none">
-   <h3 style="margin:0 0 12px">Request additional evidence</h3>
+ return `<div id="evForm-${c.id}" class="ev-form" style="display:${open?'block':'none'}">
+   ${open?'':'<h3 style="margin:0 0 12px">Request additional evidence</h3>'}
    <div class="ev-grid">${rows}</div>
-   <textarea id="evRat-${c.id}" class="ev-rat" rows="2" placeholder="Rationale — required for every request (logged to the audit trail, visible to operations)"></textarea>
+   <textarea id="evRat-${c.id}" class="ev-rat" rows="2" placeholder="Explain why this evidence is needed — required for every request (logged to the audit trail, visible to operations)"></textarea>
    <div id="evCheck-${c.id}"></div>
    <div class="desk-actions"><button class="ai-btn" style="background:var(--acc)" onclick="submitEvidence('${c.id}')">Run pre-check &amp; dispatch</button>
-    <button class="ai-btn" style="background:var(--mut)" onclick="toggleEvidence('${c.id}')">Cancel</button></div></div>`;
+    ${open?'':`<button class="ai-btn" style="background:var(--mut)" onclick="toggleEvidence('${c.id}')">Cancel</button>`}</div></div>`;
 }
 function toggleEvidence(id){const f=document.getElementById('evForm-'+id);if(!f)return;
  const show=f.style.display==='none';f.style.display=show?'block':'none';if(!show)f.dataset.ack='';}
+function toggleDoc(id,key){const el=document.getElementById('doc-'+id+'-'+key);if(!el)return;
+ el.style.display=el.style.display==='none'?'block':'none';}
+function docContent(c,key){
+ // Representative parsed content per document (the demo's inline viewer, §3.7).
+ const e=c.extraction||{};const g=(v,d)=>(v!=null?v:d);
+ if(key==='app')return [['Full name',c.name],['Date of birth',c.dob+' (age '+c.age+')'],['Sex',c.sex==='M'?'Male':'Female'],['Coverage requested',fmt$(c.coverage)],['Policy',c.policy],['Tobacco declared',c.smoker],['Section 6 declarations','See the Application tab']];
+ if(key==='pay')return [['Employer',c.employer],['Annual income (payslip, annualised)',fmt$(g(e.payslip_income,c.income))],['Employment status',c.emp_status||'—'],['Years employed',(c.years_emp!=null?c.years_emp+' yr':'—')]];
+ if(key==='paramed')return [['Height / weight',c.height+' cm / '+c.weight+' kg'],['BMI',c.bmi],['Blood pressure',c.bp],['Total cholesterol',c.chol+' mg/dL'],['Cotinine (tobacco lab)',g(e.cotinine,'—')],['Tobacco on form',e.form_tobacco_yes?'YES':'NO']];
+ if(key==='bank')return [['Avg monthly deposits',fmt$(e.bank_deposit_monthly)],['Avg monthly outflows',fmt$(e.bank_outflow_monthly)],['Average balance',fmt$(c.bank)]];
+ if(key==='tax')return [['Declared income (tax slip 2025)',fmt$(g(e.tax_income,c.income))],['Personal net worth',fmt$(c.net_worth)],['Existing debt (bureau)',fmt$(g(e.bureau_debt,c.debt))]];
+ return [];
+}
+function docViewHTML(c,key,label){
+ const rows=docContent(c,key);
+ return `<div id="doc-${c.id}-${key}" class="doc-view" style="display:none">
+   <div class="prov" style="margin-bottom:8px">Parsed from ${label}</div>
+   <table class="xt">${rows.map(r=>`<tr><td style="width:55%">${r[0]}</td><td class="mono">${r[1]??'—'}</td></tr>`).join('')}</table></div>`;
+}
 function submitEvidence(id){
  const c=CASES.find(x=>x.id===id);const form=document.getElementById('evForm-'+id);
  const items=Array.from(form.querySelectorAll('input:checked')).map(i=>i.value);
@@ -1144,11 +1182,19 @@ function panel(c){
   +(c.unique?`<div class="unique-banner"><b>UNIQUE CIRCUMSTANCES DISCLOSED</b><p style="margin:5px 0 0">“${c.unique}” — this disclosure automatically routes the file to a human underwriter so the person is assessed as a whole, not just by the score.</p></div>`:'');
  }
  if(activeTab===2){
-  const docs=c.has_docs?[["Application Form (Parts A–B, health questionnaire)","Parsed ✓"],["Payslip / Earnings Statement","Parsed ✓"],["Paramedical Exam Report + consumer report","Parsed ✓"],["Bank Statement (3-month, deposits & expense categories)","Parsed ✓"],["Tax Slip — 2025 Statement of Income","Parsed ✓"]]
-   :[["Application Form","Not in packet sample"],["Payslip / Earnings Statement","Not in packet sample"],["Paramedical Exam Report","Not in packet sample"],["Bank Statement (3-month)","Not in packet sample"],["Tax Slip — Statement of Income","Not in packet sample"]];
-  return `<div class="card"><h3>Document Packet</h3>`+docs.map(d=>`<div class="doc-row"><div class="dot ${c.has_docs?'':'miss'}"></div><div class="dname">${d[0]}</div><div class="dstatus">${d[1]}</div></div>`).join('')
-   +(c.has_docs?'<div class="note">Documents are read-only (§3.5). In the live tier each row opens an inline viewer, and clicking an extracted value on the Extraction tab jumps to the page it was read from.':'<div class="note">This applicant is in the scored portfolio but outside the PDF-packet sample; scores are computed from structured data. In production, every case flows through document extraction.')+`</div></div>`
-   +requirementsCardHTML(c);
+  const docs=[['app','Application Form (Parts A–B, health questionnaire)'],['pay','Payslip / Earnings Statement'],['paramed','Paramedical Exam Report + consumer report'],['bank','Bank Statement (3-month, deposits & expense categories)'],['tax','Tax Slip — 2025 Statement of Income']];
+  const packet=docs.map(d=>{const [key,label]=d;
+    if(c.has_docs)return `<div class="doc-row" style="cursor:pointer" onclick="this.classList.toggle('open');toggleDoc('${c.id}','${key}')"><div class="dot"></div><div class="dname">${label}</div><div class="dstatus">Parsed ✓ · click to open</div></div>${docViewHTML(c,key,label)}`;
+    return `<div class="doc-row"><div class="dot miss"></div><div class="dname">${label}</div><div class="dstatus" style="color:var(--mut)">Not in packet sample</div></div>`;}).join('');
+  const reqCard=CURRENT_ROLE==='underwriter'
+   ?`<div class="card"><h3>Request more information</h3>
+      <div class="note" style="margin:0 0 12px">Order additional evidence — an <b>Attending Physician Statement (APS)</b>, past insurance history (MIB), pharmacy / prescription history, medical records, MVR, exams or labs. Select what you need and <b>explain why it's needed</b>: the reason is mandatory, logged to the audit trail, and sent to operations. An AI pre-check flags duplicate or non-indicated orders before dispatch.</div>
+      ${evidenceFormHTML(c,true)}</div>`
+   :'';
+  return `<div class="card"><h3>Document Packet</h3>${packet}
+   ${c.has_docs?'<div class="note">Click any parsed document to open it inline. Documents are read-only (§3.5); on the Extraction tab, each value traces to the document it was read from.</div>':'<div class="note">This applicant is in the scored portfolio but outside the PDF-packet sample; scores are computed from structured data. In production, every case flows through document extraction.</div>'}</div>
+   ${requirementsCardHTML(c)}
+   ${reqCard}`;
  }
  if(activeTab===3){
   if(!c.has_docs)return '<div class="card"><div class="note">No PDF packet for this applicant in the sample — open a case tagged · PDF in the queue for the full extraction view.</div></div>';
