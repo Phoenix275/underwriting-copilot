@@ -66,6 +66,23 @@ table.xt td{padding:10px 10px 10px 0;border-bottom:1px solid var(--line);font-si
 .conflict-card.minor{border-left-color:var(--warn);background:var(--warn-soft)}
 .conflict-card b{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.5px}
 .conflict-card p{margin:5px 0 0;font-size:12.5px}
+/* case-wide conflict alert (shown on every tab so the underwriter can't miss it) */
+.conflict-alert{border:2px solid var(--bad);background:var(--bad-soft);border-radius:14px;padding:14px 18px;margin-bottom:16px}
+.conflict-alert.warn{border-color:var(--warn);background:var(--warn-soft)}
+.conflict-alert .ca-head{font-family:'Poppins',sans-serif;font-weight:700;font-size:14px;color:var(--bad);margin-bottom:6px}
+.conflict-alert.warn .ca-head{color:var(--warn)}
+.conflict-line{padding:9px 0;border-top:1px solid rgba(242,88,91,.22)}
+.conflict-line:first-of-type{border-top:none}
+.conf-tag{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.4px;color:var(--bad)}
+.conflict-line.minor .conf-tag{color:var(--warn)}
+.conf-desc{font-size:13px;margin-top:3px;color:var(--ink)}
+.conf-vals{font-size:12.5px;margin-top:6px;color:var(--mut);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.conf-bad{color:var(--bad);background:var(--bad-soft);padding:2px 8px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-weight:600}
+/* red-highlighted fields on the Application / Extraction tabs */
+.field.field-conflict{background:var(--bad-soft);border-radius:8px;padding-left:8px;margin-left:-8px;border-bottom-color:transparent}
+.field-conflict .val{color:var(--bad);font-weight:700}
+.fc-badge{color:var(--bad);font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:.4px;margin-left:6px}
+tr.row-conflict td{background:var(--bad-soft);color:var(--bad);font-weight:700}
 .gauge-wrap{display:flex;gap:28px;align-items:center;flex-wrap:wrap}
 .gauge{width:230px}.gauge-info{flex:1;min-width:240px}
 .g-num{font-family:'Space Grotesk',sans-serif;font-size:42px;font-weight:700}
@@ -604,17 +621,73 @@ function requirementsCardHTML(c){
  return `<div class="card"><h3>Requirements — Age &times; Amount grid</h3>${rows}
    <div class="note">The requirement set that applies to a <b>${c.age}</b>-year-old requesting <b>${fmt$(c.coverage)}</b>, from a simplified version of the meeting's age &times; amount grid. Outstanding items are ordered from the Decision tab with a rationale and an AI pre-check; grid-triggered orders are distinguished from discretionary “for cause” orders in the record.</div></div>`;
 }
+function conflictDetail(c,k){
+ // the specific mismatched values behind a conflict, pulled from the extraction
+ const e=c.extraction||{};
+ switch(k.type){
+  case 'dob_mismatch': return {field:'Date of birth',a:['Application form',e.form_dob],b:['Paramedical / ID',e.paramed_dob]};
+  case 'smoker_nondisclosure': return {field:'Tobacco use',a:['Declared on form',e.form_tobacco_yes?'Smoker':'Non-smoker'],b:['Lab cotinine',e.cotinine]};
+  case 'income_mismatch': return {field:'Annual income',a:['Declared',fmt$(e.form_income)],b:['Payslip',fmt$(e.payslip_income)]};
+  case 'tax_income_mismatch': return {field:'Annual income',a:['Declared',fmt$(e.form_income)],b:['Tax slip',fmt$(e.tax_income)]};
+  case 'debt_understated': return {field:'Existing debt',a:['Declared',fmt$(e.form_debt)],b:['Credit bureau',fmt$(e.bureau_debt)]};
+ }
+ return null;
+}
+function conflictAlertHTML(c){
+ // A case-wide red alert shown at the top of the case file (visible on every
+ // tab) so the underwriter sees exactly what's wrong without hunting for it.
+ const conf=c.conflicts||[];if(!conf.length)return '';
+ const anyMajor=conf.some(k=>k.severity==='major');
+ const rows=conf.map(k=>{const d=conflictDetail(c,k);const misrep=MISREP.has(k.type);
+   const vals=d?`<div class="conf-vals"><b>${d.field}:</b> ${d.a[0]} <span class="conf-bad">${d.a[1]??'—'}</span> <span style="opacity:.6">vs</span> ${d.b[0]} <span class="conf-bad">${d.b[1]??'—'}</span></div>`:'';
+   return `<div class="conflict-line ${k.severity==='minor'?'minor':''}">
+     <span class="conf-tag">${k.severity.toUpperCase()} · ${k.type.replace(/_/g,' ').toUpperCase()}${misrep?' · MATERIAL MISREPRESENTATION':''}</span>
+     <div class="conf-desc">${k.description}</div>${vals}</div>`;}).join('');
+ const majors=conf.filter(k=>k.severity==='major').length;
+ return `<div class="conflict-alert ${anyMajor?'':'warn'}">
+   <div class="ca-head">⚠ ${conf.length} data conflict${conf.length>1?'s':''} flagged${majors?` · ${majors} major — resolve before deciding`:''}</div>${rows}</div>`;
+}
+function conflictFieldLabels(c){
+ // Application-tab field labels a conflict touches → highlighted red
+ const s=new Set();(c.conflicts||[]).forEach(k=>{
+  if(k.type==='dob_mismatch')s.add('Date of Birth');
+  if(k.type==='smoker_nondisclosure'){s.add('Smoker Status (last 12 months)');s.add('Tobacco / cotinine-verified (8-1)');}
+  if(k.type==='income_mismatch'||k.type==='tax_income_mismatch')s.add('Annual Net Earned Income');
+  if(k.type==='debt_understated')s.add('Existing Debt');});
+ return s;
+}
+function conflictRowLabels(c){
+ // Extraction-tab row labels a conflict touches → highlighted red
+ const s=new Set();(c.conflicts||[]).forEach(k=>{
+  if(k.type==='dob_mismatch'){s.add('DOB (form)');s.add('DOB (paramed / ID)');}
+  if(k.type==='smoker_nondisclosure'){s.add('Tobacco (form 4a)');s.add('Cotinine (lab)');}
+  if(k.type==='income_mismatch'){s.add('Declared income (form)');s.add('Income (payslip, annualized)');}
+  if(k.type==='tax_income_mismatch'){s.add('Declared income (form)');s.add('Income (tax slip, 2025)');}
+  if(k.type==='debt_understated'){s.add('Declared debt (form)');s.add('Debt (credit bureau)');}});
+ return s;
+}
 function topDriversHTML(c){
- // Top-3 risk drivers at the top of the case file (§4.2), generated from the
- // rule engine's factor weights — never hand-authored — with clean signals
- // listed so the explanation isn't one-sided.
+ // Top drivers at the top of the case file (§4.2). If the case was declined,
+ // LEAD with why (misrepresentation / score) so the reason is right below the
+ // name, not buried in the Decision tab. Then the rule-engine contributors.
  if(!c.rule_factors)return '';
  const drivers=c.rule_factors.filter(f=>f[2]>0).sort((a,b)=>b[2]-a[2]).slice(0,3);
  const clean=c.rule_factors.filter(f=>f[2]===0).slice(0,3);
+ let lead='';
+ if(c.verdict==='red'){
+  const misrep=(c.conflicts||[]).filter(k=>MISREP.has(k.type));
+  const why=misrep.length
+   ?['⚠ Declined — material misrepresentation',misrep.map(k=>k.type.replace(/_/g,' ')+' — '+k.description).join('; ')]
+   :['⚠ Declined — risk exceeds appetite','Composite score '+c.risk_score+' is at or above the '+D_LINE+'-point decline line'];
+  lead=`<div class="factor-row" style="background:var(--bad-soft);border-radius:10px;padding:10px 12px;margin-bottom:8px"><div><div class="factor-label" style="color:var(--bad)">${why[0]}</div><div class="factor-detail">${why[1]}</div></div><div class="factor-pts" style="color:var(--bad)">DECLINE</div></div>`;
+ } else {
+  const majors=(c.conflicts||[]).filter(k=>k.severity==='major');
+  if(majors.length)lead=`<div class="factor-row" style="background:var(--warn-soft);border-radius:10px;padding:10px 12px;margin-bottom:8px"><div><div class="factor-label" style="color:var(--warn)">⚑ ${majors.length} major data conflict(s) flagged</div><div class="factor-detail">${majors.map(k=>k.type.replace(/_/g,' ')).join('; ')} — see the alert above and the Extraction tab</div></div><div class="factor-pts" style="color:var(--warn)">FLAG</div></div>`;
+ }
  const dr=drivers.map((f,i)=>`<div class="factor-row"><div><div class="factor-label">${i+1}. ${f[0]}</div><div class="factor-detail">${f[1]}</div></div><div class="factor-pts" style="color:var(--warn)">+${f[2]}</div></div>`).join('');
  const off=clean.length?`<div class="note" style="margin-top:10px"><b>Offsetting / clean signals:</b> ${clean.map(f=>f[0].toLowerCase()+' ('+f[1]+')').join(' · ')}</div>`:'';
- return `<div class="card"><h3>Top drivers of this score</h3>${drivers.length?dr:'<div class="note" style="margin:0">No positive risk contributors — every rule factor is clean.</div>'}${off}
-  <div class="note">The three largest positive contributors to this applicant's composite score, straight from the rule engine's documented factor weights. Full breakdown on the Risk Score tab.</div></div>`;
+ return `<div class="card"><h3>Top drivers of this ${c.verdict==='red'?'decision':'score'}</h3>${lead}${drivers.length?dr:'<div class="note" style="margin:0">No positive risk contributors — every rule factor is clean.</div>'}${off}
+  <div class="note">${c.verdict==='red'?'The decision reason leads; below are the largest rule-engine contributors to the score.':'The three largest positive contributors to the composite score, straight from the documented rule-engine factor weights.'} Full breakdown on the Risk Score tab.</div></div>`;
 }
 function backLabel(){if(prev.view==='manager')return 'Manager Overview';if(prev.view==='overview')return 'Portfolio & Model Card';return SPACE_LABEL[prev.space]||'Queue';}
 function goBack(){view=prev.view;if(prev.space)space=prev.space;render();}
@@ -893,6 +966,7 @@ function main(){
     <div style="text-align:center"><div class="hs-num" style="font-size:22px">${fmt$(c.coverage)}</div><div class="hs-lab" style="margin-top:4px">Coverage requested</div></div>
     ${afvm?`<div style="text-align:center"><div class="hs-class cls-${afvm[1]}" style="font-size:13px">${c.afford.label}</div><div class="hs-lab" style="margin-top:4px">Financial Viability</div></div>`:''}
     <div style="text-align:center;padding-left:16px;border-left:1px solid var(--line)"><div style="font-size:14px;font-weight:700;color:var(--ink)">${reco[0]}</div><div class="hs-lab" style="margin-top:4px">AI recommendation · ${reco[1]}</div></div></div></div>
+  ${conflictAlertHTML(c)}
   ${topDriversHTML(c)}
   <div class="tabs">${[[1,'Application'],[2,'Documents'],[3,'Extraction & Conflicts'],[4,'Risk Score'],[5,'Decision']]
    .map(t=>`<div class="tab ${t[0]===activeTab?'active':''}" onclick="selTab(${t[0]})">${t[1]}</div>`).join('')}</div>
@@ -1286,8 +1360,10 @@ function submitEvidence(id){
 }
 function panel(c){
  if(activeTab===1){
+  const cl=conflictFieldLabels(c);   // fields a cross-document conflict touches → highlighted red
   const sec=(title,fields)=>`<div class="card"><h3>${title}</h3><div class="grid2">
-   ${fields.map(f=>`<div class="field"><label>${f[0]}</label><div class="val">${f[1]}</div></div>`).join('')}</div></div>`;
+   ${fields.map(f=>{const bad=cl.has(f[0]);
+     return `<div class="field${bad?' field-conflict':''}"><label>${f[0]}${bad?' <span class="fc-badge">⚠ CONFLICT</span>':''}</label><div class="val">${f[1]}</div></div>`;}).join('')}</div></div>`;
   const yn=v=>v?'<b style="color:var(--warn)">Yes</b>':'No';
   const d=c.decl||{};
   const imm=`<div class="imm-note">🔒 <div><b>Application is read-only for every role.</b> Submitted values are evidence, not a working document — there is no edit path in this product, by design (§3.5). A correction is an appended amendment with author, timestamp and reason; the original value is never overwritten. Fields are marked <span class="prov" style="display:inline">declared by applicant</span> or <span class="prov" style="display:inline">extracted from documents</span>.</div></div>`;
@@ -1347,8 +1423,10 @@ function panel(c){
   const confl=c.conflicts.length?c.conflicts.map(k=>`<div class="conflict-card ${k.severity==='minor'?'minor':''}">
    <b>${k.severity.toUpperCase()} · ${k.type.replace(/_/g,' ').toUpperCase()}</b><p>${k.description}</p></div>`).join('')
    :'<div class="note">No cross-document conflicts detected. All six checks passed — every applicant runs through the identical checklist.</div>';
+  const rl=conflictRowLabels(c);   // the specific extracted rows in conflict → highlighted red
   return `<div class="card"><h3>Extracted Fields (5 documents)</h3><table class="xt"><tr><th>Field</th><th>Value</th></tr>
-   ${rows.map(r=>`<tr><td>${r[0]}</td><td class="mono">${r[1]??'—'}</td></tr>`).join('')}</table></div>
+   ${rows.map(r=>{const bad=rl.has(r[0]);return `<tr class="${bad?'row-conflict':''}"><td>${r[0]}${bad?' ⚠':''}</td><td class="mono">${r[1]??'—'}</td></tr>`;}).join('')}</table>
+   ${rl.size?'<div class="note">Rows highlighted red are the values in conflict across documents — see the alert at the top of the case and the conflict screen below.</div>':''}</div>
    <div class="card"><h3>Cross-Document Conflict Screen</h3>${confl}</div>`;
  }
  if(activeTab===4){
