@@ -114,6 +114,8 @@ tr.row-conflict td{background:var(--bad-soft);color:var(--bad);font-weight:700}
 .verdict-banner .vb-word{font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:700;letter-spacing:1px}
 .v-green .vb-word{color:var(--ok)}.v-yellow .vb-word{color:var(--warn)}.v-red .vb-word{color:var(--bad)}
 .verdict-banner .vb-sub{font-size:13px;color:var(--ink);margin-top:6px;line-height:1.55}
+.banner-x{position:absolute;top:12px;right:14px;background:transparent;border:none;color:var(--warn);font-size:17px;font-weight:700;cursor:pointer;line-height:1;padding:5px 9px;border-radius:8px}
+.banner-x:hover{background:rgba(0,0,0,.08)}
 .form-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px 16px}
 .form-grid label{display:block;font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--mut);margin-bottom:4px}
 .form-grid input,.form-grid select,.fg-wide textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font:13px Inter,sans-serif;background:var(--bg);color:var(--ink);outline:none}
@@ -709,9 +711,27 @@ function wfPull(id){const st=wfGet(id);st.pulled=true;st.status='in_review';
  wfSave(id,st);space='review';render();}
 function wfReassign(id){const st=wfGet(id);st.assigneeUid=CURRENT_UID;st.assignee=CURRENT_USER;st.tier=CURRENT_TIER;
  st.history.push({by:CURRENT_USER,role:CURRENT_ROLE,at:nowStr(),action:'Reassigned to '+CURRENT_USER});wfSave(id,st);render();}
-function wfReopen(id){const st=wfGet(id);st.decision=null;st.status='in_review';
- st.history.push({by:CURRENT_USER,role:CURRENT_ROLE,at:nowStr(),action:'Reopened for review'});wfSave(id,st);
- const ov=getOverrides();delete ov[id];localStorage.setItem('uw_overrides',JSON.stringify(ov));space='review';render();}
+function wfReopen(id){const st=wfGet(id);const wasBy=st.decision?st.decision.by:'';st.decision=null;st.status='in_review';
+ st.history.push({by:CURRENT_USER,role:CURRENT_ROLE,at:nowStr(),action:'Reopened for review'+(CURRENT_ROLE==='manager'&&wasBy?' by manager (was decided by '+wasBy+')':'')});wfSave(id,st);
+ const ov=getOverrides();delete ov[id];localStorage.setItem('uw_overrides',JSON.stringify(ov));
+ if(CURRENT_ROLE==='underwriter')space='review';render();}
+function wfManagerOverride(id,kind){
+ // Manager-only: change an underwriter's recorded decision after the fact (§ manager authority).
+ if(CURRENT_ROLE!=='manager'){alert('Only a manager can override a recorded decision.');return;}
+ const labels={approve:'APPROVED',decline:'DECLINED'};
+ const st=wfGet(id);const prevDecision=st.decision?st.decision.action:'(none)';const prevBy=st.decision?st.decision.by:'';
+ const rationale=(prompt('Manager override → '+labels[kind]+'. Reason (required — supersedes the '+prevDecision+' decision'+(prevBy?' by '+prevBy:'')+'):')||'').trim();
+ if(!rationale){alert('A rationale is required to override a decision.');return;}
+ st.status=kind==='approve'?'approved':'declined';
+ st.decision={action:labels[kind],by:CURRENT_USER,role:CURRENT_ROLE,at:nowStr(),rationale:rationale,managerOverride:true,supersedes:prevDecision};
+ st.history.push({by:CURRENT_USER,role:CURRENT_ROLE,at:nowStr(),action:'MANAGER OVERRIDE → '+labels[kind]+' (superseded '+prevDecision+(prevBy?' by '+prevBy:'')+') — “'+rationale+'”'});
+ wfSave(id,st);
+ const ov=getOverrides();ov[id]={decision:labels[kind],label:kind==='decline'?1:0,reason:rationale,at:st.decision.at};
+ localStorage.setItem('uw_overrides',JSON.stringify(ov));
+ render();}
+/* dismissable review-queue banner */
+function bannerClosed(){try{return localStorage.getItem('uw_queue_banner_closed')==='1';}catch(e){return false;}}
+function closeQueueBanner(){try{localStorage.setItem('uw_queue_banner_closed','1');}catch(e){}render();}
 /* ---------- case spaces: manual-review queue vs auto-decisioned record ---------- */
 const SPACES=[
  ["review","Review Queue","▣","Cases the system flagged for a human. These are the only cases you action."],
@@ -768,9 +788,19 @@ function caseDeskHTML(c){
      <button class="ai-btn" style="background:var(--acc)" onclick="downloadMemo('${c.id}')">⬇ Decision memo</button>
      <button class="ai-btn" style="background:var(--mut)" onclick="wfReopen('${c.id}')">Reopen</button></div>`;
  } else {
+  const isMgr=CURRENT_ROLE==='manager';
+  const mgrControls=(isMgr&&resolved)?`
+   <div class="desk-actions" style="margin-top:14px">
+     <button class="ai-btn" style="background:var(--warn)" onclick="wfReopen('${c.id}')">↺ Reopen for review</button>
+     <button class="ai-btn" style="background:var(--ok)" onclick="wfManagerOverride('${c.id}','approve')">Override → Approve</button>
+     <button class="ai-btn" style="background:var(--bad)" onclick="wfManagerOverride('${c.id}','decline')">Override → Decline</button></div>
+   <div class="note"><b>Manager authority:</b> reopen this case to send it back to the underwriter, or override the recorded decision directly. Both are logged to the audit trail with your name and what they superseded.</div>`:'';
+  const roleNote=isMgr
+   ?(resolved?'':'<div class="note">Manager view — this case is still with the underwriter. Reopen / override becomes available once a decision is recorded.</div>')
+   :'<div class="note">Read-only view.</div>';
   controls=`<div class="desk-row"><span class="desk-l">Status</span><span class="status-chip wf-${st.status}">${WF_LABEL[st.status]}</span></div>
    <div class="desk-row"><span class="desk-l">Owner</span><span>${owner}</span></div>
-   <div class="note">Manager view — read-only. Underwriters action manual-review cases from their queue.</div>`;
+   ${mgrControls}${roleNote}`;
  }
  return `<div class="card"><h3>Underwriter Case Desk</h3>${decided}${controls}</div>${notes}<div class="card"><h3>Audit trail</h3>${trailHTML(st)}</div>`;
 }
@@ -783,8 +813,8 @@ function goManager(){view="manager";render();}
 function goExec(){view="executive";render();}
 function goAdmin(){view="admin";render();}
 function goScore(){view="score";render();}
-function sel(id){if(view!=='case'){prev={view,space};caseNav=currentList().map(x=>x.id);}activeId=id;view="case";const c=CASES.find(x=>x.id===id);activeTab=(c&&bucketOf(c)==='review')?5:4;render();}
-function selInNav(id){activeId=id;const c=CASES.find(x=>x.id===id);activeTab=(c&&bucketOf(c)==='review')?5:4;render();}
+function sel(id){if(view!=='case'){prev={view,space};caseNav=currentList().map(x=>x.id);}activeId=id;view="case";const c=CASES.find(x=>x.id===id);activeTab=(c&&(bucketOf(c)==='review'||wfGet(c.id).decision))?5:4;render();}
+function selInNav(id){activeId=id;const c=CASES.find(x=>x.id===id);activeTab=(c&&(bucketOf(c)==='review'||wfGet(c.id).decision))?5:4;render();}
 function caseNavPos(){return caseNav.indexOf(activeId);}
 function nextCase(){const i=caseNavPos();if(i<0||i>=caseNav.length-1)return;selInNav(caseNav[i+1]);}
 function prevCase(){const i=caseNavPos();if(i<=0)return;selInNav(caseNav[i-1]);}
@@ -891,7 +921,7 @@ function spaceView(){
       <td style="text-align:right"><button class="ai-btn" onclick="event.stopPropagation();sel('${c.id}')">Open</button></td></tr>`;}).join('');
  }
  const breaches=isRev?list.filter(c=>ageHours(c)>=8).length:0;
- const banner=isRev?`<div class="verdict-banner v-yellow" style="margin-top:16px"><div class="vb-word">${list.length} case(s) ranked by coverage &amp; time in queue${breaches?` · ${breaches} over the 8h SLA`:''}</div><div class="vb-sub">Work top-down — most important first. These are the only cases needing a human; auto-approvals and auto-declines are filed separately. Anything over 8 hours in the queue is flagged red.</div></div>`:'';
+ const banner=(isRev&&!bannerClosed())?`<div class="verdict-banner v-yellow" style="margin-top:16px;position:relative"><button class="banner-x" onclick="closeQueueBanner()" title="Dismiss">✕</button><div class="vb-word">${list.length} case(s) ranked by coverage &amp; time in queue${breaches?` · ${breaches} over the 8h SLA`:''}</div><div class="vb-sub">Work top-down — most important first. These are the only cases needing a human; auto-approvals and auto-declines are filed separately. Anything over 8 hours in the queue is flagged red.</div></div>`:'';
  // Bulk approve/decline (§4.4) — batch-affirm straight-through decisions into
  // the recorded decision trail, top-right of the auto-decisioned spaces.
  const canBulk=CURRENT_ROLE==='underwriter'&&(space==='auto_approved'||space==='auto_declined')&&list.length;
@@ -1128,6 +1158,16 @@ function managerView(){
     <td class="mono">${fmt$(c.coverage)}</td><td><span class="score-chip sc-warn" style="color:var(--warn);background:var(--warn-soft)">${c.risk_score}</span></td>
     <td style="font-size:12px;color:var(--mut)">${ov[c.id]?'<b style="color:var(--acc)">OVERRIDDEN → '+ov[c.id].decision+'</b>':(c.reasons[0]||'')}</td></tr>`).join('')}</table>
   <div class="note">Click any row to open the full case file. ${Y.length-queue.length>0?`${Y.length-queue.length} more manual-review cases in the queue at left.`:''}</div></div>
+ ${(()=>{const dec=allDecisions();return `<div class="card"><h3>Decided cases — reopen or override</h3>
+  ${dec.length?`<table class="xt"><tr><th>Case</th><th>Applicant</th><th>AI rec</th><th>Underwriter decision</th><th>By</th><th></th></tr>
+   ${dec.map(d=>{const flip=d.model&&((d.model==='APPROVE'&&d.action==='DECLINED')||(d.model==='DECLINE'&&d.action==='APPROVED'));
+     return `<tr style="cursor:pointer" onclick="sel('${d.id}')"><td class="mono">${d.id}</td><td><b>${d.name}</b></td>
+     <td style="font-size:12px;color:var(--mut)">${d.model}</td>
+     <td><span class="status-chip ${d.action==='APPROVED'?'wf-approved':'wf-declined'}">${d.action}</span>${flip?' <span class="pri-chip" style="background:var(--warn)">vs AI</span>':''}</td>
+     <td style="font-size:12px">${d.by||'—'}</td>
+     <td style="text-align:right"><button class="ai-btn" onclick="event.stopPropagation();sel('${d.id}')">Open</button></td></tr>`;}).join('')}</table>
+   <div class="note">Open any decided case to <b>reopen</b> it (send back to the underwriter) or <b>override</b> the decision. Manager-only — every action is logged to the audit trail.</div>`
+  :'<div class="note" style="margin:0">No underwriter decisions recorded yet this session. Once an underwriter approves or declines a case, it appears here for you to reopen or override.</div>'}</div>`;})()}
  <div class="card"><h3>Verdict Mix by Policy Type</h3>
   <table class="xt"><tr><th>Policy</th><th>Cases</th><th>Approve</th><th>Manual review</th><th>Decline</th></tr>
    ${Object.entries(pols).sort((a,b)=>b[1].n-a[1].n).map(([p,v])=>`<tr><td>${p}</td><td class="mono">${v.n}</td>
