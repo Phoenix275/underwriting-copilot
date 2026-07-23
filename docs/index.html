@@ -910,6 +910,25 @@ function affordCard(af){
   ${af.indicators.map(i=>`<div class="factor-row"><div><div class="factor-label">${i.label} <b style="color:${stCol[i.status]}">· ${stLab[i.status]}</b></div><div class="factor-detail">${i.detail}</div></div><div class="factor-pts" style="color:${stCol[i.status]}">${i.value}</div></div>`).join('')}
   <div class="note">Financial underwriting asks a different question from risk scoring: not “how risky is this life?” but “can this applicant sustain the premium, and is the requested amount financially justified?” A failed indicator refers the case to financial underwriting regardless of the mortality risk score.</div></div>`;
 }
+function scoreExplainerHTML(){
+ // The generic "how scoring works" reference — shown ONCE on the model card,
+ // not repeated on every case file (underwriters don't need it per application).
+ return `<div class="card explain"><h3>How the composite score works</h3>
+   <p><b>Formula:</b> Risk Score = 50% × Rule Engine score + 50% × ML probability. The rule engine is fully auditable — every point traces to a documented factor weight. The ML component is a gradient-boosting model trained on ${M.risk_models.n_train.toLocaleString()} records (AUC ${(M.risk_models.gradient_boosting.auc*100).toFixed(1)}% on ${M.risk_models.n_test.toLocaleString()} held-out cases), which captures factor interactions the rules miss. Blending them means one bad model can never single-handedly approve a risky case.</p>
+   <p><b>The traffic light:</b> the composite score alone sets the band. Below ${A_LINE} the case is <b style="color:var(--ok)">GREEN — APPROVE</b>, clear-cut and auto-approved. From ${A_LINE} to ${D_LINE-1} it is <b style="color:var(--warn)">YELLOW — MANUAL REVIEW</b>: a human underwriter looks at the application and the person as a whole. At ${D_LINE} or above — or when the application materially misrepresents the medical/identity evidence — it is <b style="color:var(--bad)">RED — DECLINE</b>. Conflicts, affordability and disclosed circumstances are surfaced as flags for the reviewer, but they no longer change the band.</p>
+   <div class="scale-wrap">
+    <div class="scale-ticks"><span style="left:0%">0</span><span style="left:${A_LINE}%">${A_LINE}</span><span style="left:${D_LINE}%">${D_LINE}</span><span style="left:100%">100</span></div>
+    <div class="scale-track">
+     <div class="scale-seg" style="width:${A_LINE}%;background:var(--ok)"></div>
+     <div class="scale-seg" style="width:${D_LINE-A_LINE}%;background:var(--warn)"></div>
+     <div class="scale-seg" style="width:${100-D_LINE}%;background:var(--bad)"></div></div>
+    <div class="scale-labels">
+     <div class="slab" style="width:${A_LINE}%"><div class="sl-word" style="color:var(--ok)">APPROVE</div><div class="sl-sub">clear-cut, auto-approved</div></div>
+     <div class="slab" style="width:${D_LINE-A_LINE}%"><div class="sl-word" style="color:var(--warn)">MANUAL REVIEW</div><div class="sl-sub">a human sees the whole person</div></div>
+     <div class="slab" style="width:${100-D_LINE}%"><div class="sl-word" style="color:var(--bad)">DECLINE</div><div class="sl-sub">exceeds appetite / misrepresentation</div></div></div>
+   </div>
+   <div class="override-note"><span class="on-ic">⚠</span><div><b>Score-driven bands:</b> the composite score sets the decision. Material misrepresentation is the one hard override — it declines regardless of score. Other flags (conflicts, affordability, disclosed circumstances) are shown to the reviewer without changing the band.</div></div></div>`;
+}
 function overview(){
  const vc={green:0,yellow:0,red:0};CASES.forEach(c=>vc[c.verdict]++);
  const tierLabels={low:"Low (0–25)",mod:`Moderate (26–${A_LINE-1})`,elev:`Elevated (${A_LINE}–${D_LINE-1})`,high:`High (${D_LINE}–100)`};
@@ -951,6 +970,7 @@ function overview(){
   <table class="xt" style="margin-top:12px"><tr><th>Affordability indicator</th><th>Fail rate</th></tr>
    ${Object.entries(M.affordability.indicator_fail_rates).map(([k,v])=>`<tr><td>${k}</td><td class="mono">${(v*100).toFixed(1)}%</td></tr>`).join('')}</table>
   <div class="note">Four financial-underwriting screens run on every applicant: premium-to-income (≤5%), disposable income after premium, coverage-to-income against an age-banded cap, and debt-service ratio (≤20% of net). Average premium-to-income across the portfolio is ${(M.affordability.avg_premium_to_income*100).toFixed(1)}% on an average estimated premium of ${fmt$(M.affordability.avg_annual_premium)}/yr. Any failed indicator refers the case regardless of mortality-risk score — this is the affordability half of the copilot the project brief asks for.</div></div>`:''}
+ ${scoreExplainerHTML()}
  <div class="card" style="margin-top:16px"><h3>Composite Risk Score Distribution</h3>
   ${Object.entries(tc).map(([t,n],i)=>`<div class="hist-bar-row"><div class="hist-label">${t}</div>
    <div class="hist-track"><div class="hist-fill" style="width:${n/mx*100}%;background:${cols[i]}"></div></div><div class="hist-count">${n}</div></div>`).join('')}
@@ -1086,16 +1106,32 @@ function executiveView(){
  const overrideRate=decidedManual?(nOv/decidedManual*100):0;
  const appetitePct=APPETITE_MONTHLY?Math.min(covAppr/APPETITE_MONTHLY*100,100):0;
  const pctG=covAll?covAppr/covAll*100:0,pctP=covAll?covPend/covAll*100:0,pctR=covAll?covDecl/covAll*100:0;
+ const moNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
+ const _now=new Date();const moName=moNames[_now.getMonth()];const yr=_now.getFullYear();
+ const underwritten2025=covAppr*0.82;   // illustrative prior-year same-month figure (no dated cohort in synthetic data)
+ const yoyAmt=underwritten2025>0?(covAppr/underwritten2025-1)*100:0;
  const tile=(v,l,accent)=>`<div class="stat"${accent?` style="border-top:4px solid ${accent}"`:''}><div class="sv">${v}</div><div class="sl">${l}</div></div>`;
  return `<div class="case-head"><div><h2>Executive Overview</h2>
-   <div class="case-meta"><span>Chief Underwriting Officer</span><span>${n} cases in the current book</span><span>evaluated ${M.generated_at}</span></div></div></div>
+   <div class="case-meta"><span>Chief Underwriting Officer</span><span>Executive-only view</span><span>evaluated ${M.generated_at}</span></div></div></div>
   <div class="grid3" style="margin-top:18px">
-   ${tile(fmtBigMoney(covAppr),'<b>Exposure taken on</b> — total approved cover in the current book','var(--ok)')}
-   ${tile(fmtMoneyK(premAppr)+'/yr','<b>Approved premium</b> — annualised, the revenue side of the book','var(--acc)')}
-   ${tile(stp.toFixed(0)+'%','<b>Straight-through rate</b> — decided with no human touch')}
+   ${tile(fmtBigMoney(covAppr),'<b>Total coverage accepted</b> — exposure taken on to the book','var(--ok)')}
+   ${tile(fmtBigMoney(covDecl),'<b>Total coverage declined</b> — risk turned away','var(--bad)')}
+   ${tile(fmtMoneyK(premAppr)+'/yr','<b>Approved premium</b> — annualised, the revenue side','var(--acc)')}
   </div>
   <div class="grid3" style="margin-top:14px">
-   ${tile(apprRate.toFixed(0)+'%','<b>Approval rate</b> — share of the book approved · <span style="color:var(--mut)">vs. '+priorApprRate.toFixed(0)+'% illustrative 2025 baseline</span>')}
+   ${tile(apprRate.toFixed(0)+'%','<b>YoY approval rate</b> — '+yr+' vs. '+priorApprRate.toFixed(0)+'% in '+(yr-1)+' (illustrative)','var(--acc)')}
+   ${tile(appetitePct.toFixed(0)+'%','<b>% of monthly appetite</b> — accepted cover vs the '+fmtBigMoney(APPETITE_MONTHLY)+' target','var(--warn)')}
+   ${tile(stp.toFixed(0)+'%','<b>Straight-through rate</b> — decided with no human touch')}
+  </div>
+  <div class="card" style="margin-top:16px"><h3>Total amount of risk underwritten — ${moName} ${yr-1} vs ${moName} ${yr}</h3>
+   <div style="display:flex;gap:26px;flex-wrap:wrap;align-items:flex-end">
+    <div><div class="hs-lab">${moName} ${yr-1} <span style="opacity:.7">(illustrative)</span></div><div class="sv" style="color:var(--mut)">${fmtBigMoney(underwritten2025)}</div></div>
+    <div style="font-size:24px;color:var(--mut);padding-bottom:6px">→</div>
+    <div><div class="hs-lab">${moName} ${yr} (actual)</div><div class="sv" style="color:var(--ok)">${fmtBigMoney(covAppr)}</div></div>
+    <div style="margin-left:8px"><div class="hs-lab">Year-over-year</div><div class="sv" style="color:${yoyAmt>=0?'var(--ok)':'var(--bad)'}">${yoyAmt>=0?'+':''}${yoyAmt.toFixed(0)}%</div></div>
+   </div>
+   <div class="note">Total amount of risk underwritten (approved cover), this month against the same month last year — the executive's headline movement, held by no other role. The ${yr-1} figure is an illustrative baseline pending a real historical book; ${yr} is live.</div></div>
+  <div class="grid3" style="margin-top:14px">
    ${tile(fmtBigMoney(avgCover),'Average approved cover per policy')}
    ${tile(fmtAge(avgCycle),'Average time in queue — proxy for cycle time')}
    ${tile(overrideRate.toFixed(0)+'%','<b>Override rate</b> — human decisions against the model lean ('+nOv+' of '+decidedManual+')')}
@@ -1322,21 +1358,6 @@ function panel(c){
       ${sub("ML — gradient boosting (50%)",Math.round(c.ml_score),"var(--acc)")}
       ${sub("ML — logistic (reference)",Math.round(c.ml_score_lr),"var(--mut)")}
      </div></div></div></div>
-  <div class="card explain"><h3>How this score works</h3>
-   <p><b>Formula:</b> Risk Score = 50% × Rule Engine score + 50% × ML probability. The rule engine is fully auditable — every point traces to a documented factor weight below. The ML component is a gradient-boosting model trained on ${M.risk_models.n_train.toLocaleString()} records (AUC ${(M.risk_models.gradient_boosting.auc*100).toFixed(1)}% on ${M.risk_models.n_test.toLocaleString()} held-out cases), which captures factor interactions the rules miss. Blending them means one bad model can never single-handedly approve a risky case.</p>
-   <p><b>The traffic light:</b> the composite score alone sets the band. Below ${A_LINE} the case is <b style="color:var(--ok)">GREEN — APPROVE</b>, clear-cut and auto-approved. From ${A_LINE} to ${D_LINE-1} it is <b style="color:var(--warn)">YELLOW — MANUAL REVIEW</b>: a human underwriter looks at the application and the person as a whole. At ${D_LINE} or above — or when the application materially misrepresents the medical/identity evidence — it is <b style="color:var(--bad)">RED — DECLINE</b>. Conflicts, affordability and disclosed circumstances are surfaced as flags for the reviewer, but they no longer change the band.</p>
-   <div class="scale-wrap">
-    <div class="scale-ticks"><span style="left:0%">0</span><span style="left:${A_LINE}%">${A_LINE}</span><span style="left:${D_LINE}%">${D_LINE}</span><span style="left:100%">100</span></div>
-    <div class="scale-track">
-     <div class="scale-seg" style="width:${A_LINE}%;background:var(--ok)"></div>
-     <div class="scale-seg" style="width:${D_LINE-A_LINE}%;background:var(--warn)"></div>
-     <div class="scale-seg" style="width:${100-D_LINE}%;background:var(--bad)"></div></div>
-    <div class="scale-labels">
-     <div class="slab" style="width:${A_LINE}%"><div class="sl-word" style="color:var(--ok)">APPROVE</div><div class="sl-sub">clear-cut, auto-approved</div></div>
-     <div class="slab" style="width:${D_LINE-A_LINE}%"><div class="sl-word" style="color:var(--warn)">MANUAL REVIEW</div><div class="sl-sub">a human sees the whole person</div></div>
-     <div class="slab" style="width:${100-D_LINE}%"><div class="sl-word" style="color:var(--bad)">DECLINE</div><div class="sl-sub">exceeds appetite / misrepresentation</div></div></div>
-   </div>
-   <div class="override-note"><span class="on-ic">⚠</span><div><b>Score-driven bands:</b> the composite score sets the decision. Material misrepresentation is the one hard override — it declines regardless of score. Other flags (conflicts, affordability, disclosed circumstances) are shown to the reviewer without changing the band.</div></div></div>
   <div class="card"><h3>Rule Engine — Factor Breakdown</h3>
    ${c.rule_factors.map(f=>`<div class="factor-row"><div><div class="factor-label">${f[0]}</div><div class="factor-detail">${f[1]}</div></div>
     <div class="factor-pts">${f[2]>0?'+':''}${f[2]}</div></div>`).join('')}
