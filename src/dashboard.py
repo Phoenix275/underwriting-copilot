@@ -324,7 +324,52 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 .doc-view{background:#141417;border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:-4px 0 12px}
 .doc-row.open .dstatus{color:var(--acc)}
 @media(max-width:900px){.ev-grid{grid-template-columns:1fr}}
+/* =================== LIGHT MODE (toggle) =================== */
+#themeToggle{position:fixed;top:14px;right:16px;z-index:2000;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:17px;line-height:1;cursor:pointer;box-shadow:0 6px 18px rgba(20,20,40,.28);display:flex;align-items:center;justify-content:center}
+#themeToggle:hover{filter:brightness(1.08)}
+:root[data-theme="light"]{
+ --bg:#E7E8F0;--card:#FFFFFF;--ink:#1B1B26;--mut:#5B5C69;--line:#E4E6EE;
+ --rail:#F5F6F9;--rail-2:#ECEEF3;
+ --acc:#5754F0;--acc-soft:rgba(87,84,240,.12);
+ --ok:#1B9D5E;--ok-soft:rgba(27,157,94,.14);
+ --warn:#B9781A;--warn-soft:rgba(200,130,24,.16);
+ --bad:#D0454A;--bad-soft:rgba(208,69,74,.12)}
+:root[data-theme="light"] body{background:var(--bg) !important;color:var(--ink)}
+:root[data-theme="light"] #app{background:#FFFFFF !important;box-shadow:0 18px 60px rgba(30,32,60,.18)}
+:root[data-theme="light"] .rail-brand h1{color:var(--ink) !important}
+:root[data-theme="light"] .rail-brand p,:root[data-theme="light"] .rail-sub,:root[data-theme="light"] .nav-head{color:var(--mut) !important}
+:root[data-theme="light"] .role-badge{background:var(--rail-2) !important}
+:root[data-theme="light"] .role-badge .rb-name{color:var(--ink)}
+:root[data-theme="light"] .overview-link{color:#3B3B47 !important}
+:root[data-theme="light"] .overview-link:hover{background:var(--rail-2) !important}
+:root[data-theme="light"] .ci-name{color:var(--ink) !important}
+:root[data-theme="light"] .case-item:hover,:root[data-theme="light"] .case-item.active{background:var(--rail-2) !important}
+:root[data-theme="light"] .pagination button{background:var(--rail-2) !important;color:var(--ink) !important}
+:root[data-theme="light"] .headline-score{background:#F7F8FC !important}
+:root[data-theme="light"] .doc-row,:root[data-theme="light"] .sub-score,:root[data-theme="light"] .drop-zone,:root[data-theme="light"] .form-grid input,:root[data-theme="light"] .form-grid select,:root[data-theme="light"] .fg-wide textarea{background:#F3F4F8 !important;color:var(--ink)}
+:root[data-theme="light"] .search-box{background:#F3F4F8 !important;color:var(--ink) !important}
+:root[data-theme="light"] .tab{background:#EDEFF4 !important}
+:root[data-theme="light"] .tab.active{background:var(--acc) !important;color:#fff !important}
+:root[data-theme="light"] .ai-btn,:root[data-theme="light"] .score-btn,:root[data-theme="light"] .login-btn{background:#EAECF2;color:var(--ink) !important}
+:root[data-theme="light"] .login-btn,:root[data-theme="light"] .score-btn{background:var(--acc) !important;color:#fff !important}
+:root[data-theme="light"] .score-chip{background:#EEF0F4}
+:root[data-theme="light"] .sc-bad{background:var(--bad-soft) !important;color:var(--bad) !important}
+:root[data-theme="light"] .status-chip,:root[data-theme="light"] .wf-chip{background:#EEF0F4 !important}
+:root[data-theme="light"] .wf-new{background:#E9EAEF !important;color:#5B5C69 !important}
+:root[data-theme="light"] .wf-in_review,:root[data-theme="light"] .wf-referred{color:var(--acc) !important}
+:root[data-theme="light"] .wf-declined{color:var(--bad) !important}
+:root[data-theme="light"] .sla-ok{background:#E9EAEF !important;color:#5B5C69 !important}
+:root[data-theme="light"] .seg{background:#EEF0F4}
+:root[data-theme="light"] .seg button.on{background:var(--acc);color:#fff}
+:root[data-theme="light"] .hist-track,:root[data-theme="light"] .coef-track{background:#EEF0F4 !important}
+:root[data-theme="light"] .appetite .lever,:root[data-theme="light"] .gauge-line,:root[data-theme="light"] .ev-opt,:root[data-theme="light"] .ev-rat,:root[data-theme="light"] .imm-note,:root[data-theme="light"] .role-badge{background:#F3F4F8 !important}
+:root[data-theme="light"] .doc-view{background:#F7F8FC}
+:root[data-theme="light"] .explain p{color:#33343E}
+:root[data-theme="light"] .scale-seg+.scale-seg{border-left-color:#fff}
+:root[data-theme="light"] #login{background:linear-gradient(160deg,#DDE0EC,#F5F6F9) !important}
+:root[data-theme="light"] .login-card input{background:#F3F4F8 !important;color:var(--ink) !important}
 </style>
+<button id="themeToggle" onclick="toggleTheme()" title="Toggle light / dark mode" aria-label="Toggle light or dark mode">🌙</button>
 <div id="login">
  <div class="login-card">
   <div class="brandmark">◆ UNDERWRITING COPILOT</div>
@@ -355,6 +400,12 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 <script>
 const DATA = /*__DATA__*/;
 const M = DATA.metrics, CASES = DATA.cases;
+/* ---------- light / dark theme toggle ---------- */
+function applyThemeIcon(){var b=document.getElementById('themeToggle');if(b)b.textContent=document.documentElement.getAttribute('data-theme')==='light'?'☀️':'🌙';}
+function toggleTheme(){var root=document.documentElement;var light=root.getAttribute('data-theme')!=='light';
+ root.setAttribute('data-theme',light?'light':'dark');
+ try{localStorage.setItem('uw_theme',light?'light':'dark');}catch(e){}applyThemeIcon();}
+(function(){try{if(localStorage.getItem('uw_theme')==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}applyThemeIcon();})();
 // Fixed decision bands (product owner): 0–50 APPROVE · 51–89 MANUAL REVIEW · 90–100 DECLINE.
 // A_LINE=51 → approve is score<51 (0–50); D_LINE=90 → review is 51–89, decline is ≥90.
 // The pipeline's STP-optimised export is intentionally ignored so the traffic-light lines
