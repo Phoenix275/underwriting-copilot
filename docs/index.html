@@ -446,6 +446,7 @@ CASES.forEach(c=>{(c.rule_factors||[]).forEach(f=>{if(f[1]==='Notable')f[1]='Fam
 let filtered=CASES.slice(),page=0,activeId=CASES[0].id,view="case",activeTab=4;const PAGE=20;
 let railScroll=0;                              // preserved list scroll (§3.3 back-button restores context)
 let prev={view:'space',space:'review'};        // where "back" returns to
+let caseNav=[];                                // ordered case IDs of the list a case was opened from — Next/Prev walks this
 const fmt$=n=>n==null?"—":"$"+Math.round(n).toLocaleString();
 /* ---------- workbench login (credential auth) ---------- */
 const ACCOUNTS={
@@ -704,7 +705,11 @@ function goManager(){view="manager";render();}
 function goExec(){view="executive";render();}
 function goAdmin(){view="admin";render();}
 function goScore(){view="score";render();}
-function sel(id){if(view!=='case')prev={view,space};activeId=id;view="case";const c=CASES.find(x=>x.id===id);activeTab=(c&&bucketOf(c)==='review')?5:4;render();}
+function sel(id){if(view!=='case'){prev={view,space};caseNav=currentList().map(x=>x.id);}activeId=id;view="case";const c=CASES.find(x=>x.id===id);activeTab=(c&&bucketOf(c)==='review')?5:4;render();}
+function selInNav(id){activeId=id;const c=CASES.find(x=>x.id===id);activeTab=(c&&bucketOf(c)==='review')?5:4;render();}
+function caseNavPos(){return caseNav.indexOf(activeId);}
+function nextCase(){const i=caseNavPos();if(i<0||i>=caseNav.length-1)return;selInNav(caseNav[i+1]);}
+function prevCase(){const i=caseNavPos();if(i<=0)return;selInNav(caseNav[i-1]);}
 function selTab(n){activeTab=n;render();}
 function render(){rail();main();}
 function buildNav(){
@@ -770,12 +775,14 @@ function spaceView(){
     <button class="${queueScope==='team'?'on':''}" onclick="setScope('team')">Whole team</button></div>`:'';
  let head,rows;
  if(isRev){
-  head=`<tr><th>#</th><th>Applicant</th><th>Case ID</th><th>Coverage</th><th>Time in queue</th><th>Requirements</th><th>AI recommendation</th><th></th></tr>`;
+  head=`<tr><th>#</th><th>Applicant</th><th>Case ID</th><th>Risk score</th><th>Coverage</th><th>Time in queue</th><th>Requirements</th><th>AI recommendation</th><th></th></tr>`;
   rows=list.slice(0,300).map((c,i)=>{const st=wfGet(c.id);
+    const sc=c.verdict==='red'?'sc-bad':c.verdict==='yellow'?'sc-warn':'sc-ok';
     return `<tr onclick="sel('${c.id}')" style="cursor:pointer">
       <td class="rank-num">${i+1}</td>
       <td><b>${c.name}</b><div style="font-size:11px;color:var(--mut)">${c.policy}</div></td>
       <td><span class="mono" style="font-weight:700;font-size:13px;white-space:nowrap">${c.id}</span></td>
+      <td><span class="score-chip ${sc}">${c.risk_score}</span></td>
       <td class="mono" style="white-space:nowrap">${fmt$(c.coverage)}</td>
       <td>${slaChip(c)}</td>
       <td>${reqOutstanding(c)}</td>
@@ -807,10 +814,37 @@ function spaceView(){
  }
  const breaches=isRev?list.filter(c=>ageHours(c)>=8).length:0;
  const banner=isRev?`<div class="verdict-banner v-yellow" style="margin-top:16px"><div class="vb-word">${list.length} case(s) ranked by coverage &amp; time in queue${breaches?` · ${breaches} over the 8h SLA`:''}</div><div class="vb-sub">Work top-down — most important first. These are the only cases needing a human; auto-approvals and auto-declines are filed separately. Anything over 8 hours in the queue is flagged red.</div></div>`:'';
+ // Bulk approve/decline (§4.4) — batch-affirm straight-through decisions into
+ // the recorded decision trail, top-right of the auto-decisioned spaces.
+ const canBulk=CURRENT_ROLE==='underwriter'&&(space==='auto_approved'||space==='auto_declined')&&list.length;
+ const bulkBtn=canBulk?`<button class="ai-btn" style="background:${space==='auto_approved'?'var(--ok)':'var(--bad)'}" onclick="bulkDecide('${space}')">${space==='auto_approved'?'✓ Bulk approve all':'✕ Bulk decline all'} (${list.length})</button>`:'';
  return `<div class="case-head"><div><h2>${meta[1]}</h2>
-    <div class="case-meta"><span>${list.length} case(s)</span><span>${meta[3]}</span></div>${toggle}</div></div>
+    <div class="case-meta"><span>${list.length} case(s)</span><span>${meta[3]}</span></div>${toggle}</div>${bulkBtn}</div>
    ${banner}
    <div class="card" style="margin-top:16px">${list.length?`<table class="xt">${head}${rows}</table>`:`<div class="note" style="margin:0">Nothing in this space right now.</div>`}</div>`;
+}
+function bulkDecide(sp){
+ // §4.4 guardrails: itemized confirm before acting, mandatory rationale, and
+ // every case written to the decision record individually and flagged "bulk".
+ const list=spaceCases(sp).filter(c=>!wfGet(c.id).decision);
+ if(!list.length){alert('Nothing left to act on in this space.');return;}
+ const kind=sp==='auto_approved'?'approve':'decline';
+ const labels={approve:'APPROVED',decline:'DECLINED'};
+ const totalCov=list.reduce((s,c)=>s+(c.coverage||0),0);
+ const preview=list.slice(0,8).map(c=>`${c.id} · ${fmt$(c.coverage)}`).join('\n')+(list.length>8?`\n…and ${list.length-8} more`:'');
+ const ok=confirm(`Bulk ${labels[kind]} ${list.length} case(s), ${fmt$(totalCov)} total coverage:\n\n${preview}\n\nEach case is written to the decision record individually, flagged "bulk".`);
+ if(!ok)return;
+ const rationale=(prompt('Rationale for this bulk '+labels[kind]+' — required, applied to every case listed above, logged individually:')||'').trim();
+ if(!rationale){alert('A rationale is required for a bulk decision.');return;}
+ list.forEach(c=>{
+  const st=wfGet(c.id);st.pulled=true;st.status=kind==='approve'?'approved':'declined';
+  st.decision={action:labels[kind],by:CURRENT_USER,role:CURRENT_ROLE,at:nowStr(),rationale:rationale,bulk:true};
+  st.history.push({by:CURRENT_USER,role:CURRENT_ROLE,at:nowStr(),action:labels[kind]+' (bulk) — "'+rationale+'"'});
+  wfSave(c.id,st);
+  const ov=getOverrides();ov[c.id]={decision:labels[kind],label:kind==='decline'?1:0,reason:rationale,at:st.decision.at};
+  localStorage.setItem('uw_overrides',JSON.stringify(ov));
+ });
+ render();
 }
 function main(){
  const el=document.getElementById('mainContent');
@@ -823,8 +857,16 @@ function main(){
  const c=CASES.find(x=>x.id===activeId);if(!c){el.innerHTML=spaceView();return;}
  const vm=VM[c.verdict];
  const afvm=c.afford?AFF[c.afford.verdict]:null;
+ const navPos=caseNavPos();
+ const navCtl=navPos>=0?`<div style="display:flex;gap:8px;align-items:center">
+    <button class="ai-btn" style="background:var(--rail-2)" ${navPos<=0?'disabled':''} onclick="prevCase()">‹ Prev</button>
+    <span class="mono" style="font-size:11px;color:var(--mut)">${navPos+1} of ${caseNav.length}</span>
+    <button class="ai-btn" style="background:var(--rail-2)" ${navPos>=caseNav.length-1?'disabled':''} onclick="nextCase()">Next ›</button></div>`:'';
+ const reco=caseRecommendation(c);
  el.innerHTML=`
-  <div style="margin-bottom:14px"><button class="ai-btn" style="background:var(--rail-2)" onclick="goBack()">← ${backLabel()}</button></div>
+  <div style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+   <button class="ai-btn" style="background:var(--rail-2)" onclick="goBack()">← ${backLabel()}</button>
+   ${navCtl}</div>
   <div class="case-head">
    <div><h2>${c.name}</h2>
     <div class="case-meta"><span class="mono" style="font-weight:700;color:var(--ink)">${c.id}</span><span>${c.occupation}</span><span>${c.city}, ${c.state}</span><span>${c.policy}</span></div></div>
@@ -833,7 +875,8 @@ function main(){
      <div class="hs-lab">Composite Risk Score</div></div>
     <div class="hs-class cls-${vm[1]}">${vm[0]}</div>
     <div style="text-align:center"><div class="hs-num" style="font-size:22px">${fmt$(c.coverage)}</div><div class="hs-lab" style="margin-top:4px">Coverage requested</div></div>
-    ${afvm?`<div style="text-align:center"><div class="hs-class cls-${afvm[1]}" style="font-size:13px">${c.afford.label}</div><div class="hs-lab" style="margin-top:4px">Financial Viability</div></div>`:''}</div></div>
+    ${afvm?`<div style="text-align:center"><div class="hs-class cls-${afvm[1]}" style="font-size:13px">${c.afford.label}</div><div class="hs-lab" style="margin-top:4px">Financial Viability</div></div>`:''}
+    <div style="text-align:center;padding-left:16px;border-left:1px solid var(--line)"><div style="font-size:14px;font-weight:700;color:var(--ink)">${reco[0]}</div><div class="hs-lab" style="margin-top:4px">AI recommendation · ${reco[1]}</div></div></div></div>
   ${topDriversHTML(c)}
   <div class="tabs">${[[1,'Application'],[2,'Documents'],[3,'Extraction & Conflicts'],[4,'Risk Score'],[5,'Decision']]
    .map(t=>`<div class="tab ${t[0]===activeTab?'active':''}" onclick="selTab(${t[0]})">${t[1]}</div>`).join('')}</div>
@@ -1635,7 +1678,10 @@ function scoreNow(){
 }
 render();
 // Esc returns from a case file to the queue with its context intact (§3.3).
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&view==='case'&&CURRENT_ROLE){goBack();}});
+document.addEventListener('keydown',e=>{if(!CURRENT_ROLE||view!=='case')return;
+ if(e.key==='Escape')goBack();
+ else if(e.key==='ArrowRight'&&!e.target.matches('input,textarea,select'))nextCase();
+ else if(e.key==='ArrowLeft'&&!e.target.matches('input,textarea,select'))prevCase();});
 // keep SLA timers + priority ranking live (queue/case views only, so forms aren't disturbed)
 setInterval(()=>{if(CURRENT_ROLE&&(view==='space'||view==='case'))render();},60000);
 </script>
