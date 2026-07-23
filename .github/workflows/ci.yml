@@ -62,10 +62,8 @@ jobs:
             echo "a local API URL leaked into the snapshot build"
             exit 1
           fi
-      - name: Committed copies must match the build
-        run: |
-          diff -q web/dist/index.html dashboard/underwriting_copilot_mvp.html
-          diff -q web/dist/index.html docs/index.html
+      # dashboard/ and docs/ now carry the classic dashboard.py artifact (the
+      # deployed UI), so they are no longer compared against the React build.
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
         working-directory: web

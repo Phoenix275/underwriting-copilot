@@ -311,7 +311,7 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
   <input id="loginPass" type="password" placeholder="password" onkeydown="if(event.key==='Enter')doLogin()">
   <div id="loginError" class="login-error"></div>
   <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign in →</button>
-  <div class="login-foot"><b>Demo accounts</b><br>Senior underwriter — <span class="mono">mrivera / senior</span><br>Mid-tier underwriter — <span class="mono">ewong / review</span><br>New analyst — <span class="mono">dpark / analyst</span><br>Manager — <span class="mono">rkubusada / oversight</span></div>
+  <div class="login-foot"><b>Demo accounts</b><br>Senior underwriter — <span class="mono">mrivera / senior</span><br>Mid-tier underwriter — <span class="mono">ewong / review</span><br>New analyst — <span class="mono">dpark / analyst</span><br>Manager — <span class="mono">nsethi / oversight</span></div>
  </div>
 </div>
 <div id="app">
@@ -375,7 +375,7 @@ const ACCOUNTS={
  dpark:{pw:"analyst",name:"Dana Park",role:"underwriter",tier:"analyst"},
  ewong:{pw:"review",name:"Erin Wong",role:"underwriter",tier:"mid"},
  mrivera:{pw:"senior",name:"Marcus Rivera",role:"underwriter",tier:"senior"},
- rkubusada:{pw:"oversight",name:"R. Kubusada",role:"manager"}
+ nsethi:{pw:"oversight",name:"Nadia Sethi",role:"manager"}
 };
 // the three underwriters cases get routed to, by experience tier
 const UWS={senior:{uid:"mrivera",name:"Marcus Rivera",label:"Senior"},

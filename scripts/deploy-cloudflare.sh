@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # Deploy the workbench to Cloudflare Pages.
 #
-# The app is one self-contained static file, so the deploy is just an asset
-# upload — no build step runs on Cloudflare's side. This script rebuilds the
-# snapshot locally, then uploads web/dist to the `underwriting-copilot` Pages
-# project.
+# The deployed UI is the classic dashboard (src/dashboard.py -> one
+# self-contained HTML file), so the deploy is just an asset upload — no build
+# runs on Cloudflare's side. This script regenerates that file from the current
+# pipeline output, refreshes the committed copies in dashboard/ and docs/, and
+# uploads it to the `underwriting-copilot` Pages project.
+# (The React app in web/ stays in the repo and CI but is not deployed.)
 #
 # Two gotchas this handles for you:
 #   1. wrangler needs Node >= 20.19; it prefers an nvm-managed 20.19+/22 if the
@@ -28,15 +30,18 @@ fi
 
 echo "node $(node -v)  ·  deploying $PROJECT"
 
-# Rebuild the shipping artifact so what we upload matches source.
-npm --prefix "$ROOT/web" run release
+# Regenerate the shipping artifact from the current pipeline output and keep
+# the committed copies in sync with what actually deploys.
+PY="$ROOT/.venv/bin/python"; [ -x "$PY" ] || PY=python3
+"$PY" "$ROOT/src/dashboard.py"
+cp "$ROOT/output/underwriting_copilot_mvp.html" "$ROOT/dashboard/underwriting_copilot_mvp.html"
+cp "$ROOT/output/underwriting_copilot_mvp.html" "$ROOT/docs/index.html"
 
-# Stage the upload: the build output stays a single index.html (CI enforces
-# that), so robots.txt / llms.txt live outside it in web/deploy and are copied
-# in only at publish time.
+# Stage the upload: the artifact is one HTML file; robots.txt / llms.txt live
+# outside it in web/deploy and are copied in only at publish time.
 PUBLISH="$(mktemp -d)"
 trap 'rm -rf "$PUBLISH"' EXIT
-cp "$ROOT/web/dist/index.html" "$PUBLISH/"
+cp "$ROOT/output/underwriting_copilot_mvp.html" "$PUBLISH/index.html"
 cp "$ROOT/web/deploy/robots.txt" "$ROOT/web/deploy/llms.txt" "$PUBLISH/"
 
 # Upload. `wrangler pages deploy` refuses to run without a TTY, so it is wrapped

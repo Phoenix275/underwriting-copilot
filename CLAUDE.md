@@ -30,18 +30,25 @@ from the Python output. **If you touch `engine.py`, port the change to `score.ts
 verify — CI enforces this.** Note: the browser composite uses logistic regression, not
 gradient boosting, because a boosted ensemble can't ship as coefficients.
 
-## Full rebuild (pipeline or front-end change)
+## What actually deploys (since 2026-07-23)
+
+**The deployed UI is the classic dashboard — `src/dashboard.py` → one self-contained
+HTML file — at underwriting-copilot.pages.dev.** The user chose to revert to it from the
+React app ("the one without the 3d design feature"). The React app in `web/` stays in the
+repo and CI but is **not deployed**.
 
 ```bash
 ./.venv/bin/python src/run_pipeline.py   # ~7s — needs the venv (joblib isn't on system python)
-./.venv/bin/python src/webdata.py        # export results into web/src/data/
-npm --prefix web run release             # verify → snapshot build → sync to dashboard/ and docs/
+./.venv/bin/python src/dashboard.py      # regenerate output/underwriting_copilot_mvp.html
+./scripts/deploy-cloudflare.sh           # regenerates + syncs dashboard/, docs/ + uploads
 ```
 
-`npm run release` = `verify` + `build:snapshot` + `sync`. `sync` copies `web/dist/index.html`
-to both `dashboard/underwriting_copilot_mvp.html` and `docs/index.html`. **CI fails if those
-committed copies drift from a fresh build**, if the build emits more than one file, if any
-tag references an external origin, or if a `localhost` API URL leaks into the snapshot.
+`dashboard/underwriting_copilot_mvp.html` and `docs/index.html` are committed copies of the
+dashboard.py artifact (the deploy script keeps them in sync). If you touch the React app
+instead: `./.venv/bin/python src/webdata.py` exports pipeline results into `web/src/data/`,
+and `npm --prefix web run release` = `verify` + `build:snapshot` (no sync — it no longer
+overwrites the deployed copies). CI still fails if the React build emits more than one file,
+references an external origin, or leaks a `localhost` API URL.
 
 ## Tests
 
@@ -55,16 +62,15 @@ npm --prefix web run test:e2e                          # Playwright: sign-in →
 ```
 
 CI (`.github/workflows/`) runs the pytest suite (Python 3.13) and the full web chain
-(typecheck → verify → snapshot build → single-file + no-external-origin checks → committed-copy
-diff → Playwright) on Node 20.
+(typecheck → verify → snapshot build → single-file + no-external-origin checks → Playwright)
+on Node 20. (The committed-copy diff was removed when dashboard.py became the deployed UI.)
 
-## Snapshot vs live
+## Snapshot vs live (React app — in repo, not deployed)
 
 The React app runs in two modes off the same source:
 
-- **Snapshot (default, the shipped artifact):** `--mode snapshot` forces `VITE_API_URL`
-  empty and inlines everything into one `dist/index.html`. This is what `release` builds
-  and what deploys.
+- **Snapshot (default):** `--mode snapshot` forces `VITE_API_URL`
+  empty and inlines everything into one `dist/index.html`. This is what `release` builds.
 - **Live:** point `VITE_API_URL` at the FastAPI service to read `GET /portfolio` and write
   decisions via `POST /cases/{id}/decision` (SQLite-backed). Falls back to the bundled book
   on any API failure.

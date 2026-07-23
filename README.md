@@ -65,10 +65,11 @@ The workbench front end is a Vite + React app in `web/`:
 npm --prefix web ci
 npm --prefix web run dev       # local dev server
 npm --prefix web run verify    # replay all 200 cases through the browser engine
-npm --prefix web run release   # verify → snapshot build → copy into dashboard/ and docs/
+npm --prefix web run release   # verify → snapshot build (React app; in repo, not deployed)
 ```
 
-Deploy the workbench to Cloudflare Pages (rebuilds, then uploads the single file):
+The deployed UI is the classic dashboard (`src/dashboard.py` → one self-contained HTML
+file). Deploy it to Cloudflare Pages (regenerates, syncs `dashboard/` + `docs/`, uploads):
 
 ```bash
 ./scripts/deploy-cloudflare.sh   # one-time setup: npx wrangler login

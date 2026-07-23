@@ -11,8 +11,7 @@
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "verify": "node scripts/verify-port.mjs",
-    "sync": "cp dist/index.html ../dashboard/underwriting_copilot_mvp.html && cp dist/index.html ../docs/index.html",
-    "release": "npm run verify && npm run build:snapshot && npm run sync",
+    "release": "npm run verify && npm run build:snapshot",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report"
