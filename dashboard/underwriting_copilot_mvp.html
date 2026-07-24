@@ -486,9 +486,6 @@ const TUTORIAL_STEPS=[
   do:`Click <b>Decision</b>.`,
   learn:`The system decision and rationale, the affordability screen, the case desk where you <b>Approve / Decline</b> (with a required reason) or request info — and the full <b>audit trail</b> of everything that happened.`,
   action:{label:`Show the Decision tab`,fn:()=>{selTab(5);}}},
- {title:`Move through cases fast`,
-  do:`Use the <b>‹ Prev / Next ›</b> buttons at the top of the case (or the ← / → keys).`,
-  learn:`Work the queue case-by-case without returning to the list. The back button restores your place in the queue.`},
  {title:`Bulk approve / decline`,
   do:`We'll take you to the Auto-Approved space.`,
   learn:`For straight-through decisions, the <b>top-right "Bulk approve all"</b> button batch-records them under one rationale — but each case is written to the audit trail individually.`,
@@ -509,9 +506,6 @@ const TUTORIAL_STEPS=[
   do:`We'll sign you in as operations admin.`,
   learn:`Priya Anand, ops. The full <b>decision feed</b> — every recorded decision, attributed and timestamped, <b>exportable to CSV/JSON</b> for compliance — plus the outstanding evidence-request queue raised by underwriters.`,
   action:{label:`Sign in as the admin`,fn:()=>tourLogin('panand','admin')}},
- {title:`Two more touches`,
-  do:`Try the <b>☀️/🌙 toggle</b> (top-right) and the <b>✕</b> on the review-queue banner.`,
-  learn:`Light/dark mode persists across visits, and the queue banner is dismissable. That's the whole product — you now know every feature.`},
  {title:`You're ready 🎉`,
   learn:`Re-launch this tour anytime from the <b>🎓 Tutorial</b> button. For talking points and a timed 5-minute demo script, see <span class="mono">docs/PRESENTATION_GUIDE.pdf</span>. Good luck!`}
 ];
