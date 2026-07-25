@@ -351,6 +351,22 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 /* =================== LIGHT MODE (toggle) =================== */
 #themeToggle{position:fixed;top:14px;right:16px;z-index:2000;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:17px;line-height:1;cursor:pointer;box-shadow:0 6px 18px rgba(20,20,40,.28);display:flex;align-items:center;justify-content:center}
 #themeToggle:hover{filter:brightness(1.08)}
+/* ---- sign-in whoosh: the wordmark flies through the camera into the workbench ---- */
+#whoosh{position:fixed;inset:0;z-index:2050;display:flex;align-items:center;justify-content:center;background:var(--bg);perspective:1000px;overflow:hidden;pointer-events:none;animation:whooshFade 1.15s cubic-bezier(.65,0,.35,1) forwards}
+#whoosh .wz{transform-style:preserve-3d;text-align:center;animation:whooshZoom 1.15s cubic-bezier(.5,0,.15,1) forwards}
+#whoosh .w-mark{font:800 clamp(34px,6vw,64px) 'Poppins',sans-serif;letter-spacing:-.5px;color:var(--ink)}
+#whoosh .w-mark b{color:var(--acc)}
+#whoosh .w-sub{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:3px;color:var(--mut);margin-top:12px}
+#whoosh .w-ring{position:absolute;left:50%;top:50%;width:340px;height:340px;margin:-170px 0 0 -170px;border:1.5px solid var(--acc);border-radius:50%;animation:whooshRing 1.15s cubic-bezier(.5,0,.15,1) forwards}
+@keyframes whooshZoom{0%{opacity:0;transform:translateZ(-420px) rotateX(16deg)}25%{opacity:1;transform:translateZ(-60px) rotateX(4deg)}48%{opacity:1;transform:translateZ(0) rotateX(0deg)}100%{opacity:0;transform:translateZ(860px) rotateX(-8deg)}}
+@keyframes whooshRing{0%{transform:scale(.15);opacity:0}40%{opacity:.35}100%{transform:scale(3.6);opacity:0}}
+@keyframes whooshFade{0%,74%{opacity:1}100%{opacity:0}}
+#app.app-reveal{animation:appReveal .8s .55s cubic-bezier(.22,1,.36,1) backwards}
+@keyframes appReveal{0%{opacity:0;transform:scale(.986) translateY(10px)}100%{opacity:1;transform:none}}
+.login-card{animation:loginIn .6s cubic-bezier(.22,1,.36,1) both}
+@keyframes loginIn{0%{opacity:0;transform:translateY(14px) scale(.985)}100%{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){#whoosh{display:none}#app.app-reveal,.login-card{animation:none}}
+.cap-cut td{text-align:center;font:600 10.5px 'JetBrains Mono',monospace;color:var(--warn);padding:10px 6px;border-top:2px dashed var(--warn) !important;border-bottom:2px dashed var(--warn);letter-spacing:.5px}
 /* interactive tutorial */
 #tourBtn{position:fixed;top:14px;right:66px;z-index:2000;height:40px;padding:0 16px;border-radius:999px;border:none;background:var(--acc);color:#fff;font:600 12.5px 'Poppins',sans-serif;cursor:pointer;box-shadow:0 6px 18px rgba(87,84,240,.4);display:flex;align-items:center;gap:6px}
 #tourBtn:hover{filter:brightness(1.07)}
@@ -454,7 +470,9 @@ function applyThemeIcon(){var b=document.getElementById('themeToggle');if(b)b.te
 function toggleTheme(){var root=document.documentElement;var light=root.getAttribute('data-theme')!=='light';
  root.setAttribute('data-theme',light?'light':'dark');
  try{localStorage.setItem('uw_theme',light?'light':'dark');}catch(e){}applyThemeIcon();}
-(function(){try{if(localStorage.getItem('uw_theme')==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}applyThemeIcon();})();
+// Light is the default; dark only when the user explicitly chose it before.
+(function(){var t='light';try{if(localStorage.getItem('uw_theme')==='dark')t='dark';}catch(e){}
+ if(t==='light')document.documentElement.setAttribute('data-theme','light');applyThemeIcon();})();
 /* ---------- interactive tutorial (learn every feature hands-on) ---------- */
 let tourIdx=0;
 function tourLogin(u,p){if(typeof CURRENT_ROLE!=='undefined'&&CURRENT_ROLE)signOut();
@@ -498,9 +516,9 @@ const TUTORIAL_STEPS=[
   do:`The Decision tab.`,
   learn:`The system decision and rationale, the affordability screen, the case desk where the underwriter <b>approves or declines</b> (with a required reason) or requests info — and the full <b>audit trail</b> of everything that happened on the case.`,
   action:{label:`Show the Decision tab`,fn:()=>{tourShowTab(5);}}},
- {title:`Bulk approve / decline`,
+ {title:`Auto-Approved — ranked for capacity`,
   do:`The Auto-Approved space.`,
-  learn:`For straight-through decisions, the <b>top-right "Bulk approve all"</b> button batch-records them under one rationale — but each case is still written to the audit trail individually.`,
+  learn:`Straight-through approvals, ranked <b>best candidate first</b> by expected underwriting margin — because a real book has a capacity constraint, and if you can only accept N cases this month, these are the N to take. The dashed line marks where the monthly appetite runs out. The <b>"Bulk approve all"</b> button batch-records them under one rationale, each case still written to the audit trail individually.`,
   action:{label:`Go to Auto-Approved`,fn:()=>{if(CURRENT_ROLE!=='underwriter')tourLogin('mrivera','senior');goSpace('auto_approved');}}},
  {title:`The Manager`,
   do:`Switching roles: signing in as the manager.`,
@@ -630,7 +648,19 @@ function doLogin(){
  else if(CURRENT_ROLE==='executive'){queueScope='team';view='executive';}
  else if(CURRENT_ROLE==='admin'){queueScope='team';view='admin';}
  else{queueScope='mine';space='review';view='space';}
- render();}
+ render();whooshPlay();}
+function whooshPlay(){
+ // 3D brand transition from sign-in into the workbench. Decorative only:
+ // pointer-events none, skipped entirely under prefers-reduced-motion.
+ try{if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;}catch(e){}
+ const old=document.getElementById('whoosh');if(old)old.remove();
+ const d=document.createElement('div');d.id='whoosh';
+ d.innerHTML='<div class="w-ring"></div><div class="wz"><div class="w-mark">Underwriting <b>Copilot</b></div><div class="w-sub">EXTRACTION · CONFLICT SCREEN · RISK SCORE · DECISION</div></div>';
+ document.body.appendChild(d);
+ const app=document.getElementById('app');
+ if(app){app.classList.remove('app-reveal');void app.offsetWidth;app.classList.add('app-reveal');}
+ setTimeout(()=>{d.remove();},1200);
+}
 function applyRole(){
  // nav (buildNav) shows the oversight links only for managers
  const badge=document.getElementById('roleBadge');
@@ -870,7 +900,7 @@ function closeQueueBanner(){try{localStorage.setItem('uw_queue_banner_closed','1
 const SPACES=[
  ["review","Review Queue","▣","Cases the system flagged for a human. These are the only cases you action."],
  ["completed","Completed","✓","Manual-review cases you've approved or declined."],
- ["auto_approved","Auto-Approved","⤴","Straight-through approvals — decided automatically, kept as a record."],
+ ["auto_approved","Auto-Approved","⤴","Straight-through approvals — ranked best candidate first by expected underwriting margin."],
  ["auto_declined","Auto-Declined","⤵","Straight-through declines — decided automatically, kept as a record."]];
 const SPACE_LABEL=Object.fromEntries(SPACES.map(s=>[s[0],s[1]]));
 let space='review';
@@ -878,10 +908,20 @@ function bucketOf(c){const st=wfGet(c.id);
  if(c.verdict==='yellow'||st.pulled)return st.decision?'completed':'review';
  return c.verdict==='green'?'auto_approved':'auto_declined';}
 function spaceCases(sp){return CASES.filter(c=>bucketOf(c)===sp);}
+function acceptMargin(c){
+ // Expected annual underwriting margin per accepted case: premium less SG&A
+ // less expected claims payout (same evidence-anchored model as the exec P&L).
+ // This is the "how good a candidate is this?" number a capacity-constrained
+ // book ranks its acceptances by.
+ return (c.premium||0)*(1-SGA_RATE)-expectedAnnualClaim(c);
+}
 function currentList(){let l=spaceCases(space);
  if(space==='review'){
   if(CURRENT_ROLE==='underwriter'&&queueScope==='mine')l=l.filter(c=>wfGet(c.id).assigneeUid===CURRENT_UID);
   l=l.slice().sort((a,b)=>priorityScore(b)-priorityScore(a));   // most important first
+ }
+ if(space==='auto_approved'){  // best candidate first — margin, then the cleaner score
+  l=l.slice().sort((a,b)=>(acceptMargin(b)-acceptMargin(a))||(a.risk_score-b.risk_score));
  }
  if(searchQ)l=l.filter(c=>c.name.toLowerCase().includes(searchQ)||c.id.toLowerCase().includes(searchQ));return l;}
 function setScope(s){queueScope=s;page=0;render();}
@@ -1030,6 +1070,26 @@ function spaceView(){
       <td>${reqOutstanding(c)}</td>
       <td>${aiRecoCol(c)}</td>
       <td style="text-align:right"><button class="ai-btn" onclick="event.stopPropagation();sel('${c.id}')">Review</button></td></tr>`;}).join('');
+ }else if(space==='auto_approved'){
+  // Ranked acceptance order for a capacity-constrained book (7/26 request):
+  // best candidate first by expected margin, with the appetite cutoff drawn in.
+  let cum=0,cut=-1;
+  list.forEach((c,i)=>{cum+=(c.coverage||0);if(cut<0&&cum>APPETITE_MONTHLY)cut=i;});
+  head=`<tr><th>Rank</th><th>Applicant</th><th>Case ID</th><th>Risk score</th><th>Coverage</th><th>Premium /yr</th><th>Expected margin /yr</th><th>Margin</th><th>Status</th></tr>`;
+  rows=list.slice(0,300).map((c,i)=>{const st=wfGet(c.id);
+    const m=acceptMargin(c);const mp=c.premium?m/c.premium*100:0;
+    const over=cut>=0&&i>=cut;
+    const divider=(cut>=0&&i===cut)?`<tr class="cap-cut"><td colspan="9">MONTHLY APPETITE ${fmtBigMoney(APPETITE_MONTHLY)} REACHED — CASES BELOW QUEUE FOR NEXT MONTH'S CAPACITY</td></tr>`:'';
+    return divider+`<tr onclick="sel('${c.id}')" style="cursor:pointer${over?';opacity:.55':''}">
+      <td class="rank-num">${i+1}</td>
+      <td><b>${c.name}</b><div style="font-size:11px;color:var(--mut)">${c.policy}</div></td>
+      <td><span class="mono" style="font-weight:700;font-size:13px;white-space:nowrap">${c.id}</span></td>
+      <td><span class="score-chip sc-ok">${c.risk_score}</span></td>
+      <td class="mono" style="white-space:nowrap">${fmt$(c.coverage)}</td>
+      <td class="mono" style="white-space:nowrap">${fmt$(c.premium)}</td>
+      <td class="mono" style="white-space:nowrap;font-weight:600;color:${m>=0?'var(--ok)':'var(--bad)'}">${m>=0?'':'−'}${fmt$(Math.abs(m))}</td>
+      <td><span class="pri-chip" style="background:${mp>=35?'var(--ok)':mp>=15?'var(--warn)':'var(--bad)'}">${mp.toFixed(0)}%</span></td>
+      <td>${over?'<span class="pri-chip" style="background:var(--warn)">NEXT MONTH</span>':`<span class="status-chip wf-${st.status}">${WF_LABEL[st.status]}</span>`}</td></tr>`;}).join('');
  }else{
   const isDone=space==='completed';
   head=isDone
@@ -1060,9 +1120,10 @@ function spaceView(){
  // the recorded decision trail, top-right of the auto-decisioned spaces.
  const canBulk=CURRENT_ROLE==='underwriter'&&(space==='auto_approved'||space==='auto_declined')&&list.length;
  const bulkBtn=canBulk?`<button class="ai-btn" style="background:${space==='auto_approved'?'var(--ok)':'var(--bad)'}" onclick="bulkDecide('${space}')">${space==='auto_approved'?'✓ Bulk approve all':'✕ Bulk decline all'} (${list.length})</button>`:'';
+ const rankBanner=(space==='auto_approved'&&list.length)?`<div class="verdict-banner v-green" style="margin-top:16px"><div class="vb-word">Ranked best candidate first — for a capacity-constrained book</div><div class="vb-sub">A real book can only take on so much cover per period. These straight-through approvals are ordered by <b>expected annual underwriting margin</b> (premium − expected claims payout − SG&amp;A, the same evidence-anchored model as the executive P&amp;L), lower risk score breaking ties. If capacity only allows N acceptances this month, take them from the top; the dashed line marks where cumulative coverage reaches the monthly appetite.</div></div>`:'';
  return `<div class="case-head"><div><h2>${meta[1]}</h2>
     <div class="case-meta"><span>${list.length} case(s)</span><span>${meta[3]}</span></div>${toggle}</div>${bulkBtn}</div>
-   ${banner}
+   ${banner}${rankBanner}
    <div class="card" style="margin-top:16px">${list.length?`<table class="xt">${head}${rows}</table>`:`<div class="note" style="margin:0">Nothing in this space right now.</div>`}</div>`;
 }
 function bulkDecide(sp){
@@ -1475,6 +1536,14 @@ function adminView(){
  const evList=ev.length?ev.map(e=>`<div class="feed-row"><span class="feed-when">${e.at}</span>
     <span class="feed-what"><span class="status-chip wf-info_requested">${e.status}</span> <span class="mono" style="cursor:pointer;color:var(--acc)" onclick="sel('${e.caseId}')">${e.caseId}</span> ${e.name} — ${e.labels}<div style="color:var(--mut);font-size:12px;margin-top:2px">“${e.rationale}”${e.flags&&e.flags.length?` · <span style="color:var(--warn)">${e.flags.length} pre-check flag(s) acknowledged</span>`:''}</div></span>
     <span class="feed-who">${e.by||''}</span></div>`).join(''):'<div class="note" style="margin:0">No outstanding evidence requests.</div>';
+ // Operations control (7/26): the admin desk is more than a decision feed —
+ // SLA watch, evidence chasing, and workload balance are ops-owned levers.
+ const reviewCases=CASES.filter(c=>c.verdict==='yellow'&&!wfGet(c.id).decision);
+ const slaBreaches=reviewCases.filter(c=>ageHours(c)>=8);
+ const oldest=reviewCases.slice().sort((a,b)=>ageHours(b)-ageHours(a))[0];
+ const deskLoad={};reviewCases.forEach(c=>{const t=wfGet(c.id).tier||'unassigned';deskLoad[t]=(deskLoad[t]||0)+1;});
+ const deskChips=Object.entries(deskLoad).map(([t,k])=>`<span class="pri-chip" style="background:var(--acc)">${(UWS[t]||{}).label||t} · ${k}</span>`).join(' ');
+ const evOpen=ev.filter(e=>e.status==='info_requested'||!e.status).length;
  return `<div class="case-head"><div><h2>Decision Feed</h2>
    <div class="case-meta"><span>Operations administrator</span><span>${dec.length} recorded decision(s)</span><span>${ev.length} evidence request(s)</span></div></div></div>
   <div class="grid3" style="margin-top:18px">
@@ -1482,6 +1551,14 @@ function adminView(){
    ${tile(nInfo,'<b>Info / evidence requested</b> — awaiting third parties','var(--warn)')}
    ${tile(nDeclined,'<b>Declined</b> — decisions recorded this session','var(--bad)')}
   </div>
+  <div class="card" style="margin-top:16px"><h3>Operations control — the desk beyond the feed</h3>
+   <div class="grid3">
+    ${tile(slaBreaches.length,'<b>SLA breaches</b> — review cases over the 8-hour line, chase the assigned desk',slaBreaches.length?'var(--bad)':'var(--ok)')}
+    ${tile(evOpen,'<b>Evidence being chased</b> — open third-party requests (APS, labs, MVR)','var(--warn)')}
+    ${tile(oldest?fmtAge(ageHours(oldest)):'—','<b>Oldest case in queue</b>'+(oldest?' — <span class="mono">'+oldest.id+'</span> '+oldest.name:''))}
+   </div>
+   <div style="margin-top:12px"><b style="font-size:13px">Workload by desk</b> &nbsp;${deskChips||'<span class="note">no referred cases assigned</span>'}</div>
+   <div class="note" style="margin-top:10px">Ops owns the flow, not the risk call: watching SLAs, chasing evidence vendors, rebalancing desks when one underwriter backs up, and keeping the audit package export-ready below.</div></div>
   <div class="card" style="margin-top:16px"><div class="ai-head"><h3 style="margin:0">Decision trail — every recorded decision, newest first</h3>
     <div><button class="ai-btn" onclick="exportDecisions('csv')">⬇ CSV</button> <button class="ai-btn" style="background:var(--acc)" onclick="exportDecisions('json')">⬇ JSON</button></div></div>
    ${feed}
