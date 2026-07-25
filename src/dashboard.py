@@ -352,21 +352,45 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 #themeToggle{position:fixed;top:14px;right:16px;z-index:2000;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:17px;line-height:1;cursor:pointer;box-shadow:0 6px 18px rgba(20,20,40,.28);display:flex;align-items:center;justify-content:center}
 #themeToggle:hover{filter:brightness(1.08)}
 /* ---- sign-in whoosh: the wordmark flies through the camera into the workbench ---- */
-#whoosh{position:fixed;inset:0;z-index:2050;display:flex;align-items:center;justify-content:center;background:var(--bg);perspective:1000px;overflow:hidden;pointer-events:none;animation:whooshFade 1.15s cubic-bezier(.65,0,.35,1) forwards}
-#whoosh .wz{transform-style:preserve-3d;text-align:center;animation:whooshZoom 1.15s cubic-bezier(.5,0,.15,1) forwards}
-#whoosh .w-mark{font:800 clamp(34px,6vw,64px) 'Poppins',sans-serif;letter-spacing:-.5px;color:var(--ink)}
-#whoosh .w-mark b{color:var(--acc)}
-#whoosh .w-sub{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:3px;color:var(--mut);margin-top:12px}
-#whoosh .w-ring{position:absolute;left:50%;top:50%;width:340px;height:340px;margin:-170px 0 0 -170px;border:1.5px solid var(--acc);border-radius:50%;animation:whooshRing 1.15s cubic-bezier(.5,0,.15,1) forwards}
+#whoosh{position:fixed;inset:0;z-index:2050;display:flex;align-items:center;justify-content:center;background:var(--bg);perspective:1000px;overflow:hidden;pointer-events:none;animation:whooshFade 1.7s cubic-bezier(.65,0,.35,1) forwards}
+#whoosh .wz{transform-style:preserve-3d;text-align:center;animation:whooshZoom 1.7s cubic-bezier(.5,0,.15,1) forwards}
+#whoosh .w-mark,#landing .w-mark{font:800 clamp(34px,6vw,64px) 'Poppins',sans-serif;letter-spacing:-.5px;color:var(--ink)}
+#whoosh .w-mark b,#landing .w-mark b{color:var(--acc)}
+#whoosh .w-sub,#landing .w-sub{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:3px;color:var(--mut);margin-top:12px}
+#whoosh .w-ring{position:absolute;left:50%;top:50%;width:340px;height:340px;margin:-170px 0 0 -170px;border:1.5px solid var(--acc);border-radius:50%;animation:whooshRing 1.7s cubic-bezier(.5,0,.15,1) forwards}
 @keyframes whooshZoom{0%{opacity:0;transform:translateZ(-420px) rotateX(16deg)}25%{opacity:1;transform:translateZ(-60px) rotateX(4deg)}48%{opacity:1;transform:translateZ(0) rotateX(0deg)}100%{opacity:0;transform:translateZ(860px) rotateX(-8deg)}}
 @keyframes whooshRing{0%{transform:scale(.15);opacity:0}40%{opacity:.35}100%{transform:scale(3.6);opacity:0}}
 @keyframes whooshFade{0%,74%{opacity:1}100%{opacity:0}}
-#app.app-reveal{animation:appReveal .8s .55s cubic-bezier(.22,1,.36,1) backwards}
+#app.app-reveal{animation:appReveal .95s .85s cubic-bezier(.22,1,.36,1) backwards}
 @keyframes appReveal{0%{opacity:0;transform:scale(.986) translateY(10px)}100%{opacity:1;transform:none}}
 .login-card{animation:loginIn .6s cubic-bezier(.22,1,.36,1) both}
 @keyframes loginIn{0%{opacity:0;transform:translateY(14px) scale(.985)}100%{opacity:1;transform:none}}
 @media (prefers-reduced-motion: reduce){#whoosh{display:none}#app.app-reveal,.login-card{animation:none}}
 .cap-cut td{text-align:center;font:600 10.5px 'JetBrains Mono',monospace;color:var(--warn);padding:10px 6px;border-top:2px dashed var(--warn) !important;border-bottom:2px dashed var(--warn);letter-spacing:.5px}
+/* ---- landing scene: orbiting case artifacts around the wordmark, before sign-in ---- */
+#landing{position:fixed;inset:0;z-index:1600;background:var(--bg);display:flex;align-items:center;justify-content:center;overflow:hidden;font-family:'Poppins',sans-serif}
+#landing .ld-glow{position:absolute;border-radius:50%;filter:blur(90px);opacity:.16;animation:ldDrift 16s ease-in-out infinite alternate}
+#landing .ld-glow.g1{width:540px;height:540px;left:-120px;top:-120px;background:var(--acc)}
+#landing .ld-glow.g2{width:440px;height:440px;right:-100px;bottom:-100px;background:var(--ok);animation-duration:21s}
+@keyframes ldDrift{0%{transform:translate(0,0) scale(1)}100%{transform:translate(70px,45px) scale(1.16)}}
+#landing .ld-rings i{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border:1px solid var(--acc);border-radius:50%;opacity:.12}
+#landing .ld-rings i:nth-child(1){width:430px;height:430px}
+#landing .ld-rings i:nth-child(2){width:660px;height:660px;opacity:.08}
+#landing .ld-rings i:nth-child(3){width:900px;height:900px;opacity:.05}
+#landing .ld-orbits{position:absolute;left:50%;top:50%;z-index:1}
+#landing .ld-orb{position:absolute;left:0;top:0;padding:7px 12px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--mut);font:600 11px 'JetBrains Mono',monospace;letter-spacing:.4px;white-space:nowrap;box-shadow:0 8px 24px rgba(20,20,40,.12);animation:ldOrbit var(--t) linear infinite}
+#landing .ld-orb.far{opacity:.55;filter:blur(.4px);font-size:10px}
+@keyframes ldOrbit{0%{transform:translate(-50%,-50%) rotate(var(--a)) translateX(var(--r)) rotate(calc(-1*var(--a)))}100%{transform:translate(-50%,-50%) rotate(calc(var(--a) + 360deg)) translateX(var(--r)) rotate(calc(-1*var(--a) - 360deg))}}
+#landing .ld-center{position:relative;text-align:center;z-index:3;animation:ldIn 1.1s cubic-bezier(.22,1,.36,1) both}
+@keyframes ldIn{0%{opacity:0;transform:translateY(20px) scale(.965)}100%{opacity:1;transform:none}}
+#landing .ld-tag{font:500 13px 'Poppins',sans-serif;color:var(--mut);margin-top:16px}
+#landing .ld-btn{margin-top:26px;padding:13px 42px;border-radius:999px;border:none;background:var(--acc);color:#fff;font:600 15px 'Poppins',sans-serif;cursor:pointer;box-shadow:0 10px 30px rgba(106,103,247,.4);transition:transform .2s,box-shadow .2s}
+#landing .ld-btn:hover{transform:translateY(-2px);box-shadow:0 14px 38px rgba(106,103,247,.55)}
+#landing.out{animation:ldOut .9s cubic-bezier(.5,0,.15,1) forwards;pointer-events:none}
+@keyframes ldOut{0%{opacity:1}100%{opacity:0}}
+#landing.out .ld-center{animation:ldCenterOut .9s cubic-bezier(.5,0,.15,1) forwards}
+@keyframes ldCenterOut{0%{opacity:1;transform:none}100%{opacity:0;transform:scale(5.5)}}
+@media (prefers-reduced-motion: reduce){#landing .ld-orb,#landing .ld-glow,#landing .ld-center{animation:none}}
 /* interactive tutorial */
 #tourBtn{position:fixed;top:14px;right:66px;z-index:2000;height:40px;padding:0 16px;border-radius:999px;border:none;background:var(--acc);color:#fff;font:600 12.5px 'Poppins',sans-serif;cursor:pointer;box-shadow:0 6px 18px rgba(87,84,240,.4);display:flex;align-items:center;gap:6px}
 #tourBtn:hover{filter:brightness(1.07)}
@@ -435,6 +459,27 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 <button id="themeToggle" onclick="toggleTheme()" title="Toggle light / dark mode" aria-label="Toggle light or dark mode">🌙</button>
 <button id="tourBtn" onclick="tourStart()" title="Interactive tutorial — learn every feature">🎓 Tutorial</button>
 <div id="tourPanel"></div>
+<div id="landing">
+ <div class="ld-glow g1"></div><div class="ld-glow g2"></div>
+ <div class="ld-rings"><i></i><i></i><i></i></div>
+ <div class="ld-orbits">
+  <span class="ld-orb" style="--r:305px;--t:34s;--a:15deg">RISK 24</span>
+  <span class="ld-orb" style="--r:305px;--t:34s;--a:105deg">DOB ✓ VERIFIED</span>
+  <span class="ld-orb" style="--r:305px;--t:34s;--a:195deg">STP 77%</span>
+  <span class="ld-orb" style="--r:305px;--t:34s;--a:285deg">6-CHECK SCREEN</span>
+  <span class="ld-orb far" style="--r:455px;--t:52s;--a:0deg">APS ORDERED</span>
+  <span class="ld-orb far" style="--r:455px;--t:52s;--a:72deg">COTININE −</span>
+  <span class="ld-orb far" style="--r:455px;--t:52s;--a:144deg">AUC 0.92</span>
+  <span class="ld-orb far" style="--r:455px;--t:52s;--a:216deg">$487k /YR</span>
+  <span class="ld-orb far" style="--r:455px;--t:52s;--a:288deg">ACORD 103</span>
+ </div>
+ <div class="ld-center">
+  <div class="w-mark">Underwriting <b>Copilot</b></div>
+  <div class="w-sub">EXTRACTION · CONFLICT SCREEN · RISK SCORE · DECISION</div>
+  <div class="ld-tag">Every application read, screened, scored and routed — a human on every borderline call.</div>
+  <button class="ld-btn" onclick="landingGo()">Login →</button>
+ </div>
+</div>
 <div id="login">
  <div class="login-card">
   <div class="brandmark">◆ UNDERWRITING COPILOT</div>
@@ -539,7 +584,8 @@ const TUTORIAL_STEPS=[
  {title:`That's the whole product 🎉`,
   learn:`Every application read, screened, scored, and routed — with a human on every borderline call and an audit trail behind every decision. This tour can be re-launched anytime from the <b>🎓 Tutorial</b> button.`}
 ];
-function tourStart(){tourIdx=0;const p=document.getElementById('tourPanel');if(p)p.classList.add('on');tourRender();}
+function tourStart(){const ld=document.getElementById('landing');if(ld)ld.remove();
+ tourIdx=0;const p=document.getElementById('tourPanel');if(p)p.classList.add('on');tourRender();}
 function tourExit(){const p=document.getElementById('tourPanel');if(p)p.classList.remove('on');}
 function tourGo(d){tourIdx=Math.max(0,Math.min(TUTORIAL_STEPS.length-1,tourIdx+d));tourRender();}
 function tourAct(){const s=TUTORIAL_STEPS[tourIdx];if(s&&s.action&&s.action.fn){s.action.fn();document.getElementById('tourPanel').classList.add('on');}}
@@ -636,6 +682,7 @@ const UWS={senior:{uid:"mrivera",name:"Marcus Rivera",label:"Senior"},
 let CURRENT_ROLE=null, CURRENT_USER="", CURRENT_UID="", CURRENT_TIER="";
 function loginErr(m){const e=document.getElementById('loginError');if(e)e.textContent=m;}
 function doLogin(){
+ const _ld=document.getElementById('landing');if(_ld)_ld.remove();   // tour / direct logins skip the landing
  const u=(document.getElementById('loginUser').value||'').trim().toLowerCase();
  const p=document.getElementById('loginPass').value||'';
  const acct=ACCOUNTS[u];
@@ -659,7 +706,16 @@ function whooshPlay(){
  document.body.appendChild(d);
  const app=document.getElementById('app');
  if(app){app.classList.remove('app-reveal');void app.offsetWidth;app.classList.add('app-reveal');}
- setTimeout(()=>{d.remove();},1200);
+ setTimeout(()=>{d.remove();},1750);
+}
+function landingGo(){
+ // Landing → sign-in: the center zooms through the camera, echoing the whoosh.
+ const ld=document.getElementById('landing');if(!ld)return;
+ try{if(matchMedia('(prefers-reduced-motion: reduce)').matches){ld.remove();return;}}catch(e){}
+ ld.classList.add('out');
+ const card=document.querySelector('.login-card');
+ if(card){card.style.animation='none';void card.offsetWidth;card.style.animation='';}
+ setTimeout(()=>{ld.remove();},950);
 }
 function applyRole(){
  // nav (buildNav) shows the oversight links only for managers
