@@ -281,13 +281,18 @@ def ml_scores(models, df):
 APPROVE_LINE = 50   # defaults; run_pipeline passes STP-optimised lines instead
 DECLINE_LINE = 90
 
-MISREP_TYPES = {"smoker_nondisclosure", "dob_mismatch"}
+# Material misrepresentation = evidence contradicts a sworn answer (fraud signal).
+# A DOB mismatch is a data-entry discrepancy, not fraud (7/24 carrier feedback):
+# it forces a human verification pass, never an auto-decline.
+MISREP_TYPES = {"smoker_nondisclosure"}
+DATA_DISCREPANCY_TYPES = {"dob_mismatch"}
 
 def decide(rule_s, ml_s, conflicts, unique=None, a_line=APPROVE_LINE, d_line=DECLINE_LINE,
            afford=None):
     composite = int(round(0.5 * rule_s + 0.5 * ml_s))
     majors = [c for c in conflicts if c["severity"] == "major"]
     misrep = [c for c in majors if c["type"] in MISREP_TYPES]
+    discrepancy = [c for c in majors if c["type"] in DATA_DISCREPANCY_TYPES]
     afford_fail = bool(afford and afford["verdict"] == "fail")
     reasons = []
     if misrep:
@@ -314,6 +319,10 @@ def decide(rule_s, ml_s, conflicts, unique=None, a_line=APPROVE_LINE, d_line=DEC
             reasons.append(f"Composite score {composite} sits in the {a_line}–{d_line - 1} referral band")
         if abs(rule_s - ml_s) > 20:
             reasons.append(f"Rule engine ({rule_s}) and ML model ({ml_s:.0f}) disagree materially")
+        if discrepancy:
+            rate = "Referred — Data Discrepancy (Verify)"
+            reasons.append("Data discrepancy — DOB on the application does not match the "
+                           "paramedical/ID; likely a data-entry error. Verify before proceeding.")
     else:
         verdict, decision = "green", "APPROVE"
         rate = "Preferred Rate Class" if composite <= 25 else "Standard Rate Class"

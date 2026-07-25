@@ -387,7 +387,11 @@ export function affordabilityAssess(
 
 /* ------------------------------------------------------------------ decide -- */
 
-const MISREP_TYPES = new Set(['smoker_nondisclosure', 'dob_mismatch'])
+// Material misrepresentation = evidence contradicts a sworn answer (fraud signal).
+// A DOB mismatch is a data-entry discrepancy, not fraud (7/24 carrier feedback):
+// it forces a human verification pass, never an auto-decline.
+const MISREP_TYPES = new Set(['smoker_nondisclosure'])
+const DATA_DISCREPANCY_TYPES = new Set(['dob_mismatch'])
 
 export interface Decision {
   decision: 'APPROVE' | 'MANUAL REVIEW' | 'DECLINE'
@@ -416,6 +420,7 @@ export function decide(
   const composite = Math.round(0.5 * ruleS + 0.5 * mlS)
   const majors = conflicts.filter((c) => c.severity === 'major')
   const misrep = majors.filter((c) => MISREP_TYPES.has(c.type))
+  const discrepancy = majors.filter((c) => DATA_DISCREPANCY_TYPES.has(c.type))
   const affordFail = afford?.verdict === 'fail'
   const reasons: string[] = []
 
@@ -465,6 +470,12 @@ export function decide(
     if (Math.abs(ruleS - mlS) > 20) {
       reasons.push(
         `Rule engine (${ruleS}) and ML model (${mlS.toFixed(0)}) disagree materially`,
+      )
+    }
+    if (discrepancy.length) {
+      rate = 'Referred — Data Discrepancy (Verify)'
+      reasons.push(
+        'Data discrepancy — DOB on the application does not match the paramedical/ID; likely a data-entry error. Verify before proceeding.',
       )
     }
   } else {

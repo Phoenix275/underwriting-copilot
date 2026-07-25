@@ -473,7 +473,7 @@ const TUTORIAL_STEPS=[
   learn:`Only the 51–89 cases that need a human land here. It's ranked by <b>coverage + time-in-queue</b> — not risk score, so the model never decides who gets looked at first. Each row carries an actionable <b>AI recommendation</b> on the right. Auto-approvals and auto-declines are filed in the spaces on the left rail.`},
  {title:`A case the system flagged`,
   do:`Opening a case flagged for a conflict.`,
-  learn:`This applicant was declined for a <b>date-of-birth mismatch</b>. The red <b>conflict alert</b> at the top names exactly what's wrong — the two mismatched dates — and "Top drivers of this decision" explains why, right under the name. Nobody has to hunt for the problem.`,
+  learn:`This applicant has a <b>date-of-birth mismatch</b> across documents. The amber alert at the top flags it as a <b>data discrepancy — verify</b>: likely a data-entry mistake, not fraud, so the system routes it to a human instead of auto-declining. The two mismatched dates are named right under the applicant's name — nobody has to hunt for the problem.`,
   action:{label:`Open a flagged case`,fn:()=>tourOpenConflictCase()}},
  {title:`Application tab — read-only`,
   do:`The Application tab.`,
@@ -512,7 +512,7 @@ const TUTORIAL_STEPS=[
   action:{label:`Open the Model Card`,fn:()=>{if(CURRENT_ROLE!=='manager')tourLogin('nsethi','oversight');goOverview();}}},
  {title:`The Executive view`,
   do:`Switching roles: signing in as the Chief Underwriting Officer.`,
-  learn:`Marcus Vale, CUO. A <b>money-only</b> view — coverage accepted vs declined, YoY approval, total risk underwritten this month vs last year, and how the book tracks against its monthly <b>appetite</b>. No individual cases, and no other role sees this.`,
+  learn:`Marcus Vale, CUO. A <b>money-only</b> view — coverage accepted vs declined, and a full <b>portfolio P&L</b>: expected claims payout against the approved premium, SG&A, the cost to underwrite, down to <b>operating income</b> and the combined ratio. Plus the cost-per-application economics that make small-premium policies viable. No individual cases, and no other role sees this.`,
   action:{label:`Sign in as the executive`,fn:()=>tourLogin('mvale','executive')}},
  {title:`The Operations Admin`,
   do:`Switching roles: signing in as operations admin.`,
@@ -549,27 +549,37 @@ const AFF={pass:["AFFORDABLE","ok"],strain:["STRAINED","warn"],fail:["NOT JUSTIF
 const bandOf=s=>s<A_LINE?"green":s<D_LINE?"yellow":"red";
 const band=s=>s<=25?["Low","var(--ok)"]:s<A_LINE?["Moderate","var(--ok)"]:s<D_LINE?["Elevated","var(--warn)"]:["High","var(--bad)"];
 // thresholds moved to 50/90 — recompute every case's verdict client-side so the whole app is consistent (no pipeline rerun)
-const MISREP=new Set(['smoker_nondisclosure','dob_mismatch']);
+// Material misrepresentation = evidence contradicts a sworn answer (fraud → decline).
+// A DOB mismatch is a data-entry discrepancy, not fraud (7/24 carrier feedback):
+// it forces a manual verification pass, never an auto-decline.
+const MISREP=new Set(['smoker_nondisclosure']);
+const DATA_FLAG=new Set(['dob_mismatch']);
 function recomputeVerdicts(){
  CASES.forEach(c=>{
   const comp=c.risk_score,conf=c.conflicts||[];
   const majors=conf.filter(k=>k.severity==='major');
   const misrep=majors.filter(k=>MISREP.has(k.type));
+  const disc=majors.filter(k=>DATA_FLAG.has(k.type));
   const reasons=[];let verdict,decision,rate;
   // Score-driven bands: the composite score alone sets the decision. Material
   // misrepresentation is the one hard override (fraud → decline regardless of
-  // score). Conflicts, affordability and disclosed circumstances are surfaced
-  // as flags for the reviewer but no longer change the band.
+  // score); a data discrepancy (DOB mismatch) forces manual review — a human
+  // verifies the data-entry mistake, whatever the score. Other conflicts,
+  // affordability and disclosed circumstances are surfaced as flags for the
+  // reviewer but no longer change the band.
   if(misrep.length){verdict='red';decision='DECLINE';rate='Declined — Material Misrepresentation';
     reasons.push('Application materially contradicts medical/identity evidence: '+misrep.map(k=>k.type.replace(/_/g,' ')).join('; '));}
   else if(comp>=D_LINE){verdict='red';decision='DECLINE';rate='Declined — Risk Exceeds Appetite';
     reasons.push(`Composite risk score ${comp}/100 is at or above the ${D_LINE}-point decline line`);}
+  else if(disc.length){verdict='yellow';decision='MANUAL REVIEW';rate='Referred — Data Discrepancy (Verify)';
+    reasons.push(`Data discrepancy — the date of birth on the application does not match the paramedical/ID. Likely a data-entry mistake, not fraud: verify before proceeding. Composite score ${comp} would otherwise ${comp<A_LINE?'auto-approve':'refer on score'}.`);}
   else if(comp>=A_LINE){verdict='yellow';decision='MANUAL REVIEW';rate='Referred — Senior Underwriter Review';
     reasons.push(`Composite score ${comp} sits in the ${A_LINE}–${D_LINE-1} manual-review band`);}
   else{verdict='green';decision='APPROVE';rate=comp<=25?'Preferred Rate Class':'Standard Rate Class';
     reasons.push(`Composite score ${comp} is below the ${A_LINE}-point approval line`);}
   if(verdict!=='red'){   // informational flags — do not change the band
-    if(majors.length)reasons.push(`Flag: ${majors.length} major data conflict(s) for the reviewer — `+majors.map(k=>k.type.replace(/_/g,' ')).join('; '));
+    const flagMajors=majors.filter(k=>!DATA_FLAG.has(k.type));   // discrepancies already lead the reasons
+    if(flagMajors.length)reasons.push(`Flag: ${flagMajors.length} major data conflict(s) for the reviewer — `+flagMajors.map(k=>k.type.replace(/_/g,' ')).join('; '));
     if(c.unique)reasons.push('Flag: applicant disclosed unique circumstances — '+c.unique);
     if(c.afford&&c.afford.verdict==='fail')reasons.push('Flag: affordability screen refers this case to financial underwriting');
     else if(c.afford&&c.afford.verdict==='strain')reasons.push('Affordability is strained but within tolerance');}
@@ -748,14 +758,16 @@ function conflictAlertHTML(c){
  // A case-wide red alert shown at the top of the case file (visible on every
  // tab) so the underwriter sees exactly what's wrong without hunting for it.
  const conf=c.conflicts||[];if(!conf.length)return '';
- const anyMajor=conf.some(k=>k.severity==='major');
- const rows=conf.map(k=>{const d=conflictDetail(c,k);const misrep=MISREP.has(k.type);
+ // Data discrepancies (DOB mismatch) render amber "verify" — a data-entry issue,
+ // visually distinct from the red fraud treatment (7/24 carrier feedback).
+ const anyRed=conf.some(k=>k.severity==='major'&&!DATA_FLAG.has(k.type));
+ const rows=conf.map(k=>{const d=conflictDetail(c,k);const misrep=MISREP.has(k.type);const disc=DATA_FLAG.has(k.type);
    const vals=d?`<div class="conf-vals"><b>${d.field}:</b> ${d.a[0]} <span class="conf-bad">${d.a[1]??'—'}</span> <span style="opacity:.6">vs</span> ${d.b[0]} <span class="conf-bad">${d.b[1]??'—'}</span></div>`:'';
    return `<div class="conflict-line ${k.severity==='minor'?'minor':''}">
-     <span class="conf-tag">${k.severity.toUpperCase()} · ${k.type.replace(/_/g,' ').toUpperCase()}${misrep?' · MATERIAL MISREPRESENTATION':''}</span>
-     <div class="conf-desc">${k.description}</div>${vals}</div>`;}).join('');
+     <span class="conf-tag"${disc?' style="color:var(--warn)"':''}>${k.severity.toUpperCase()} · ${k.type.replace(/_/g,' ').toUpperCase()}${misrep?' · MATERIAL MISREPRESENTATION':disc?' · DATA DISCREPANCY — VERIFY':''}</span>
+     <div class="conf-desc">${k.description}${disc?' Likely a data-entry mistake — verify with the applicant/ID before proceeding.':''}</div>${vals}</div>`;}).join('');
  const majors=conf.filter(k=>k.severity==='major').length;
- return `<div class="conflict-alert ${anyMajor?'':'warn'}">
+ return `<div class="conflict-alert ${anyRed?'':'warn'}">
    <div class="ca-head">⚠ ${conf.length} data conflict${conf.length>1?'s':''} flagged${majors?` · ${majors} major — resolve before deciding`:''}</div>${rows}</div>`;
 }
 function conflictFieldLabels(c){
@@ -792,8 +804,10 @@ function topDriversHTML(c){
    :['⚠ Declined — risk exceeds appetite','Composite score '+c.risk_score+' is at or above the '+D_LINE+'-point decline line'];
   lead=`<div class="factor-row" style="background:var(--bad-soft);border-radius:10px;padding:10px 12px;margin-bottom:8px"><div><div class="factor-label" style="color:var(--bad)">${why[0]}</div><div class="factor-detail">${why[1]}</div></div><div class="factor-pts" style="color:var(--bad)">DECLINE</div></div>`;
  } else {
-  const majors=(c.conflicts||[]).filter(k=>k.severity==='major');
-  if(majors.length)lead=`<div class="factor-row" style="background:var(--warn-soft);border-radius:10px;padding:10px 12px;margin-bottom:8px"><div><div class="factor-label" style="color:var(--warn)">⚑ ${majors.length} major data conflict(s) flagged</div><div class="factor-detail">${majors.map(k=>k.type.replace(/_/g,' ')).join('; ')} — see the alert above and the Extraction tab</div></div><div class="factor-pts" style="color:var(--warn)">FLAG</div></div>`;
+  const disc=(c.conflicts||[]).filter(k=>DATA_FLAG.has(k.type));
+  const majors=(c.conflicts||[]).filter(k=>k.severity==='major'&&!DATA_FLAG.has(k.type));
+  if(disc.length)lead=`<div class="factor-row" style="background:var(--warn-soft);border-radius:10px;padding:10px 12px;margin-bottom:8px"><div><div class="factor-label" style="color:var(--warn)">⚑ Data discrepancy — verify before proceeding</div><div class="factor-detail">The date of birth on the application does not match the paramedical/ID — likely a data-entry mistake, not fraud. Both fields are highlighted on the Application and Extraction tabs.</div></div><div class="factor-pts" style="color:var(--warn)">VERIFY</div></div>`;
+  else if(majors.length)lead=`<div class="factor-row" style="background:var(--warn-soft);border-radius:10px;padding:10px 12px;margin-bottom:8px"><div><div class="factor-label" style="color:var(--warn)">⚑ ${majors.length} major data conflict(s) flagged</div><div class="factor-detail">${majors.map(k=>k.type.replace(/_/g,' ')).join('; ')} — see the alert above and the Extraction tab</div></div><div class="factor-pts" style="color:var(--warn)">FLAG</div></div>`;
  }
  const dr=drivers.map((f,i)=>`<div class="factor-row"><div><div class="factor-label">${i+1}. ${f[0]}</div><div class="factor-detail">${f[1]}</div></div><div class="factor-pts" style="color:var(--warn)">+${f[2]}</div></div>`).join('');
  const off=clean.length?`<div class="note" style="margin-top:10px"><b>Offsetting / clean signals:</b> ${clean.map(f=>f[0].toLowerCase()+' ('+f[1]+')').join(' · ')}</div>`:'';
@@ -1139,7 +1153,7 @@ function scoreExplainerHTML(){
  // not repeated on every case file (underwriters don't need it per application).
  return `<div class="card explain"><h3>How the composite score works</h3>
    <p><b>Formula:</b> Risk Score = 50% × Rule Engine score + 50% × ML probability. The rule engine is fully auditable — every point traces to a documented factor weight. The ML component is a gradient-boosting model trained on ${M.risk_models.n_train.toLocaleString()} records (AUC ${(M.risk_models.gradient_boosting.auc*100).toFixed(1)}% on ${M.risk_models.n_test.toLocaleString()} held-out cases), which captures factor interactions the rules miss. Blending them means one bad model can never single-handedly approve a risky case.</p>
-   <p><b>The traffic light:</b> the composite score alone sets the band. Below ${A_LINE} the case is <b style="color:var(--ok)">GREEN — APPROVE</b>, clear-cut and auto-approved. From ${A_LINE} to ${D_LINE-1} it is <b style="color:var(--warn)">YELLOW — MANUAL REVIEW</b>: a human underwriter looks at the application and the person as a whole. At ${D_LINE} or above — or when the application materially misrepresents the medical/identity evidence — it is <b style="color:var(--bad)">RED — DECLINE</b>. Conflicts, affordability and disclosed circumstances are surfaced as flags for the reviewer, but they no longer change the band.</p>
+   <p><b>The traffic light:</b> the composite score alone sets the band. Below ${A_LINE} the case is <b style="color:var(--ok)">GREEN — APPROVE</b>, clear-cut and auto-approved. From ${A_LINE} to ${D_LINE-1} it is <b style="color:var(--warn)">YELLOW — MANUAL REVIEW</b>: a human underwriter looks at the application and the person as a whole. At ${D_LINE} or above — or when the application materially misrepresents the medical/identity evidence — it is <b style="color:var(--bad)">RED — DECLINE</b>. A <b>data discrepancy</b> (e.g. a date of birth that differs between documents) is treated as a data-entry issue, not fraud: it routes the case to manual review with an amber <b>verify</b> flag, never an auto-decline. Other conflicts, affordability and disclosed circumstances are surfaced as flags for the reviewer, but they no longer change the band.</p>
    <div class="scale-wrap">
     <div class="scale-ticks"><span style="left:0%">0</span><span style="left:${A_LINE}%">${A_LINE}</span><span style="left:${D_LINE}%">${D_LINE}</span><span style="left:100%">100</span></div>
     <div class="scale-track">
@@ -1151,7 +1165,7 @@ function scoreExplainerHTML(){
      <div class="slab" style="width:${D_LINE-A_LINE}%"><div class="sl-word" style="color:var(--warn)">MANUAL REVIEW</div><div class="sl-sub">a human sees the whole person</div></div>
      <div class="slab" style="width:${100-D_LINE}%"><div class="sl-word" style="color:var(--bad)">DECLINE</div><div class="sl-sub">exceeds appetite / misrepresentation</div></div></div>
    </div>
-   <div class="override-note"><span class="on-ic">⚠</span><div><b>Score-driven bands:</b> the composite score sets the decision. Material misrepresentation is the one hard override — it declines regardless of score. Other flags (conflicts, affordability, disclosed circumstances) are shown to the reviewer without changing the band.</div></div></div>`;
+   <div class="override-note"><span class="on-ic">⚠</span><div><b>Score-driven bands:</b> the composite score sets the decision. Material misrepresentation is the one hard override — it declines regardless of score. A data discrepancy (DOB mismatch) instead forces a manual-review <b>verify</b> step — a data-entry issue, not fraud. Other flags (conflicts, affordability, disclosed circumstances) are shown to the reviewer without changing the band.</div></div></div>`;
 }
 function overview(){
  const vc={green:0,yellow:0,red:0};CASES.forEach(c=>vc[c.verdict]++);
@@ -1198,7 +1212,7 @@ function overview(){
  <div class="card" style="margin-top:16px"><h3>Composite Risk Score Distribution</h3>
   ${Object.entries(tc).map(([t,n],i)=>`<div class="hist-bar-row"><div class="hist-label">${t}</div>
    <div class="hist-track"><div class="hist-fill" style="width:${n/mx*100}%;background:${cols[i]}"></div></div><div class="hist-count">${n}</div></div>`).join('')}
-  <div class="note">Score-driven bands: below ${A_LINE} → green auto-approve. ${A_LINE}–${D_LINE-1} → yellow manual review. At or above ${D_LINE}, or material misrepresentation → red decline. Conflicts, affordability and disclosed circumstances are shown as flags but no longer change the band.</div></div>
+  <div class="note">Score-driven bands: below ${A_LINE} → green auto-approve. ${A_LINE}–${D_LINE-1} → yellow manual review. At or above ${D_LINE}, or material misrepresentation → red decline. A DOB data discrepancy → manual review with a verify flag (data-entry issue, not fraud). Other conflicts, affordability and disclosed circumstances are shown as flags but no longer change the band.</div></div>
  <div class="card"><h3>Continuous Learning — real datasets & run-over-run improvement</h3>
   ${(()=>{const el=M.external_learning||{datasets:[]};const hist=M.model_history||[];
    const ds=el.datasets.filter(d=>!d.error);
@@ -1257,7 +1271,8 @@ function managerView(){
  const pols={};CASES.forEach(c=>{(pols[c.policy]=pols[c.policy]||{g:0,y:0,r:0,n:0});pols[c.policy][c.verdict[0]]++;pols[c.policy].n++;});
  const hist=M.model_history||[]; const lastRun=hist[hist.length-1]||{};
  return `<div class="case-head"><div><h2>Manager Overview</h2>
-  <div class="case-meta"><span>${n} cases in queue</span><span>${M.n_applicants.toLocaleString()} scored pipeline-wide</span><span>evaluated ${M.generated_at}</span></div></div></div>
+  <div class="case-meta"><span>${n} cases in queue</span><span>${M.n_applicants.toLocaleString()} scored pipeline-wide</span><span>evaluated ${M.generated_at}</span></div></div>
+  <div><button class="ai-btn" style="background:var(--acc)" onclick="exportBenchmark()" title="Every application with the system's score, flags, routing and time-to-decision beside any recorded human decision — the artifact for benchmarking a pilot batch against human underwriters.">⬇ Pilot benchmark CSV</button></div></div>
  <div class="grid3" style="margin-top:18px">
   <div class="stat" style="border-top:4px solid var(--ok)"><div class="sv" style="color:var(--ok)">${G.length}</div><div class="sl"><b>APPROVED</b> · ${pct(G)} of queue · no human touch needed</div></div>
   <div class="stat" style="border-top:4px solid var(--warn)"><div class="sv" style="color:var(--warn)">${Y.length}</div><div class="sl"><b>MANUAL REVIEW</b> · ${pct(Y)} · awaiting an underwriter</div></div>
@@ -1304,6 +1319,25 @@ function managerView(){
 }
 /* =================== PRD v2: executive + admin + evidence flow =================== */
 const APPETITE_MONTHLY=45000000;   // §5.1 monthly coverage the book wants to take on (config lever)
+/* ---- portfolio economics (7/26 carrier feedback) ----
+   "Premium in the door" is only half the P&L: show the expected payout against
+   that premium, SG&A and the cost to underwrite, down to operating income.
+   Assumptions are illustrative, named, and labeled as such in the UI. */
+const SGA_RATE=0.12;               // SG&A + acquisition as a share of premium (illustrative loading)
+const COST_AUTO=12;                // per-application system cost: compute, parsing, data pulls
+const COST_HUMAN=150;              // fully-loaded underwriter touch per referred case
+const MORT_A=0.00005,MORT_B=0.088; // Gompertz base annual mortality ≈ unisex period life table
+const SELECT_FACTOR=0.45;          // select-period discount: newly underwritten lives run well
+                                   // below ultimate mortality (SOA select & ultimate tables)
+function expectedAnnualClaim(c){
+ // Expected annual claims cost = coverage × q(age) × relative-mortality multiple × select factor.
+ // Rule-engine weights are round(28·ln(real mortality multiple)) (derive_weights.py),
+ // so exp(rule_score/28) recovers the combined evidence-anchored multiple; capped
+ // at 12× (and q at 5%/yr) to stay conservative on the synthetic book.
+ const q=MORT_A*Math.exp(MORT_B*(c.age||45));
+ const mult=Math.min(Math.exp((c.rule_score||0)/28),12);
+ return (c.coverage||0)*Math.min(q*mult*SELECT_FACTOR,0.05);
+}
 function finalOf(c){
  // the case's effective disposition: a recorded human decision wins; otherwise
  // the straight-through verdict; referred-but-undecided reads as pending.
@@ -1330,6 +1364,18 @@ function executiveView(){
  const sum=(a,f)=>a.reduce((s,c)=>s+(f(c)||0),0);
  const covAppr=sum(appr,c=>c.coverage),covDecl=sum(decl,c=>c.coverage),covPend=sum(pend,c=>c.coverage),covAll=covAppr+covDecl+covPend;
  const premAppr=sum(appr,c=>c.premium||0);
+ // portfolio economics (7/26 feedback): payout vs premium, costs, operating income
+ const expClaims=sum(appr,expectedAnnualClaim);
+ const sga=premAppr*SGA_RATE;
+ const referredN=CASES.filter(c=>c.verdict==='yellow').length;
+ const opsCost=n*COST_AUTO+referredN*COST_HUMAN;
+ const opInc=premAppr-expClaims-sga-opsCost;
+ const lossRatio=premAppr?expClaims/premAppr*100:0;
+ const expenseRatio=premAppr?(sga+opsCost)/premAppr*100:0;
+ const combined=lossRatio+expenseRatio;
+ const costPerAppCopilot=n?opsCost/n:0;
+ const costPerAppManual=COST_HUMAN+COST_AUTO;
+ const uwSavings=costPerAppManual*n-opsCost;
  const avgCover=appr.length?covAppr/appr.length:0;
  const stp=(M.decisioning.straight_through_rate*100);
  const apprRate=n?appr.length/n*100:0;
@@ -1352,6 +1398,29 @@ function executiveView(){
    ${tile(fmtBigMoney(covDecl),'<b>Total coverage declined</b> — risk turned away','var(--bad)')}
    ${tile(fmtMoneyK(premAppr)+'/yr','<b>Approved premium</b> — annualised, the revenue side','var(--acc)')}
   </div>
+  <div class="card" style="margin-top:16px"><h3>Portfolio economics — what the book keeps, not just what it writes</h3>
+   ${[['Approved premium (annualised)',premAppr,'+'],
+      ['Expected claims payout against that premium',-expClaims,'−'],
+      ['SG&A + acquisition ('+(SGA_RATE*100).toFixed(0)+'% of premium)',-sga,'−'],
+      ['Cost to underwrite the book ('+n+' applications processed)',-opsCost,'−']]
+     .map(r=>`<div style="display:flex;justify-content:space-between;align-items:baseline;padding:7px 2px;border-bottom:1px solid var(--line,rgba(128,128,128,.15))">
+       <span>${r[2]==='+'?'':'− '}${r[0]}</span><span class="mono" style="font-weight:600;color:${r[1]>=0?'var(--ok)':'var(--bad)'}">${r[1]>=0?'':'−'}${fmtMoneyK(Math.abs(r[1]))}</span></div>`).join('')}
+   <div style="display:flex;justify-content:space-between;align-items:baseline;padding:10px 2px 2px">
+     <span><b>Expected operating income</b> — premium after payout, SG&A and underwriting cost</span>
+     <span class="mono" style="font-size:20px;font-weight:700;color:${opInc>=0?'var(--ok)':'var(--bad)'}">${opInc>=0?'':'−'}${fmtMoneyK(Math.abs(opInc))}/yr</span></div>
+   <div class="grid3" style="margin-top:12px">
+    ${tile(lossRatio.toFixed(0)+'%','<b>Loss ratio</b> — expected payout ÷ approved premium',lossRatio<70?'var(--ok)':'var(--bad)')}
+    ${tile(expenseRatio.toFixed(0)+'%','<b>Expense ratio</b> — SG&A + underwriting ops ÷ premium')}
+    ${tile(combined.toFixed(0)+'%','<b>Combined ratio</b> — under 100% means the book earns an underwriting profit',combined<100?'var(--ok)':'var(--bad)')}
+   </div>
+   <div class="note">Expected payout is an illustrative actuarial model on the synthetic book: Gompertz base mortality by age × each case's rule-engine relative-mortality multiple (the published weights are 28·ln(multiple), so exp(score/28) recovers it). SG&A and cost figures are named, illustrative assumptions — swap in carrier actuals during a pilot to make this the real class-profile P&L.</div></div>
+  <div class="card"><h3>Cost to underwrite — the economics of automation</h3>
+   <div class="grid3">
+    ${tile('$'+costPerAppCopilot.toFixed(0),'<b>Per application with the copilot</b> — only '+referredN+' of '+n+' cases need an underwriter’s time','var(--ok)')}
+    ${tile('$'+costPerAppManual.toFixed(0),'<b>Per application, all-manual baseline</b> — every case gets a full human review','var(--bad)')}
+    ${tile(fmtMoneyK(uwSavings),'<b>Saved across this book</b> — underwriting cost avoided on '+n+' applications','var(--acc)')}
+   </div>
+   <div class="note">This is what makes small-premium policies economically viable: a term policy writing a few hundred dollars a year cannot carry a $${costPerAppManual.toFixed(0)} manual underwriting cost, but it can carry $${costPerAppCopilot.toFixed(0)}. Straight-through processing pays for the low end of the market, and human attention concentrates on the ${referredN} cases that genuinely need it.</div></div>
   <div class="grid3" style="margin-top:14px">
    ${tile(apprRate.toFixed(0)+'%','<b>YoY approval rate</b> — '+yr+' vs. '+priorApprRate.toFixed(0)+'% in '+(yr-1)+' (illustrative)','var(--acc)')}
    ${tile(appetitePct.toFixed(0)+'%','<b>% of monthly appetite</b> — accepted cover vs the '+fmtBigMoney(APPETITE_MONTHLY)+' target','var(--warn)')}
@@ -1430,6 +1499,23 @@ function exportDecisions(fmt){
   blob=new Blob([hdr+rows],{type:'text/csv'});name='decision_trail.csv';
  }else{blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});name='decision_trail.json';}
  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();
+}
+function exportBenchmark(){
+ // Pilot benchmark artifact: every application with the system's score, flags and
+ // routing beside any recorded human decision — formatted so a carrier's tech team
+ // can replay a batch of its own applications through the copilot and benchmark
+ // score, fraud flags and time-to-decision against what its underwriters decided.
+ const hdr='case_id,applicant,age,policy,coverage,annual_premium,composite_score,rule_score,ml_score,band,system_decision,rate_class,fraud_flags,data_flags,affordability,routing,assigned_desk,time_to_decision,human_decision,decided_by,agreement\n';
+ const rows=CASES.map(c=>{
+  const st=wfGet(c.id);const dec=st.decision;
+  const conf=c.conflicts||[];
+  const fraud=conf.filter(k=>MISREP.has(k.type)).map(k=>k.type).join('; ');
+  const flags=conf.filter(k=>!MISREP.has(k.type)).map(k=>k.type).join('; ');
+  const auto=c.verdict!=='yellow';
+  const agree=dec?(((c.decision==='APPROVE'&&dec.action==='APPROVED')||(c.decision==='DECLINE'&&dec.action==='DECLINED'))?'AGREED':c.decision==='MANUAL REVIEW'?'HUMAN CALL':'OVERRIDE'):'';
+  return [c.id,'"'+c.name+'"',c.age,'"'+c.policy+'"',c.coverage,c.premium,c.risk_score,c.rule_score,Math.round(c.ml_score),c.verdict,c.decision,'"'+c.rate_class+'"','"'+fraud+'"','"'+flags+'"',(c.afford&&c.afford.verdict)||'',auto?'straight-through':'referred',c.assigned_desk||'',auto?'instant (auto)':fmtAge(ageHours(c))+' in queue',dec?dec.action:'',dec?dec.by:'',agree].join(',');
+ }).join('\n');
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([hdr+rows],{type:'text/csv'}));a.download='pilot_benchmark.csv';a.click();
 }
 /* ---------- evidence request flow with AI pre-check (§4.3) ---------- */
 const EVIDENCE_TYPES=[

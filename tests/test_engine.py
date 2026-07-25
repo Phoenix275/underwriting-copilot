@@ -104,6 +104,15 @@ class TestDecide:
         d = engine.decide(5, 5, conf, a_line=50, d_line=90)
         assert d["decision"] == "DECLINE" and "Misrepresentation" in d["rate_class"]
 
+    def test_dob_mismatch_refers_for_verification_not_decline(self):
+        # 7/24 carrier feedback: a DOB mismatch is a data-entry discrepancy,
+        # not fraud — manual review with a verify flag, never an auto-decline.
+        conf = [{"type": "dob_mismatch", "severity": "major", "description": ""}]
+        d = engine.decide(5, 5, conf, a_line=50, d_line=90)
+        assert d["decision"] == "MANUAL REVIEW" and d["referred"] is True
+        assert "Data Discrepancy" in d["rate_class"]
+        assert "Misrepresentation" not in d["rate_class"]
+
     def test_score_at_decline_line_declines(self):
         d = engine.decide(95, 95, [], a_line=50, d_line=90)
         assert d["decision"] == "DECLINE"
