@@ -368,29 +368,43 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 @media (prefers-reduced-motion: reduce){#whoosh{display:none}#app.app-reveal,.login-card{animation:none}}
 .cap-cut td{text-align:center;font:600 10.5px 'JetBrains Mono',monospace;color:var(--warn);padding:10px 6px;border-top:2px dashed var(--warn) !important;border-bottom:2px dashed var(--warn);letter-spacing:.5px}
 /* ---- landing scene: orbiting case artifacts around the wordmark, before sign-in ---- */
-#landing{position:fixed;inset:0;z-index:1600;background:var(--bg);display:flex;align-items:center;justify-content:center;overflow:hidden;font-family:'Poppins',sans-serif}
-#landing .ld-glow{position:absolute;border-radius:50%;filter:blur(90px);opacity:.16;animation:ldDrift 16s ease-in-out infinite alternate}
-#landing .ld-glow.g1{width:540px;height:540px;left:-120px;top:-120px;background:var(--acc)}
-#landing .ld-glow.g2{width:440px;height:440px;right:-100px;bottom:-100px;background:var(--ok);animation-duration:21s}
+#landing{position:fixed;inset:0;z-index:1600;background:var(--bg);display:flex;align-items:center;justify-content:center;overflow:hidden;font-family:'Poppins',sans-serif;perspective:1200px}
+#landing::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 42%,rgba(106,103,247,0) 32%,rgba(106,103,247,.14) 64%,rgba(106,103,247,.36) 100%);pointer-events:none}
+#landing .ld-glow{position:absolute;border-radius:50%;filter:blur(90px);opacity:.28;animation:ldDrift 16s ease-in-out infinite alternate}
+#landing .ld-glow.g1{width:560px;height:560px;left:-120px;top:-120px;background:var(--acc)}
+#landing .ld-glow.g2{width:460px;height:460px;right:-100px;bottom:-100px;background:var(--acc);animation-duration:21s}
+#landing .ld-glow.g3{width:640px;height:320px;left:50%;margin-left:-320px;bottom:-160px;background:var(--acc);opacity:.18;animation-duration:26s}
 @keyframes ldDrift{0%{transform:translate(0,0) scale(1)}100%{transform:translate(70px,45px) scale(1.16)}}
-#landing .ld-rings i{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border:1px solid var(--acc);border-radius:50%;opacity:.12}
+#landing .ld-scene{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .3s ease-out;will-change:transform}
+#landing .ld-rings i{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border:1.5px solid var(--acc);border-radius:50%;opacity:.22}
 #landing .ld-rings i:nth-child(1){width:430px;height:430px}
-#landing .ld-rings i:nth-child(2){width:660px;height:660px;opacity:.08}
-#landing .ld-rings i:nth-child(3){width:900px;height:900px;opacity:.05}
+#landing .ld-rings i:nth-child(2){width:660px;height:660px;opacity:.14}
+#landing .ld-rings i:nth-child(3){width:900px;height:900px;opacity:.09}
 #landing .ld-orbits{position:absolute;left:50%;top:50%;z-index:1}
-#landing .ld-orb{position:absolute;left:0;top:0;padding:7px 12px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--mut);font:600 11px 'JetBrains Mono',monospace;letter-spacing:.4px;white-space:nowrap;box-shadow:0 8px 24px rgba(20,20,40,.12);animation:ldOrbit var(--t) linear infinite}
+#landing .ld-orb{position:absolute;left:0;top:0;padding:7px 12px;border-radius:10px;border:1px solid rgba(106,103,247,.38);background:var(--card);color:var(--mut);font:600 11px 'JetBrains Mono',monospace;letter-spacing:.4px;white-space:nowrap;box-shadow:0 8px 24px rgba(106,103,247,.16);animation:ldOrbit var(--t) linear infinite}
+/* the book itself streams along the edges — real embedded cases, scored, drifting past */
+#landing .ld-stream{position:absolute;top:0;bottom:0;width:185px;overflow:hidden;z-index:2;-webkit-mask-image:linear-gradient(180deg,transparent,#000 14%,#000 86%,transparent);mask-image:linear-gradient(180deg,transparent,#000 14%,#000 86%,transparent)}
+#landing .ld-stream.sl{left:28px}
+#landing .ld-stream.sr{right:28px}
+#landing .ld-stream .st-inner{display:flex;flex-direction:column;gap:12px;animation:ldStream 70s linear infinite}
+#landing .ld-stream.sr .st-inner{animation-direction:reverse}
+@keyframes ldStream{0%{transform:translateY(0)}100%{transform:translateY(-50%)}}
+#landing .st-row{display:flex;align-items:center;gap:8px;font:600 10.5px 'JetBrains Mono',monospace;color:var(--mut);background:var(--card);border:1px solid rgba(106,103,247,.28);border-radius:9px;padding:7px 11px;box-shadow:0 4px 14px rgba(106,103,247,.12);white-space:nowrap}
+#landing .st-dot{width:7px;height:7px;border-radius:50%;flex:none}
+@media (max-width:980px){#landing .ld-stream{display:none}}
 #landing .ld-orb.far{opacity:.55;filter:blur(.4px);font-size:10px}
 @keyframes ldOrbit{0%{transform:translate(-50%,-50%) rotate(var(--a)) translateX(var(--r)) rotate(calc(-1*var(--a)))}100%{transform:translate(-50%,-50%) rotate(calc(var(--a) + 360deg)) translateX(var(--r)) rotate(calc(-1*var(--a) - 360deg))}}
 #landing .ld-center{position:relative;text-align:center;z-index:3;animation:ldIn 1.1s cubic-bezier(.22,1,.36,1) both}
 @keyframes ldIn{0%{opacity:0;transform:translateY(20px) scale(.965)}100%{opacity:1;transform:none}}
 #landing .ld-tag{font:500 13px 'Poppins',sans-serif;color:var(--mut);margin-top:16px}
-#landing .ld-btn{margin-top:26px;padding:13px 42px;border-radius:999px;border:none;background:var(--acc);color:#fff;font:600 15px 'Poppins',sans-serif;cursor:pointer;box-shadow:0 10px 30px rgba(106,103,247,.4);transition:transform .2s,box-shadow .2s}
-#landing .ld-btn:hover{transform:translateY(-2px);box-shadow:0 14px 38px rgba(106,103,247,.55)}
+#landing .ld-btn{margin-top:26px;padding:13px 42px;border-radius:999px;border:none;background:var(--acc);color:#fff;font:600 15px 'Poppins',sans-serif;cursor:pointer;box-shadow:0 10px 30px rgba(106,103,247,.4);transition:transform .2s;animation:ldPulse 2.6s ease-in-out infinite}
+#landing .ld-btn:hover{transform:translateY(-2px)}
+@keyframes ldPulse{0%,100%{box-shadow:0 10px 30px rgba(106,103,247,.4)}50%{box-shadow:0 10px 46px rgba(106,103,247,.8),0 0 0 9px rgba(106,103,247,.13)}}
 #landing.out{animation:ldOut .9s cubic-bezier(.5,0,.15,1) forwards;pointer-events:none}
 @keyframes ldOut{0%{opacity:1}100%{opacity:0}}
 #landing.out .ld-center{animation:ldCenterOut .9s cubic-bezier(.5,0,.15,1) forwards}
 @keyframes ldCenterOut{0%{opacity:1;transform:none}100%{opacity:0;transform:scale(5.5)}}
-@media (prefers-reduced-motion: reduce){#landing .ld-orb,#landing .ld-glow,#landing .ld-center{animation:none}}
+@media (prefers-reduced-motion: reduce){#landing .ld-orb,#landing .ld-glow,#landing .ld-center,#landing .st-inner,#landing .ld-btn{animation:none}#landing .ld-scene{transform:none !important}}
 /* interactive tutorial */
 #tourBtn{position:fixed;top:14px;right:66px;z-index:2000;height:40px;padding:0 16px;border-radius:999px;border:none;background:var(--acc);color:#fff;font:600 12.5px 'Poppins',sans-serif;cursor:pointer;box-shadow:0 6px 18px rgba(87,84,240,.4);display:flex;align-items:center;gap:6px}
 #tourBtn:hover{filter:brightness(1.07)}
@@ -460,7 +474,10 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 <button id="tourBtn" onclick="tourStart()" title="Interactive tutorial — learn every feature">🎓 Tutorial</button>
 <div id="tourPanel"></div>
 <div id="landing">
- <div class="ld-glow g1"></div><div class="ld-glow g2"></div>
+ <div class="ld-glow g1"></div><div class="ld-glow g2"></div><div class="ld-glow g3"></div>
+ <div class="ld-stream sl"><div class="st-inner"></div></div>
+ <div class="ld-stream sr"><div class="st-inner"></div></div>
+ <div class="ld-scene">
  <div class="ld-rings"><i></i><i></i><i></i></div>
  <div class="ld-orbits">
   <span class="ld-orb" style="--r:305px;--t:34s;--a:15deg">RISK 24</span>
@@ -472,6 +489,7 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
   <span class="ld-orb far" style="--r:455px;--t:52s;--a:144deg">AUC 0.92</span>
   <span class="ld-orb far" style="--r:455px;--t:52s;--a:216deg">$487k /YR</span>
   <span class="ld-orb far" style="--r:455px;--t:52s;--a:288deg">ACORD 103</span>
+ </div>
  </div>
  <div class="ld-center">
   <div class="w-mark">Underwriting <b>Copilot</b></div>
@@ -657,6 +675,24 @@ function recomputeVerdicts(){
  });
 }
 recomputeVerdicts();
+/* ---------- landing ambience: the real book streams past, the scene tilts with the cursor ---------- */
+(function(){
+ const ld=document.getElementById('landing');if(!ld)return;
+ // Edge streams are the actual embedded cases with their real scores and verdicts
+ // — the book flowing around the brand, not decorative particles.
+ const mkRow=c=>{const col=c.verdict==='green'?'var(--ok)':c.verdict==='yellow'?'var(--warn)':'var(--bad)';
+  return '<div class="st-row"><span class="st-dot" style="background:'+col+'"></span>'+c.id+' · '+c.risk_score+'</div>';};
+ const fill=(sel,cases)=>{const el=ld.querySelector(sel);if(!el)return;
+  const rows=cases.map(mkRow).join('');el.innerHTML=rows+rows;};   // doubled for a seamless loop
+ fill('.ld-stream.sl .st-inner',CASES.slice(0,22));
+ fill('.ld-stream.sr .st-inner',CASES.slice(22,44));
+ try{if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;}catch(e){}
+ const sc=ld.querySelector('.ld-scene');
+ ld.addEventListener('mousemove',e=>{if(!sc||!document.getElementById('landing'))return;
+  const r=ld.getBoundingClientRect();
+  const ty=((e.clientX-r.left)/r.width-.5)*-9, tx=((e.clientY-r.top)/r.height-.5)*7;
+  sc.style.transform='rotateY('+ty.toFixed(2)+'deg) rotateX('+tx.toFixed(2)+'deg)';});
+})();
 // §3.6 — no display label may assert a risk judgement. Neutralise the legacy
 // "Notable" family-history value baked into portfolio.json (engine.py is fixed
 // at source; this keeps the already-exported data clean without a pipeline rerun).
