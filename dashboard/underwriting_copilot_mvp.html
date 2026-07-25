@@ -371,16 +371,9 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 #landing .ld-rings i:nth-child(3){width:900px;height:900px;opacity:.09}
 #landing .ld-orbits{position:absolute;left:50%;top:50%;z-index:1}
 #landing .ld-orb{position:absolute;left:0;top:0;padding:7px 12px;border-radius:10px;border:1px solid rgba(106,103,247,.38);background:var(--card);color:var(--mut);font:600 11px 'JetBrains Mono',monospace;letter-spacing:.4px;white-space:nowrap;box-shadow:0 8px 24px rgba(106,103,247,.16);animation:ldOrbit var(--t) linear infinite}
-/* the book itself streams along the edges — real embedded cases, scored, drifting past */
-#landing .ld-stream{position:absolute;top:0;bottom:0;width:185px;overflow:hidden;z-index:2;-webkit-mask-image:linear-gradient(180deg,transparent,#000 14%,#000 86%,transparent);mask-image:linear-gradient(180deg,transparent,#000 14%,#000 86%,transparent)}
-#landing .ld-stream.sl{left:28px}
-#landing .ld-stream.sr{right:28px}
-#landing .ld-stream .st-inner{display:flex;flex-direction:column;gap:12px;animation:ldStream 70s linear infinite}
-#landing .ld-stream.sr .st-inner{animation-direction:reverse}
-@keyframes ldStream{0%{transform:translateY(0)}100%{transform:translateY(-50%)}}
-#landing .st-row{display:flex;align-items:center;gap:8px;font:600 10.5px 'JetBrains Mono',monospace;color:var(--mut);background:var(--card);border:1px solid rgba(106,103,247,.28);border-radius:9px;padding:7px 11px;box-shadow:0 4px 14px rgba(106,103,247,.12);white-space:nowrap}
-#landing .st-dot{width:7px;height:7px;border-radius:50%;flex:none}
-@media (max-width:980px){#landing .ld-stream{display:none}}
+/* radar sweep: the copilot scanning the book — a slow beam over the ring field */
+#landing .ld-sweep{position:absolute;left:50%;top:50%;width:240vmax;height:240vmax;margin:-120vmax 0 0 -120vmax;border-radius:50%;pointer-events:none;background:conic-gradient(from 0deg,rgba(106,103,247,0) 0deg,rgba(106,103,247,.10) 46deg,rgba(106,103,247,.26) 58deg,rgba(106,103,247,0) 72deg,rgba(106,103,247,0) 360deg);animation:ldSpin 22s linear infinite}
+@keyframes ldSpin{to{transform:rotate(360deg)}}
 #landing .ld-orb.far{opacity:.55;filter:blur(.4px);font-size:10px}
 @keyframes ldOrbit{0%{transform:translate(-50%,-50%) rotate(var(--a)) translateX(var(--r)) rotate(calc(-1*var(--a)))}100%{transform:translate(-50%,-50%) rotate(calc(var(--a) + 360deg)) translateX(var(--r)) rotate(calc(-1*var(--a) - 360deg))}}
 #landing .ld-center{position:relative;text-align:center;z-index:3;animation:ldIn 1.1s cubic-bezier(.22,1,.36,1) both}
@@ -393,7 +386,7 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 @keyframes ldOut{0%{opacity:1}100%{opacity:0}}
 #landing.out .ld-center{animation:ldCenterOut .9s cubic-bezier(.5,0,.15,1) forwards}
 @keyframes ldCenterOut{0%{opacity:1;transform:none}100%{opacity:0;transform:scale(5.5)}}
-@media (prefers-reduced-motion: reduce){#landing .ld-orb,#landing .ld-glow,#landing .ld-center,#landing .st-inner,#landing .ld-btn{animation:none}#landing .ld-scene{transform:none !important}}
+@media (prefers-reduced-motion: reduce){#landing .ld-orb,#landing .ld-glow,#landing .ld-center,#landing .ld-sweep,#landing .ld-btn{animation:none}#landing .ld-scene{transform:none !important}}
 /* interactive tutorial */
 #tourBtn{position:fixed;top:14px;right:66px;z-index:2000;height:40px;padding:0 16px;border-radius:999px;border:none;background:var(--acc);color:#fff;font:600 12.5px 'Poppins',sans-serif;cursor:pointer;box-shadow:0 6px 18px rgba(87,84,240,.4);display:flex;align-items:center;gap:6px}
 #tourBtn:hover{filter:brightness(1.07)}
@@ -464,9 +457,8 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 <div id="tourPanel"></div>
 <div id="landing">
  <div class="ld-glow g1"></div><div class="ld-glow g2"></div><div class="ld-glow g3"></div>
- <div class="ld-stream sl"><div class="st-inner"></div></div>
- <div class="ld-stream sr"><div class="st-inner"></div></div>
  <div class="ld-scene">
+ <div class="ld-sweep"></div>
  <div class="ld-rings"><i></i><i></i><i></i></div>
  <div class="ld-orbits">
   <span class="ld-orb" style="--r:305px;--t:34s;--a:15deg">RISK 24</span>
@@ -667,14 +659,6 @@ recomputeVerdicts();
 /* ---------- landing ambience: the real book streams past, the scene tilts with the cursor ---------- */
 (function(){
  const ld=document.getElementById('landing');if(!ld)return;
- // Edge streams are the actual embedded cases with their real scores and verdicts
- // — the book flowing around the brand, not decorative particles.
- const mkRow=c=>{const col=c.verdict==='green'?'var(--ok)':c.verdict==='yellow'?'var(--warn)':'var(--bad)';
-  return '<div class="st-row"><span class="st-dot" style="background:'+col+'"></span>'+c.id+' · '+c.risk_score+'</div>';};
- const fill=(sel,cases)=>{const el=ld.querySelector(sel);if(!el)return;
-  const rows=cases.map(mkRow).join('');el.innerHTML=rows+rows;};   // doubled for a seamless loop
- fill('.ld-stream.sl .st-inner',CASES.slice(0,22));
- fill('.ld-stream.sr .st-inner',CASES.slice(22,44));
  try{if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;}catch(e){}
  const sc=ld.querySelector('.ld-scene');
  ld.addEventListener('mousemove',e=>{if(!sc||!document.getElementById('landing'))return;
