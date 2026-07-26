@@ -352,6 +352,17 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 @keyframes whooshFade{0%,74%{opacity:1}100%{opacity:0}}
 #app.app-reveal{animation:appReveal .95s .85s cubic-bezier(.22,1,.36,1) backwards}
 @keyframes appReveal{0%{opacity:0;transform:scale(.986) translateY(10px)}100%{opacity:1;transform:none}}
+/* ---- role switch: a quick 3D seat-change, distinct from the first-entry whoosh ---- */
+#roleswap{position:fixed;inset:0;z-index:2050;display:flex;align-items:center;justify-content:center;pointer-events:none;perspective:1100px;animation:rsScrim .95s ease forwards}
+@keyframes rsScrim{0%{background:rgba(24,24,50,0)}30%{background:rgba(24,24,50,.30)}70%{background:rgba(24,24,50,.30)}100%{background:rgba(24,24,50,0)}}
+#roleswap .rs-chip{display:flex;align-items:center;gap:13px;padding:16px 26px;border-radius:16px;background:var(--card);border:1px solid var(--line);box-shadow:0 24px 70px rgba(20,20,40,.35);animation:rsChip .95s cubic-bezier(.22,1,.36,1) forwards}
+@keyframes rsChip{0%{opacity:0;transform:rotateY(75deg) translateX(110px) scale(.88)}28%{opacity:1;transform:none}72%{opacity:1;transform:none}100%{opacity:0;transform:rotateY(-75deg) translateX(-110px) scale(.88)}}
+#roleswap .rs-av{width:42px;height:42px;border-radius:50%;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center;font:700 16px 'Poppins',sans-serif;flex:none}
+#roleswap .rs-name{font:700 16px 'Poppins',sans-serif;color:var(--ink)}
+#roleswap .rs-role{font:500 12px 'Poppins',sans-serif;color:var(--mut)}
+#app.role-turn{animation:roleTurn .8s .25s cubic-bezier(.22,1,.36,1) backwards}
+@keyframes roleTurn{0%{opacity:.35;transform:translateX(30px) scale(.992)}100%{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){#roleswap{display:none}#app.role-turn{animation:none}}
 .login-card{animation:loginIn .6s cubic-bezier(.22,1,.36,1) both}
 @keyframes loginIn{0%{opacity:0;transform:translateY(14px) scale(.985)}100%{opacity:1;transform:none}}
 @media (prefers-reduced-motion: reduce){#whoosh{display:none}#app.app-reveal,.login-card{animation:none}}
@@ -704,7 +715,22 @@ function doLogin(){
  else if(CURRENT_ROLE==='executive'){queueScope='team';view='executive';}
  else if(CURRENT_ROLE==='admin'){queueScope='team';view='admin';}
  else{queueScope='mine';space='review';view='space';}
- render();whooshPlay();}
+ render();
+ if(hasEnteredApp)roleSwapPlay();else{hasEnteredApp=true;whooshPlay();}}
+let hasEnteredApp=false;   // first entry gets the brand whoosh; later logins get the seat-change
+function roleSwapPlay(){
+ try{if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;}catch(e){}
+ const old=document.getElementById('roleswap');if(old)old.remove();
+ const initials=(CURRENT_USER||'').split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
+ const roleEl=document.querySelector('#roleBadge .rb-role');
+ const roleLabel=roleEl?roleEl.textContent:'';
+ const d=document.createElement('div');d.id='roleswap';
+ d.innerHTML='<div class="rs-chip"><div class="rs-av">'+initials+'</div><div><div class="rs-name">'+CURRENT_USER+'</div><div class="rs-role">'+roleLabel+'</div></div></div>';
+ document.body.appendChild(d);
+ const app=document.getElementById('app');
+ if(app){app.classList.remove('app-reveal','role-turn');void app.offsetWidth;app.classList.add('role-turn');}
+ setTimeout(()=>{d.remove();},1000);
+}
 function whooshPlay(){
  // 3D brand transition from sign-in into the workbench. Decorative only:
  // pointer-events none, skipped entirely under prefers-reduced-motion.
