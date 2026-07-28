@@ -58,7 +58,7 @@ TEMPLATE = r"""
 .stat .sv{font-family:'Space Grotesk',sans-serif;font-size:30px;font-weight:700}.stat .sl{font-size:11.5px;color:var(--mut);margin-top:2px;line-height:1.45}
 /* The metric's NAME carries equal weight to its value — number answers "how much",
    the bold lead answers "of what"; only the explanation is quiet. */
-.stat .sl b{display:block;font-family:'Poppins',sans-serif;font-size:24px;font-weight:700;color:var(--ink);line-height:1.12;letter-spacing:-.01em;margin:0 0 5px}
+.stat .sl b{display:block;font-family:'Poppins',sans-serif;font-size:22px;font-weight:700;color:var(--ink);line-height:1.14;letter-spacing:-.012em;margin:0 0 5px;text-wrap:balance}
 .doc-row{display:flex;align-items:center;gap:12px;padding:13px 16px;background:var(--bg);border:1px solid var(--line);border-radius:10px;margin-bottom:10px}
 .doc-row .dot{width:9px;height:9px;border-radius:50%;background:var(--ok);flex-shrink:0}.doc-row .dot.miss{background:var(--mut)}
 .dname{font-size:13.5px;font-weight:600;flex:1}.dstatus{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ok)}
@@ -2378,7 +2378,22 @@ const UWG_KB=[
  {k:['nigo','incomplete','not in good order','info request','missing information'],
   a:()=>`<b>NIGO</b> (“not in good order”) — incomplete or malformed applications — is the biggest single source of cycle-time loss. Underwriters send a case back with <b>Request information</b>, which stamps it Info Requested, logs what’s missing, and parks the SLA clock on the applicant’s side.`},
  {k:['refer','why manual','yellow','middle band','human review'],
-  a:()=>`A case is referred when the system can’t safely decide alone: a mid-band score (${A_LINE}–${D_LINE-1}), a document conflict, a failed affordability screen, or disclosed unique circumstances. Open any referred case and ask me <i>“why is this case here?”</i> — I’ll read its actual drivers.`}
+  a:()=>`A case is referred when the system can’t safely decide alone: a mid-band score (${A_LINE}–${D_LINE-1}), a document conflict, a failed affordability screen, or disclosed unique circumstances. Open any referred case and ask me <i>“why is this case here?”</i> — I’ll read its actual drivers.`},
+ {k:['earning','earn','revenue','profit','making','money a month','per month','how much money','we making','am i making'],
+  a:()=>{const appr=CASES.filter(c=>finalOf(c)==='approve');
+   const prem=appr.reduce((s,c)=>s+(c.premium||0),0);
+   const claims=appr.reduce((s,c)=>s+expectedAnnualClaim(c),0);
+   const refN=CASES.filter(c=>c.verdict==='yellow').length;
+   const ops=CASES.length*COST_AUTO+refN*COST_HUMAN;
+   const opInc=prem*(1-SGA_RATE)-claims-ops;
+   return `The approved book writes <b>${fmtMoneyK(prem)}/yr</b> of premium — about <b>${fmtMoneyK(prem/12)} a month</b>. After expected claims (${fmtMoneyK(claims)}/yr), SG&A (12%) and the cost to underwrite, expected operating income is <b>${fmtMoneyK(opInc)}/yr ≈ ${fmtMoneyK(opInc/12)}/month</b>. These are live numbers — they move as decisions are recorded — and the full P&L sits on the Executive Overview.`;}},
+ {k:['how many case','how many application','book size','total cases','how big is the book','case count'],
+  a:()=>{const a=CASES.filter(c=>finalOf(c)==='approve').length,d=CASES.filter(c=>finalOf(c)==='decline').length;const p=CASES.length-a-d;
+   return `The book holds <b>${CASES.length} applications</b>: <b>${a}</b> approved, <b>${p}</b> referred / pending, <b>${d}</b> declined. ${CASES.filter(c=>c.verdict==='yellow').length} needed a human; the rest decided straight-through.`;}},
+ {k:['coverage accepted','exposure','how much cover','risk on the book','underwritten'],
+  a:()=>{const appr=CASES.filter(c=>finalOf(c)==='approve');
+   const cov=appr.reduce((s,c)=>s+(c.coverage||0),0);
+   return `The book has accepted <b>${fmtBigMoney(cov)}</b> of coverage across ${appr.length} approved policies — ${(cov/APPETITE_MONTHLY*100).toFixed(0)}% of the ${fmtBigMoney(APPETITE_MONTHLY)} monthly appetite. Average approved policy: ${fmtBigMoney(appr.length?cov/appr.length:0)}.`;}}
 ];
 function uwgRankAnswer(kind){
  // Ranked reads of the auto-decisioned book — the same ordering the
