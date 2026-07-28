@@ -380,8 +380,13 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 .cap-cut td{text-align:center;font:600 10.5px 'JetBrains Mono',monospace;color:var(--warn);padding:10px 6px;border-top:2px dashed var(--warn) !important;border-bottom:2px dashed var(--warn);letter-spacing:.5px}
 /* ---- executive rail: book-at-a-glance instead of a case list ---- */
 .exec-rail{padding:6px 4px}
-.exec-rail .er-row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:9px 8px;border-bottom:1px solid var(--line);font:500 12px 'Poppins',sans-serif;color:var(--mut)}
-.exec-rail .er-row b{font:700 12.5px 'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap}
+/* Numbers carry the panel: value big on top, label a quiet caption beneath.
+   Size encodes importance — operating income largest, ratios next, context last. */
+.exec-rail .er-row{padding:11px 8px 10px;border-bottom:1px solid var(--line)}
+.exec-rail .er-row b{display:block;font:700 19px 'JetBrains Mono',monospace;color:var(--ink);letter-spacing:-.02em;line-height:1.05;white-space:nowrap}
+.exec-rail .er-row span{display:block;font:600 9.5px 'JetBrains Mono',monospace;letter-spacing:.7px;text-transform:uppercase;color:var(--mut);margin-top:4px}
+.exec-rail .er-hero b{font-size:31px}
+.exec-rail .er-big b{font-size:24px}
 .exec-rail .er-note{font:500 11px 'Poppins',sans-serif;color:var(--mut);padding:12px 8px 0;line-height:1.5}
 /* ---- landing scene: orbiting case artifacts around the wordmark, before sign-in ---- */
 #landing{position:fixed;inset:0;z-index:1600;background:var(--bg);display:flex;align-items:center;justify-content:center;overflow:hidden;font-family:'Poppins',sans-serif;perspective:1200px}
@@ -478,6 +483,29 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 :root[data-theme="light"] .scale-seg+.scale-seg{border-left-color:#fff}
 :root[data-theme="light"] #login{background:linear-gradient(160deg,#DDE0EC,#F5F6F9) !important}
 :root[data-theme="light"] .login-card input{background:#F3F4F8 !important;color:var(--ink) !important}
+/* ---------- UW Guide — embedded knowledge assistant ---------- */
+#uwgBtn{position:fixed;right:20px;bottom:20px;z-index:960;display:none;align-items:center;gap:6px;font:600 12.5px 'Poppins',sans-serif;color:#fff;background:var(--acc);border:none;border-radius:999px;padding:11px 18px;cursor:pointer;box-shadow:0 8px 24px rgba(106,103,247,.38)}
+#uwgBtn:hover{filter:brightness(1.08)}
+#uwgPanel{position:fixed;right:20px;bottom:74px;z-index:961;width:372px;max-width:calc(100vw - 32px);height:min(540px,calc(100vh - 110px));display:none;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:0 24px 60px rgba(10,10,25,.45);overflow:hidden}
+#uwgPanel.on{display:flex}
+.uwg-head{display:flex;justify-content:space-between;align-items:center;padding:13px 15px;border-bottom:1px solid var(--line);background:var(--acc-soft)}
+.uwg-head b{font:700 14px 'Space Grotesk',sans-serif;color:var(--ink)}
+.uwg-sub{font:600 9px 'JetBrains Mono',monospace;letter-spacing:.6px;text-transform:uppercase;color:var(--mut);margin-top:2px}
+.uwg-x{cursor:pointer;color:var(--mut);font-size:14px;padding:4px 6px}
+.uwg-msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+.uwg-m{max-width:90%;padding:9px 12px;border-radius:12px;font:500 12.5px 'Poppins',sans-serif;line-height:1.55;color:var(--ink)}
+.uwg-m.bot{background:var(--acc-soft);border-bottom-left-radius:4px;align-self:flex-start}
+.uwg-m.me{background:var(--acc);color:#fff;border-bottom-right-radius:4px;align-self:flex-end}
+.uwg-m .mono{font-size:11.5px}
+.uwg-chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 10px}
+.uwg-chip{font:600 10px 'JetBrains Mono',monospace;color:var(--acc);background:transparent;border:1px solid var(--acc);border-radius:999px;padding:5px 10px;cursor:pointer}
+.uwg-chip:hover{background:var(--acc-soft)}
+.uwg-input{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line)}
+.uwg-input input{flex:1;background:rgba(128,128,128,.10);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font:500 12.5px 'Poppins',sans-serif;color:var(--ink);outline:none}
+.uwg-input input:focus{border-color:var(--acc)}
+.uwg-input button{background:var(--acc);color:#fff;border:none;border-radius:10px;padding:0 15px;font-size:15px;cursor:pointer}
+:root[data-theme="light"] #uwgPanel{box-shadow:0 24px 60px rgba(30,32,60,.22)}
+@media (max-width:640px){#uwgPanel{right:8px;left:8px;width:auto}}
 </style>
 <button id="themeToggle" onclick="toggleTheme()" title="Toggle light / dark mode" aria-label="Toggle light or dark mode">🌙</button>
 <button id="tourBtn" onclick="tourStart()" title="Interactive tutorial — learn every feature">🎓 Tutorial</button>
@@ -532,6 +560,13 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
  </div>
  <div class="main"><div id="mainContent"></div></div>
 </div>
+<button id="uwgBtn" onclick="uwgToggle()" title="UW Guide — underwriting knowledge assistant">💬 UW Guide</button>
+<div id="uwgPanel" role="dialog" aria-label="UW Guide knowledge assistant">
+ <div class="uwg-head"><div><b>UW Guide</b><div class="uwg-sub">Knowledge assistant · guidelines · product rules · process</div></div><span class="uwg-x" onclick="uwgToggle()" title="Close">✕</span></div>
+ <div class="uwg-msgs" id="uwgMsgs"></div>
+ <div class="uwg-chips" id="uwgChips"></div>
+ <div class="uwg-input"><input id="uwgIn" placeholder="Ask about guidelines, rules, or a case ID…" onkeydown="if(event.key==='Enter')uwgSend()"><button onclick="uwgSend()" aria-label="Send">→</button></div>
+</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
 const DATA = /*__DATA__*/;
@@ -552,14 +587,25 @@ function tourOpenConflictCase(){const c=CASES.find(x=>(x.conflicts||[]).some(k=>
 function tourShowTab(n){selTab(n);const el=document.querySelector('.tabs');if(el)el.scrollIntoView({block:'start'});}
 const TUTORIAL_STEPS=[
  {title:`The Underwriting Copilot`,
-  learn:`An AI-assisted life-insurance underwriting workbench. It scores every application <b>0–100</b>: the clean ones (0–50) are auto-approved, the risky ones (90–100) are auto-declined, and the 51–89 middle band goes to a human underwriter. This tour walks through the whole product, role by role.`},
- {title:`Sign-in is a role selector`,
-  do:`Signing in as a senior underwriter.`,
-  learn:`Every role sees a different product — underwriters get a work queue, the manager gets oversight, the executive gets the money view. First up: Marcus Rivera, senior underwriter.`,
-  action:{label:`Sign in as the underwriter`,fn:()=>tourLogin('mrivera','senior')}},
+  learn:`An AI-assisted life-insurance underwriting workbench. It scores every application <b>0–100</b>: the clean ones (0–50) are auto-approved, the risky ones (90–100) are auto-declined, and the 51–89 middle band goes to a human underwriter. First, why this exists — then one case, end to end.`},
+ {title:`Where underwriting sits — and where it hurts`,
+  learn:`In the insurance value chain — <b>distribution → new business intake → underwriting → policy issue → claims</b> — underwriting is the bottleneck. Underwriters typically spend <b>~40% of their time</b> gathering and re-keying data instead of judging risk; fully underwritten life runs <b>3–8 weeks of turnaround</b>; a single APS costs ~$350 and weeks of waiting; incomplete (“NIGO”) applications loop back to agents; and two underwriters can rate the same file differently. Slow TAT loses applicants, and manual cost makes small policies unwritable. <i>(Industry-typical figures, cited as context.)</i>`},
+ {title:`What an AI-enabled platform changes`,
+  learn:`The copilot reads the full packet in seconds, runs a <b>6-check cross-document conflict screen</b>, scores risk on <b>evidence-anchored weights</b>, and routes only the genuinely ambiguous middle band to a human. Clean cases decide in <b>seconds instead of weeks</b>; underwriter attention concentrates where judgement matters; every decision carries an audit trail. For the insurer: ~$47 vs ~$162 per application, and a TAT measured in minutes for the straight-through book.`},
+ {title:`One case, end to end`,
+  do:`Signing in as the junior underwriter.`,
+  learn:`Before the other personas, follow <b>one journey</b> the way a real desk runs it: intake → junior desk → escalation by authority → senior review → evidence → decision, with SLA clocks running the whole way. Starting at the bottom: Dana Park, new analyst.`,
+  action:{label:`Sign in as the junior analyst`,fn:()=>tourLogin('dpark','analyst')}},
+ {title:`The junior desk — authority-limited`,
+  do:`Dana's queue: only the cases within a new analyst's authority.`,
+  learn:`Routing follows <b>authority, not availability</b>: a new analyst holds clean cases up to <b>$250k</b>. Each row already shows the SLA clock (8-hour line), outstanding requirements, and an AI recommendation. If a file is incomplete, <b>Request information</b> sends it back (NIGO) and parks the clock — a manual intervention, logged.`},
+ {title:`Escalation — the case moves up`,
+  do:`Signing in as the senior underwriter.`,
+  learn:`High coverage (<b>$750k+</b>) or a major document conflict escalates <b>automatically at intake</b> — a junior never holds a case beyond their authority, so escalation is a routing rule, not a favour. The flagged case we're following sits on the senior desk: Marcus Rivera.`,
+  action:{label:`Sign in as the senior underwriter`,fn:()=>tourLogin('mrivera','senior')}},
  {title:`The Review Queue`,
   do:`The main table is the underwriter's queue.`,
-  learn:`Only the 51–89 cases that need a human land here. It's ranked by <b>coverage + time-in-queue</b> — not risk score, so the model never decides who gets looked at first. Each row carries an actionable <b>AI recommendation</b> on the right. Auto-approvals and auto-declines are filed in the spaces on the left rail.`},
+  learn:`Only the 51–89 cases that need a human land here. It's ranked by <b>coverage + time-in-queue</b> — not risk score, so the model never decides who gets looked at first. The SLA chips keep turnaround honest: amber from 6 hours, breach at 8. Each row carries an actionable <b>AI recommendation</b> on the right.`},
  {title:`A case the system flagged`,
   do:`Opening a case flagged for a conflict.`,
   learn:`This applicant has a <b>date-of-birth mismatch</b> across documents. The amber alert at the top flags it as a <b>data discrepancy — verify</b>: likely a data-entry mistake, not fraud, so the system routes it to a human instead of auto-declining. The two mismatched dates are named right under the applicant's name — nobody has to hunt for the problem.`,
@@ -585,7 +631,7 @@ const TUTORIAL_STEPS=[
   action:{label:`Show the Risk Score tab`,fn:()=>{tourShowTab(4);}}},
  {title:`Decision + audit trail`,
   do:`The Decision tab.`,
-  learn:`The system decision and rationale, the affordability screen, the case desk where the underwriter <b>approves or declines</b> (with a required reason) or requests info — and the full <b>audit trail</b> of everything that happened on the case.`,
+  learn:`The system decision and rationale, the affordability screen, the case desk where the underwriter <b>approves or declines</b> (with a required reason) or requests info — and the full <b>audit trail</b> of everything that happened on the case. That completes the journey: intake → junior desk → escalation → senior review → evidence → decision, inside SLA. Now the other personas.`,
   action:{label:`Show the Decision tab`,fn:()=>{tourShowTab(5);}}},
  {title:`Auto-Approved — ranked for capacity`,
   do:`The Auto-Approved space.`,
@@ -732,6 +778,7 @@ function doLogin(){
  else if(CURRENT_ROLE==='admin'){queueScope='team';view='admin';}
  else{queueScope='mine';space='review';view='space';}
  render();
+ const _uwg=document.getElementById('uwgBtn');if(_uwg)_uwg.style.display='flex';
  if(hasEnteredApp)roleSwapPlay();else{hasEnteredApp=true;whooshPlay();}}
 let hasEnteredApp=false;   // first entry gets the brand whoosh; later logins get the seat-change
 function roleSwapPlay(){
@@ -777,6 +824,8 @@ function applyRole(){
  badge.innerHTML=`<div><div class="rb-name">${CURRENT_USER}</div><div class="rb-role">${sub}</div></div><span class="signout" onclick="signOut()">Sign out</span>`;}
 function signOut(){CURRENT_ROLE=null;CURRENT_USER="";CURRENT_UID="";
  document.getElementById('loginUser').value='';document.getElementById('loginPass').value='';loginErr('');
+ const _b=document.getElementById('uwgBtn'),_p=document.getElementById('uwgPanel');
+ if(_b)_b.style.display='none';if(_p)_p.classList.remove('on');
  document.getElementById('login').style.display='flex';}
 /* ---------- underwriter case desk: status, assignment, notes, decision log (localStorage) ---------- */
 const WF_STATUSES=[["new","New"],["in_review","In Review"],["info_requested","Info Requested"],["referred","Referred"],["approved","Approved"],["declined","Declined"]];
@@ -983,19 +1032,22 @@ function wfPull(id){const st=wfGet(id);st.pulled=true;st.status='in_review';
 function wfReassign(id){const st=wfGet(id);st.assigneeUid=CURRENT_UID;st.assignee=CURRENT_USER;st.tier=CURRENT_TIER;
  st.history.push({by:CURRENT_USER,role:CURRENT_ROLE,at:nowStr(),action:'Reassigned to '+CURRENT_USER});wfSave(id,st);render();}
 function wfReopen(id){const st=wfGet(id);const wasBy=st.decision?st.decision.by:'';st.decision=null;st.status='in_review';
- st.history.push({by:CURRENT_USER,role:CURRENT_ROLE,at:nowStr(),action:'Reopened for review'+(CURRENT_ROLE==='manager'&&wasBy?' by manager (was decided by '+wasBy+')':'')});wfSave(id,st);
+ st.history.push({by:CURRENT_USER,role:CURRENT_ROLE,at:nowStr(),action:'Reopened for review'+((CURRENT_ROLE==='manager'||CURRENT_ROLE==='admin')&&wasBy?' by '+(CURRENT_ROLE==='manager'?'manager':'operations')+' (was decided by '+wasBy+')':'')});wfSave(id,st);
  const ov=getOverrides();delete ov[id];localStorage.setItem('uw_overrides',JSON.stringify(ov));
  if(CURRENT_ROLE==='underwriter')space='review';render();}
 function wfManagerOverride(id,kind){
- // Manager-only: change an underwriter's recorded decision after the fact (§ manager authority).
- if(CURRENT_ROLE!=='manager'){alert('Only a manager can override a recorded decision.');return;}
+ // Manager or operations admin: change a recorded decision after the fact.
+ // Ops corrects decisions recorded in error (wrong case, typo, missed evidence
+ // landing) — same audit discipline, distinct tag so the trail shows who acted.
+ if(CURRENT_ROLE!=='manager'&&CURRENT_ROLE!=='admin'){alert('Only a manager or operations admin can change a recorded decision.');return;}
+ const tag=CURRENT_ROLE==='admin'?'OPS AMENDMENT':'MANAGER OVERRIDE';
  const labels={approve:'APPROVED',decline:'DECLINED'};
  const st=wfGet(id);const prevDecision=st.decision?st.decision.action:'(none)';const prevBy=st.decision?st.decision.by:'';
- const rationale=(prompt('Manager override → '+labels[kind]+'. Reason (required — supersedes the '+prevDecision+' decision'+(prevBy?' by '+prevBy:'')+'):')||'').trim();
- if(!rationale){alert('A rationale is required to override a decision.');return;}
+ const rationale=(prompt(tag.charAt(0)+tag.slice(1).toLowerCase()+' → '+labels[kind]+'. Reason (required — supersedes the '+prevDecision+' decision'+(prevBy?' by '+prevBy:'')+'):')||'').trim();
+ if(!rationale){alert('A rationale is required to change a recorded decision.');return;}
  st.status=kind==='approve'?'approved':'declined';
- st.decision={action:labels[kind],by:CURRENT_USER,role:CURRENT_ROLE,at:nowStr(),rationale:rationale,managerOverride:true,supersedes:prevDecision};
- st.history.push({by:CURRENT_USER,role:CURRENT_ROLE,at:nowStr(),action:'MANAGER OVERRIDE → '+labels[kind]+' (superseded '+prevDecision+(prevBy?' by '+prevBy:'')+') — “'+rationale+'”'});
+ st.decision={action:labels[kind],by:CURRENT_USER,role:CURRENT_ROLE,at:nowStr(),rationale:rationale,managerOverride:CURRENT_ROLE==='manager',opsAmendment:CURRENT_ROLE==='admin',supersedes:prevDecision};
+ st.history.push({by:CURRENT_USER,role:CURRENT_ROLE,at:nowStr(),action:tag+' → '+labels[kind]+' (superseded '+prevDecision+(prevBy?' by '+prevBy:'')+') — “'+rationale+'”'});
  wfSave(id,st);
  const ov=getOverrides();ov[id]={decision:labels[kind],label:kind==='decline'?1:0,reason:rationale,at:st.decision.at};
  localStorage.setItem('uw_overrides',JSON.stringify(ov));
@@ -1069,15 +1121,16 @@ function caseDeskHTML(c){
      <button class="ai-btn" style="background:var(--acc)" onclick="downloadMemo('${c.id}')">⬇ Decision memo</button>
      <button class="ai-btn" style="background:var(--mut)" onclick="wfReopen('${c.id}')">Reopen</button></div>`;
  } else {
-  const isMgr=CURRENT_ROLE==='manager';
-  const mgrControls=(isMgr&&resolved)?`
+  const isMgr=CURRENT_ROLE==='manager',isOps=CURRENT_ROLE==='admin';
+  const verb=isOps?'Amend':'Override';
+  const mgrControls=((isMgr||isOps)&&resolved)?`
    <div class="desk-actions" style="margin-top:14px">
      <button class="ai-btn" style="background:var(--warn)" onclick="wfReopen('${c.id}')">↺ Reopen for review</button>
-     <button class="ai-btn" style="background:var(--ok)" onclick="wfManagerOverride('${c.id}','approve')">Override → Approve</button>
-     <button class="ai-btn" style="background:var(--bad)" onclick="wfManagerOverride('${c.id}','decline')">Override → Decline</button></div>
-   <div class="note"><b>Manager authority:</b> reopen this case to send it back to the underwriter, or override the recorded decision directly. Both are logged to the audit trail with your name and what they superseded.</div>`:'';
-  const roleNote=isMgr
-   ?(resolved?'':'<div class="note">Manager view — this case is still with the underwriter. Reopen / override becomes available once a decision is recorded.</div>')
+     <button class="ai-btn" style="background:var(--ok)" onclick="wfManagerOverride('${c.id}','approve')">${verb} → Approve</button>
+     <button class="ai-btn" style="background:var(--bad)" onclick="wfManagerOverride('${c.id}','decline')">${verb} → Decline</button></div>
+   <div class="note"><b>${isOps?'Operations authority':'Manager authority'}:</b> reopen this case to send it back to the underwriter, or ${isOps?'amend':'override'} the recorded decision directly. Both are logged to the audit trail with your name and what they superseded.</div>`:'';
+  const roleNote=(isMgr||isOps)
+   ?(resolved?'':`<div class="note">${isMgr?'Manager':'Operations'} view — this case is still with the underwriter. Reopen / ${isOps?'amend':'override'} becomes available once a decision is recorded.</div>`)
    :'<div class="note">Read-only view.</div>';
   controls=`<div class="desk-row"><span class="desk-l">Status</span><span class="status-chip wf-${st.status}">${WF_LABEL[st.status]}</span></div>
    <div class="desk-row"><span class="desk-l">Owner</span><span>${owner}</span></div>
@@ -1176,15 +1229,15 @@ function execRail(){
  const combined=premAppr?((expClaims+premAppr*SGA_RATE+opsCost)/premAppr*100):0;
  const appetitePct=covAppr/APPETITE_MONTHLY*100;
  const stp=(M.decisioning.straight_through_rate*100);
- const row=(l,v,col)=>`<div class="er-row"><span>${l}</span><b${col?` style="color:${col}"`:''}>${v}</b></div>`;
+ const row=(l,v,col,cls)=>`<div class="er-row${cls?' '+cls:''}"><b${col?` style="color:${col}"`:''}>${v}</b><span>${l}</span></div>`;
  document.getElementById('caseList').innerHTML=`<div class="exec-rail">
-  ${row('Operating income',(opInc>=0?'':'−')+fmtMoneyK(Math.abs(opInc))+'/yr',opInc>=0?'var(--ok)':'var(--bad)')}
-  ${row('Combined ratio',combined.toFixed(0)+'%',combined<100?'var(--ok)':'var(--bad)')}
-  ${row('Coverage accepted',fmtBigMoney(covAppr))}
+  ${row('Operating income',(opInc>=0?'':'−')+fmtMoneyK(Math.abs(opInc))+'/yr',opInc>=0?'var(--ok)':'var(--bad)','er-hero')}
+  ${row('Combined ratio',combined.toFixed(0)+'%',combined<100?'var(--ok)':'var(--bad)','er-big')}
+  ${row('Coverage accepted',fmtBigMoney(covAppr),'','er-big')}
   ${row('Approved premium',fmtMoneyK(premAppr)+'/yr')}
   ${row('Appetite used',appetitePct.toFixed(0)+'%',appetitePct>100?'var(--warn)':'')}
   ${row('Straight-through',stp.toFixed(0)+'%')}
-  ${row('App · pend · decl',appr.length+' · '+pend+' · '+decl.length)}
+  ${row('Approved · pending · declined',appr.length+' · '+pend+' · '+decl.length)}
   <div class="er-note">Portfolio-only view — the executive holds no individual cases. These figures update live as decisions are recorded.</div></div>`;
 }
 function spaceView(){
@@ -1556,6 +1609,20 @@ function allDecisions(){
 }
 function evidenceAll(){try{return JSON.parse(localStorage.getItem('uw_evidence')||'[]');}catch(e){return [];}}
 function fmtBigMoney(v){return "$"+(v>=1e6?(v/1e6).toFixed(1)+"M":Math.round(v/1e3)+"k");}
+/* ---- configurable executive reporting (7/28 feedback) ----
+   The dashboard is composable per stakeholder: any block can be shown or
+   hidden, and the choice persists in this browser. Different stakeholder
+   groups keep different views of the same live numbers. */
+const EXEC_SECTIONS=[
+ ['headline','Headline exposure tiles'],['pnl','Portfolio economics (P&L)'],
+ ['cost','Cost to underwrite'],['growth','Approval · appetite · STP tiles'],
+ ['yoy','YoY risk underwritten'],['ops','Operational tiles'],
+ ['mix','Decision mix'],['appetite','Risk appetite levers']];
+let execCfgOpen=false;
+function execCfg(){try{return JSON.parse(localStorage.getItem('uw_exec_cfg')||'{}');}catch(e){return {};}}
+function execShown(k){return execCfg()[k]!==false;}
+function execCfgToggle(k){const s=execCfg();s[k]=!(s[k]!==false);localStorage.setItem('uw_exec_cfg',JSON.stringify(s));render();}
+function execCfgPanel(){execCfgOpen=!execCfgOpen;render();}
 function executiveView(){
  // A money view, not a queue (§5.1). Built from the whole book + recorded decisions.
  const n=CASES.length;
@@ -1591,13 +1658,17 @@ function executiveView(){
  const yoyAmt=underwritten2025>0?(covAppr/underwritten2025-1)*100:0;
  const tile=(v,l,accent)=>`<div class="stat"${accent?` style="border-top:4px solid ${accent}"`:''}><div class="sv">${v}</div><div class="sl">${l}</div></div>`;
  return `<div class="case-head"><div><h2>Executive Overview</h2>
-   <div class="case-meta"><span>Chief Underwriting Officer</span><span>Executive-only view</span><span>evaluated ${M.generated_at}</span></div></div></div>
-  <div class="grid3" style="margin-top:18px">
+   <div class="case-meta"><span>Chief Underwriting Officer</span><span>Executive-only view</span><span>evaluated ${M.generated_at}</span></div></div>
+   <button class="ai-btn" style="background:var(--acc)" onclick="execCfgPanel()">⚙ Customize view</button></div>
+  ${execCfgOpen?`<div class="card" style="margin-top:14px"><h3>Customize this report</h3>
+   <div class="legend-row">${EXEC_SECTIONS.map(([k,l])=>`<label class="legend-chip" style="cursor:pointer;gap:7px"><input type="checkbox" ${execShown(k)?'checked':''} onchange="execCfgToggle('${k}')">${l}</label>`).join('')}</div>
+   <div class="note">Add or remove reporting blocks to fit the audience — the choice persists in this browser, and every block reads the same live numbers. Different stakeholder groups keep different views of one book.</div></div>`:''}
+  ${execShown('headline')?`<div class="grid3" style="margin-top:18px">
    ${tile(fmtBigMoney(covAppr),'<b>Total coverage accepted</b> — exposure taken on to the book','var(--ok)')}
    ${tile(fmtBigMoney(covDecl),'<b>Total coverage declined</b> — risk turned away','var(--bad)')}
    ${tile(fmtMoneyK(premAppr)+'/yr','<b>Approved premium</b> — annualised, the revenue side','var(--acc)')}
-  </div>
-  <div class="card" style="margin-top:16px"><h3>Portfolio economics — what the book keeps, not just what it writes</h3>
+  </div>`:''}
+  ${execShown('pnl')?`<div class="card" style="margin-top:16px"><h3>Portfolio economics — what the book keeps, not just what it writes</h3>
    ${[['Approved premium (annualised)',premAppr,'+'],
       ['Expected claims payout against that premium',-expClaims,'−'],
       ['SG&A + acquisition ('+(SGA_RATE*100).toFixed(0)+'% of premium)',-sga,'−'],
@@ -1612,35 +1683,35 @@ function executiveView(){
     ${tile(expenseRatio.toFixed(0)+'%','<b>Expense ratio</b> — SG&A + underwriting ops ÷ premium')}
     ${tile(combined.toFixed(0)+'%','<b>Combined ratio</b> — under 100% means the book earns an underwriting profit',combined<100?'var(--ok)':'var(--bad)')}
    </div>
-   <div class="note">Expected payout is an illustrative actuarial model on the synthetic book: Gompertz base mortality by age × each case's rule-engine relative-mortality multiple (the published weights are 28·ln(multiple), so exp(score/28) recovers it). SG&A and cost figures are named, illustrative assumptions — swap in carrier actuals during a pilot to make this the real class-profile P&L.</div></div>
-  <div class="card"><h3>Cost to underwrite — the economics of automation</h3>
+   <div class="note">Expected payout is an illustrative actuarial model on the synthetic book: Gompertz base mortality by age × each case's rule-engine relative-mortality multiple (the published weights are 28·ln(multiple), so exp(score/28) recovers it). SG&A and cost figures are named, illustrative assumptions — swap in carrier actuals during a pilot to make this the real class-profile P&L.</div></div>`:''}
+  ${execShown('cost')?`<div class="card"><h3>Cost to underwrite — the economics of automation</h3>
    <div class="grid3">
     ${tile('$'+costPerAppCopilot.toFixed(0),'<b>Per application with the copilot</b> — only '+referredN+' of '+n+' cases need an underwriter’s time','var(--ok)')}
     ${tile('$'+costPerAppManual.toFixed(0),'<b>Per application, all-manual baseline</b> — every case gets a full human review','var(--bad)')}
     ${tile(fmtMoneyK(uwSavings),'<b>Saved across this book</b> — underwriting cost avoided on '+n+' applications','var(--acc)')}
    </div>
-   <div class="note">This is what makes small-premium policies economically viable: a term policy writing a few hundred dollars a year cannot carry a $${costPerAppManual.toFixed(0)} manual underwriting cost, but it can carry $${costPerAppCopilot.toFixed(0)}. Straight-through processing pays for the low end of the market, and human attention concentrates on the ${referredN} cases that genuinely need it.</div></div>
-  <div class="grid3" style="margin-top:14px">
+   <div class="note">This is what makes small-premium policies economically viable: a term policy writing a few hundred dollars a year cannot carry a $${costPerAppManual.toFixed(0)} manual underwriting cost, but it can carry $${costPerAppCopilot.toFixed(0)}. Straight-through processing pays for the low end of the market, and human attention concentrates on the ${referredN} cases that genuinely need it.</div></div>`:''}
+  ${execShown('growth')?`<div class="grid3" style="margin-top:14px">
    ${tile(apprRate.toFixed(0)+'%','<b>YoY approval rate</b> — '+yr+' vs. '+priorApprRate.toFixed(0)+'% in '+(yr-1)+' (illustrative)','var(--acc)')}
    ${tile(appetitePct.toFixed(0)+'%','<b>% of monthly appetite</b> — accepted cover vs the '+fmtBigMoney(APPETITE_MONTHLY)+' target','var(--warn)')}
    ${tile(stp.toFixed(0)+'%','<b>Straight-through rate</b> — decided with no human touch')}
-  </div>
-  <div class="card" style="margin-top:16px"><h3>Total amount of risk underwritten — ${moName} ${yr-1} vs ${moName} ${yr}</h3>
+  </div>`:''}
+  ${execShown('yoy')?`<div class="card" style="margin-top:16px"><h3>Total amount of risk underwritten — ${moName} ${yr-1} vs ${moName} ${yr}</h3>
    <div style="display:flex;gap:26px;flex-wrap:wrap;align-items:flex-end">
     <div><div class="hs-lab">${moName} ${yr-1} <span style="opacity:.7">(illustrative)</span></div><div class="sv" style="color:var(--mut)">${fmtBigMoney(underwritten2025)}</div></div>
     <div style="font-size:24px;color:var(--mut);padding-bottom:6px">→</div>
     <div><div class="hs-lab">${moName} ${yr} (actual)</div><div class="sv" style="color:var(--ok)">${fmtBigMoney(covAppr)}</div></div>
     <div style="margin-left:8px"><div class="hs-lab">Year-over-year</div><div class="sv" style="color:${yoyAmt>=0?'var(--ok)':'var(--bad)'}">${yoyAmt>=0?'+':''}${yoyAmt.toFixed(0)}%</div></div>
    </div>
-   <div class="note">Total amount of risk underwritten (approved cover), this month against the same month last year — the executive's headline movement, held by no other role. The ${yr-1} figure is an illustrative baseline pending a real historical book; ${yr} is live.</div></div>
-  <div class="grid3" style="margin-top:14px">
+   <div class="note">Total amount of risk underwritten (approved cover), this month against the same month last year — the executive's headline movement, held by no other role. The ${yr-1} figure is an illustrative baseline pending a real historical book; ${yr} is live.</div></div>`:''}
+  ${execShown('ops')?`<div class="grid3" style="margin-top:14px">
    ${tile(fmtBigMoney(avgCover),'Average approved cover per policy')}
    ${tile(fmtAge(avgCycle),'Average time in queue — proxy for cycle time')}
    ${tile(overrideRate.toFixed(0)+'%','<b>Override rate</b> — human decisions against the model lean ('+nOv+' of '+decidedManual+')')}
    ${tile(appr.length+' / '+pend.length+' / '+decl.length,'Approved / referred-pending / declined (count)')}
    ${tile(fmtBigMoney(covAll),'Total coverage requested across the book')}
-  </div>
-  <div class="card" style="margin-top:16px"><h3>Decision mix — cover per bucket</h3>
+  </div>`:''}
+  ${execShown('mix')?`<div class="card" style="margin-top:16px"><h3>Decision mix — cover per bucket</h3>
    <div class="mix-bar">
     <div class="mix-seg" style="width:${pctG}%;background:var(--ok)">${pctG>7?fmtBigMoney(covAppr):''}</div>
     <div class="mix-seg" style="width:${pctP}%;background:var(--warn)">${pctP>7?fmtBigMoney(covPend):''}</div>
@@ -1648,13 +1719,13 @@ function executiveView(){
    <div class="legend-row" style="margin-top:10px">
     <div class="legend-chip cls-ok"><span class="swatch" style="background:var(--ok)"></span>Approved · ${appr.length} · ${fmtBigMoney(covAppr)}</div>
     <div class="legend-chip cls-warn"><span class="swatch" style="background:var(--warn)"></span>Referred / pending · ${pend.length} · ${fmtBigMoney(covPend)}</div>
-    <div class="legend-chip cls-bad"><span class="swatch" style="background:var(--bad)"></span>Declined · ${decl.length} · ${fmtBigMoney(covDecl)}</div></div></div>
-  <div class="card"><h3>Risk appetite — the levers you own</h3>
+    <div class="legend-chip cls-bad"><span class="swatch" style="background:var(--bad)"></span>Declined · ${decl.length} · ${fmtBigMoney(covDecl)}</div></div></div>`:''}
+  ${execShown('appetite')?`<div class="card"><h3>Risk appetite — the levers you own</h3>
    <div class="note" style="margin:0 0 10px">Approved cover this book is <b>${fmtBigMoney(covAppr)}</b> against a monthly appetite target of <b>${fmtBigMoney(APPETITE_MONTHLY)}</b> — <b style="color:${appetitePct>=100?'var(--bad)':'var(--ok)'}">${appetitePct.toFixed(0)}%</b> of appetite. ${appetitePct<80?'The book is running below appetite — the acceptance lines could be loosened.':appetitePct>100?'The book is over appetite — tighten the acceptance lines.':'The book is tracking to appetite.'}</div>
    <div class="gauge-line"><div class="fill" style="width:${appetitePct}%;background:${appetitePct>=100?'var(--bad)':'var(--ok)'}"></div></div>
    <div class="appetite" style="margin-top:14px">
     <div class="lever"><b>Approval line — score < ${A_LINE}</b><div class="note" style="margin:6px 0 0">Below this, cases auto-approve. Lowering it tightens the book; raising it takes on more volume and exposure.</div></div>
-    <div class="lever"><b>Decline line — score ≥ ${D_LINE}</b><div class="note" style="margin:6px 0 0">At or above this, cases auto-decline. These two lines are configuration, versioned, and owned by underwriting leadership — not baked into the model.</div></div></div></div>
+    <div class="lever"><b>Decline line — score ≥ ${D_LINE}</b><div class="note" style="margin:6px 0 0">At or above this, cases auto-decline. These two lines are configuration, versioned, and owned by underwriting leadership — not baked into the model.</div></div></div></div>`:''}
   <div class="note">YoY figures are illustrative: the synthetic book has no dated prior-year cohort, so the 2025 baseline is a placeholder pending a real historical book. Every other number is computed live from the current cases and recorded decisions.</div>`;
 }
 function fmtMoneyK(v){return "$"+(v>=1e6?(v/1e6).toFixed(2)+"M":Math.round(v/1e3)+"k");}
@@ -1668,8 +1739,10 @@ function adminView(){
  const ev=evidenceAll().slice().reverse();
  const tile=(v,l,accent)=>`<div class="stat"${accent?` style="border-top:4px solid ${accent}"`:''}><div class="sv">${v}</div><div class="sl">${l}</div></div>`;
  const feed=dec.length?dec.map(d=>{const badge=d.model&&d.action?((d.model==='APPROVE'&&d.action==='APPROVED')||(d.model==='DECLINE'&&d.action==='DECLINED')?'<span class="pri-chip" style="background:var(--ok)">AGREED</span>':d.model==='MANUAL REVIEW'?'':'<span class="pri-chip" style="background:var(--warn)">OVERRIDE</span>'):'';
+   const flipKind=d.action==='APPROVED'?'decline':'approve';
    return `<div class="feed-row"><span class="feed-when">${d.at}</span>
-    <span class="feed-what"><b>${d.action}</b> — <span class="mono" style="cursor:pointer;color:var(--acc)" onclick="sel('${d.id}')">${d.id}</span> ${d.name}, ${fmt$(d.coverage)} ${badge}<div style="color:var(--mut);font-size:12px;margin-top:2px">AI: ${d.model} · “${d.rationale||''}”</div></span>
+    <span class="feed-what"><b>${d.action}</b> — <span class="mono" style="cursor:pointer;color:var(--acc)" onclick="sel('${d.id}')">${d.id}</span> ${d.name}, ${fmt$(d.coverage)} ${badge}<div style="color:var(--mut);font-size:12px;margin-top:2px">AI: ${d.model} · “${d.rationale||''}”</div>
+     <div style="margin-top:6px"><button class="ai-btn" style="background:var(--mut)" onclick="wfReopen('${d.id}')">↺ Reopen</button> <button class="ai-btn" style="background:${flipKind==='approve'?'var(--ok)':'var(--bad)'}" onclick="wfManagerOverride('${d.id}','${flipKind}')">Amend → ${flipKind==='approve'?'Approve':'Decline'}</button></div></span>
     <span class="feed-who">${d.by||''}</span></div>`;}).join(''):'<div class="note" style="margin:0">No decisions recorded yet. Underwriter decisions land here in real time.</div>';
  const evList=ev.length?ev.map(e=>`<div class="feed-row"><span class="feed-when">${e.at}</span>
     <span class="feed-what"><span class="status-chip wf-info_requested">${e.status}</span> <span class="mono" style="cursor:pointer;color:var(--acc)" onclick="sel('${e.caseId}')">${e.caseId}</span> ${e.name} — ${e.labels}<div style="color:var(--mut);font-size:12px;margin-top:2px">“${e.rationale}”${e.flags&&e.flags.length?` · <span style="color:var(--warn)">${e.flags.length} pre-check flag(s) acknowledged</span>`:''}</div></span>
@@ -1700,9 +1773,24 @@ function adminView(){
   <div class="card" style="margin-top:16px"><div class="ai-head"><h3 style="margin:0">Decision trail — every recorded decision, newest first</h3>
     <div><button class="ai-btn" onclick="exportDecisions('csv')">⬇ CSV</button> <button class="ai-btn" style="background:var(--acc)" onclick="exportDecisions('json')">⬇ JSON</button></div></div>
    ${feed}
-   <div class="note">This is the regulator-ready package — attributed, timestamped, and linked to each case, with the model recommendation beside the human decision. Export as CSV or JSON for compliance.</div></div>
+   <div class="note">This is the regulator-ready package — attributed, timestamped, and linked to each case, with the model recommendation beside the human decision. Export as CSV or JSON for compliance. <b>Reopen</b> sends a case back to the underwriter; <b>Amend</b> corrects a decision recorded in error — both are logged as OPS AMENDMENT with your name and what they superseded.</div></div>
   <div class="card"><h3>Outstanding evidence requests</h3>${evList}
-   <div class="note">Raised by underwriters from the case file (§4.3). Each carries the requesting underwriter, a mandatory rationale, and any pre-check flags they proceeded over — so operations can chase the right provider.</div></div>`;
+   <div class="note">Raised by underwriters from the case file (§4.3). Each carries the requesting underwriter, a mandatory rationale, and any pre-check flags they proceeded over — so operations can chase the right provider.</div></div>
+  <div class="card"><h3>Integration coverage — where the platform sits in the estate</h3>
+   ${(()=>{const chip=(n,d,s)=>`<div class="doc-row"><div class="dot ${s==='demo'?'':'miss'}"></div><div class="dname">${n}<div style="font-size:11px;color:var(--mut);font-weight:500">${d}</div></div><div class="dstatus" style="color:${s==='demo'?'var(--ok)':'var(--acc)'}">${s==='demo'?'Simulated in demo':'Pilot connector'}</div></div>`;
+     return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 22px">
+      <div><b style="font-size:13px">Internal systems</b>
+       ${chip('New Business Platform','application packet intake — the demo ingests the ACORD-style packet directly','demo')}
+       ${chip('Agent / Producer Portal','NIGO return loop + status callbacks — “Request information” models the return leg','demo')}
+       ${chip('Notification Services','decision + SLA-breach events — surfaced in-app today, webhook out in pilot','demo')}
+       ${chip('CRM','applicant record sync, decision write-back','plan')}
+       ${chip('Claims','decision + rating context handed to claims at FNOL','plan')}</div>
+      <div><b style="font-size:13px">External systems</b>
+       ${chip('Risk-assessment data providers','NHANES / NCHS mortality evidence already anchors the rule weights','demo')}
+       ${chip('Medical &amp; health APIs','Rx history, MIB, lab networks — replaces simulated evidence ordering','plan')}
+       ${chip('Address verification services','identity + address validation at intake','plan')}
+       ${chip('Third-Party Administrators (TPA)','delegated case exchange for TPA-serviced blocks','plan')}</div></div>`;})()}
+   <div class="note">The engine is deliberately <b>document-intake-only</b> — no external repository is assumed at decision time (there is no shared cross-insurer claims/health repository in the target markets). Every connector lands behind the same extraction layer, so integrations add evidence without changing the scoring contract.</div></div>`;
 }
 function exportDecisions(fmt){
  const d=allDecisions();
@@ -2240,6 +2328,103 @@ function scoreNow(){
    ${factors.map(x=>`<div class="factor-row"><div><div class="factor-label">${esc(x[0])}</div><div class="factor-detail">${esc(x[1])}</div></div><div class="factor-pts">${x[2]>0?'+':''}${x[2]}</div></div>`).join('')}
    <div class="note">The ML half uses the trained logistic-regression coefficients exported from the pipeline (the browser cannot run gradient boosting; logistic is its auditable stand-in, AUC ${(M.risk_models.logistic_regression.auc*100).toFixed(1)}%), including the external-data prior learned from ${((M.external_learning||{}).total_rows||0).toLocaleString()} real records across ${(M.risk_models.prior_export||[]).length} public datasets. Portfolio cases are scored offline with the full dual engine.</div></div>`;
  document.getElementById('scoreResult').scrollIntoView({behavior:'smooth'});
+}
+/* ---------- UW Guide — embedded knowledge assistant (Knowledge Bot feedback) ----------
+   Fully offline by design: a curated knowledge base over the platform’s own
+   guidelines, product rules and process, plus live lookups into the current
+   book. It answers from the same constants the engine runs on (A_LINE, the
+   requirements grid, the routing tiers), so the bot can never drift from the
+   product. No external calls — it ships inside the single file. */
+const UWG_KB=[
+ {k:['band','threshold','line','cutoff','0-50','51','89','90','score range','how is a case decided'],
+  a:()=>`Scores run <b>0–100</b>. Under <b>${A_LINE}</b> auto-approves, <b>${D_LINE}+</b> auto-declines, and the <b>${A_LINE}–${D_LINE-1}</b> middle band goes to a human underwriter. The two lines are configuration owned by underwriting leadership — tightening or loosening the book is a config change, not a retrain.`},
+ {k:['conflict','check','screen','mismatch','discrepan','cross-document'],
+  a:()=>`The <b>6-check conflict screen</b> compares every packet across documents: income vs payslip, income vs tax slip, income vs bank deposits, declared debt vs bureau, DOB across form and paramedical, and declared tobacco vs the cotinine lab. Majors force manual review; smoker non-disclosure alone is treated as material misrepresentation.`},
+ {k:['dob','date of birth','verify','data entry'],
+  a:()=>`A <b>DOB mismatch is a data discrepancy, not fraud</b> — most are transcription errors. Policy: it forces <b>manual review</b> with an amber “verify” flag (never an auto-decline, never a silent approve). The underwriter confirms identity against the source documents, then decides.`},
+ {k:['smoker','cotinine','tobacco','nondisclosure','misrepresentation','fraud'],
+  a:()=>`Declaring non-smoker with a <b>positive cotinine lab</b> is material misrepresentation — evidence contradicting a sworn answer — and auto-declines whatever the score. A declared smoker with a positive lab is consistent: rated as a smoker, no flag. This is the only conflict treated as fraud on its own.`},
+ {k:['afford','financial underwriting','justif','premium burden','income multiple'],
+  a:()=>`The <b>affordability screen</b> checks the premium against income and the coverage amount against an income multiple by age. A failing case is never declined on affordability alone — it routes to <b>financial underwriting review</b>, because the fix is usually a smaller face amount, not a rejection.`},
+ {k:['requirement','aps','labs','evidence','paramed','ekg','cognitive','mvr','mib','grid','order'],
+  a:()=>`Requirements come from the <b>age × amount grid</b>: 50+ or $250k+ needs a paramed exam and blood profile; $1M+ or 66+ adds an APS; 50+ at $1M+ adds an EKG; 61+ at $1M+ adds a cognitive assessment. Ordering more evidence needs a <b>written rationale</b>, and an AI pre-check flags duplicate or non-indicated orders before they cost money (an APS runs ~$350 and takes weeks).`},
+ {k:['routing','desk','assign','authority','junior','analyst','senior','escalat','tier','mid-tier'],
+  a:()=>`Referred cases route by <b>authority, not availability</b>: a new analyst gets clean cases up to $250k; mid-tier takes $250k+; anything at $750k+ or carrying a major conflict goes straight to the <b>senior desk</b>. A junior underwriter never holds a case beyond their authority — escalation is automatic at intake.`},
+ {k:['sla','tat','turnaround','time in queue','priority','cycle time','oldest'],
+  a:()=>`Every referred case carries a clock: the review SLA is <b>8 hours</b>, with a warning state from 6. Queue order is <b>coverage + time-in-queue</b> — deliberately not the risk score, so the model never decides who gets looked at first. Straight-through cases decide in seconds, which is what moves the book’s TAT.`},
+ {k:['weight','evidence-anchored','nhanes','mortality','28','calibrat','prudential','why these points'],
+  a:()=>`Rule weights are <b>round(28 × ln(relative mortality))</b>, derived from NHANES + NCHS linked-mortality data and cross-validated against real Prudential applicants — not hand-picked numbers. That’s why a current smoker is +24: cotinine-confirmed smokers run ~2.37× mortality, and 28·ln(2.37) ≈ 24.`},
+ {k:['model','composite','auc','logistic','gradient','ml score','how is the score'],
+  a:()=>`The composite is a <b>50/50 blend</b>: the evidence-anchored rule engine and a trained ML model. The pipeline trains logistic regression and gradient boosting; the browser re-scores with the exported logistic coefficients (auditable, ships as numbers). Model quality, calibration and fairness by group live on the manager’s <b>Model Card</b>.`},
+ {k:['stp','straight-through','cost per app','automation','viab','small premium','economics of'],
+  a:()=>`Straight-through processing decides the clean and the clearly declinable with no human touch — only the middle band costs underwriter time. That takes the cost per application from ~$162 all-manual to ~$47, which is what makes small-premium term policies economically writable.`},
+ {k:['operating income','p&l','claims payout','sg&a','combined ratio','loss ratio','gompertz','select period','expected claims'],
+  a:()=>`The executive P&L: approved premium − expected claims (Gompertz mortality by age × each case’s rule-engine mortality multiple × a select-period factor) − SG&A (12% illustrative) − cost to underwrite = <b>operating income</b>. Under 100% combined ratio, the book earns an underwriting profit. Assumptions are named and swap for carrier actuals in a pilot.`},
+ {k:['override','amend','reopen','change a decision','change decision','who can change','undo'],
+  a:()=>`Three levels: an <b>underwriter</b> can reopen their own decided case; a <b>manager</b> can reopen or override any recorded decision (logged as MANAGER OVERRIDE); an <b>operations admin</b> can reopen or amend decisions recorded in error (logged as OPS AMENDMENT). Every change requires a written reason and records what it superseded.`},
+ {k:['export','csv','json','benchmark','memo','regulator','compliance','audit trail','audit'],
+  a:()=>`Exports: the admin’s <b>decision trail</b> (CSV/JSON, attributed and timestamped), the manager’s <b>pilot benchmark CSV</b> (every case with scores, flags and routing beside any human decision), and a per-case <b>decision memo</b>. Every case action lands in its audit trail automatically.`},
+ {k:['product','term','whole life','policy type','rate class','premium calc'],
+  a:()=>`The book carries term (10/20/30-yr), whole life and universal life. Premiums scale with age, smoker status, face amount and product. Rate classes follow the decision: approved cases price standard-or-better; referred cases can come back rated (Table B–D) after review.`},
+ {k:['role','login','persona','who sees','which view'],
+  a:()=>`Each role sees a different product: <b>underwriters</b> get the review queue and case desk, the <b>manager</b> gets oversight + the Model Card, the <b>executive</b> gets the money view only, and the <b>operations admin</b> gets the decision feed, evidence chasing and SLA watch. Sign-in is the role selector.`},
+ {k:['appetite','capacity','monthly target','lever','45m','how much can we write'],
+  a:()=>`The monthly appetite is <b>$45M of accepted cover</b> — a config lever, not a model output. The Auto-Approved space ranks candidates by expected underwriting margin so a capacity-constrained book accepts the best N first; the dashed line marks where appetite runs out. The executive owns the approve/decline lines that throttle it.`},
+ {k:['integration','crm','api','tpa','connector','agent portal','claims system','address verification','notification'],
+  a:()=>`The demo is <b>document-intake-only</b> by design. The pilot integration surface: internal — CRM, new-business platform, agent portal, notification services, claims; external — medical/health data APIs, address verification, TPAs and risk-data providers. Each lands behind the same extraction layer, so connectors add evidence without changing the engine.`},
+ {k:['nigo','incomplete','not in good order','info request','missing information'],
+  a:()=>`<b>NIGO</b> (“not in good order”) — incomplete or malformed applications — is the biggest single source of cycle-time loss. Underwriters send a case back with <b>Request information</b>, which stamps it Info Requested, logs what’s missing, and parks the SLA clock on the applicant’s side.`},
+ {k:['refer','why manual','yellow','middle band','human review'],
+  a:()=>`A case is referred when the system can’t safely decide alone: a mid-band score (${A_LINE}–${D_LINE-1}), a document conflict, a failed affordability screen, or disclosed unique circumstances. Open any referred case and ask me <i>“why is this case here?”</i> — I’ll read its actual drivers.`}
+];
+function uwgCaseAnswer(c){
+ const st=wfGet(c.id);
+ const conf=(c.conflicts||[]).map(k=>`${k.type.replace(/_/g,' ')} (${k.severity})`).join(', ');
+ const rec=caseRecommendation(c);
+ const why=(c.reasons||[]).slice(0,3).join(' · ');
+ const lines=[`<b>${c.id}</b> — ${c.name}, ${c.age}, ${c.policy}, ${fmt$(c.coverage)} of cover.`,
+  `System call: <b>${c.decision}</b> (score ${c.risk_score}: rule ${c.rule_score} / ML ${Math.round(c.ml_score)}) — ${c.rate_class}.`];
+ if(why)lines.push(`Drivers: ${why}.`);
+ if(conf)lines.push(`Conflicts: ${conf}.`);
+ if(c.afford&&c.afford.verdict)lines.push(`Affordability: <b>${c.afford.verdict.toUpperCase()}</b>.`);
+ if(c.verdict==='yellow')lines.push(`Routed to the <b>${(UWS[st.tier]||{}).label||'review'}</b> desk${st.assignee?` (${st.assignee})`:''}. Suggested next step: <b>${rec[0]}</b> — ${rec[1]}.`);
+ if(st.decision)lines.push(`Human decision on record: <b>${st.decision.action}</b> by ${st.decision.by}, ${st.decision.at}.`);
+ return lines.join('<br>');
+}
+let uwgBooted=false;
+function uwgToggle(){
+ const p=document.getElementById('uwgPanel');const on=!p.classList.contains('on');
+ p.classList.toggle('on',on);
+ if(on&&!uwgBooted){uwgBooted=true;
+  uwgMsg('Hi — I’m the <b>UW Guide</b>. Ask me about underwriting guidelines, product rules, risk-scoring, or process — or give me a case ID (or open a case and ask “why is this case here?”).','bot');}
+ if(on){uwgChipsRender();const i=document.getElementById('uwgIn');if(i)i.focus();}
+}
+function uwgMsg(html,who){
+ const m=document.getElementById('uwgMsgs');const d=document.createElement('div');
+ d.className='uwg-m '+who;d.innerHTML=html;m.appendChild(d);m.scrollTop=m.scrollHeight;
+}
+function uwgChipsRender(){
+ const chips=(view==='case'&&activeId)?['Why is this case here?','What evidence does it need?','Who can change a decision?']
+  :['What are the decision bands?','How is the score built?','Who can change a decision?','What does NIGO mean?'];
+ document.getElementById('uwgChips').innerHTML=chips.map(c=>`<button class="uwg-chip" onclick="uwgAsk('${c.replace(/'/g,'&#39;')}')">${c}</button>`).join('');
+}
+function uwgAsk(q){const i=document.getElementById('uwgIn');if(i)i.value=q;uwgSend();}
+function uwgSend(){
+ const i=document.getElementById('uwgIn');const q=(i.value||'').trim();if(!q)return;
+ i.value='';uwgMsg(q.replace(/</g,'&lt;'),'me');
+ setTimeout(()=>{uwgMsg(uwgAnswer(q),'bot');uwgChipsRender();},220);
+}
+function uwgAnswer(qRaw){
+ const q=qRaw.toLowerCase();
+ const idm=qRaw.toUpperCase().match(/APP-\d+/);
+ if(idm){const c=CASES.find(x=>x.id===idm[0]);
+  return c?uwgCaseAnswer(c):`I can’t find <span class="mono">${idm[0]}</span> in the current book.`;}
+ if(/(this case|current case|case here|explain (it|this)|why is (he|she|it))/.test(q)&&view==='case'&&activeId){
+  const c=CASES.find(x=>x.id===activeId);if(c)return uwgCaseAnswer(c);}
+ let best=null,bestN=0;
+ UWG_KB.forEach(e=>{let n=0;e.k.forEach(k=>{if(q.includes(k))n+=(k.length>4?2:1);});if(n>bestN){bestN=n;best=e;}});
+ if(best)return best.a();
+ return 'I cover the platform’s own rulebook: decision bands, the 6-check conflict screen, DOB / smoker policy, affordability, the requirements grid, desk routing, SLAs, evidence-anchored weights, the executive P&L, decision-change authority, exports and integrations. Try one of the suggestions below, or give me a case ID like <span class="mono">'+CASES[0].id+'</span>.';
 }
 render();
 // Esc returns from a case file to the queue with its context intact (§3.3).
