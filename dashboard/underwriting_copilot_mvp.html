@@ -2369,6 +2369,39 @@ const UWG_KB=[
  {k:['refer','why manual','yellow','middle band','human review'],
   a:()=>`A case is referred when the system can’t safely decide alone: a mid-band score (${A_LINE}–${D_LINE-1}), a document conflict, a failed affordability screen, or disclosed unique circumstances. Open any referred case and ask me <i>“why is this case here?”</i> — I’ll read its actual drivers.`}
 ];
+function uwgRankAnswer(kind){
+ // Ranked reads of the auto-decisioned book — the same ordering the
+ // Auto-Approved space uses (expected margin), worst-first for declines.
+ if(kind==='approve'){
+  const l=CASES.filter(c=>c.verdict==='green').sort((a,b)=>(acceptMargin(b)-acceptMargin(a))||(a.risk_score-b.risk_score)).slice(0,5);
+  return `<b>Auto-approved, ranked best candidate first</b> (by expected annual underwriting margin — premium − expected claims − SG&A):<br>${l.map((c,i)=>`${i+1}. <span class="mono">${c.id}</span> ${c.name} — ${fmtMoneyK(acceptMargin(c))}/yr margin, score ${c.risk_score}, ${fmt$(c.coverage)}`).join('<br>')}<br>The full ranked list, with the appetite cutoff, lives in the <b>Auto-Approved</b> space.`;
+ }
+ const l=CASES.filter(c=>c.verdict==='red').sort((a,b)=>b.risk_score-a.risk_score).slice(0,5);
+ return `<b>Auto-declined, ranked highest risk first</b>:<br>${l.map((c,i)=>`${i+1}. <span class="mono">${c.id}</span> ${c.name} — score ${c.risk_score}${(c.reasons||[])[0]?', '+c.reasons[0].toLowerCase():''}`).join('<br>')}<br>Every one is filed with its rationale in the <b>Auto-Declined</b> space — and any can be pulled back into manual review.`;
+}
+function uwgFieldAnswer(c,q){
+ // A specific field of a specific applicant — answer just that, from the packet.
+ const e=c.extraction||{};
+ const F=[
+  [/weight|height|bmi/, ()=>`height ${c.height} cm, weight <b>${c.weight} kg</b> (BMI ${c.bmi}), from the paramedical exam`],
+  [/\bage\b|date of birth|\bdob\b|born/, ()=>`born ${c.dob} — age <b>${c.age}</b>`],
+  [/income|salary|earn/, ()=>`annual income <b>${fmt$(c.income)}</b> (${c.occupation||'—'}${c.employer?', '+c.employer:''})`],
+  [/coverage|cover\b|face amount|sum assured/, ()=>`requesting <b>${fmt$(c.coverage)}</b> of cover — ${c.policy}`],
+  [/premium/, ()=>`annual premium <b>${fmt$(c.premium)}</b> on ${fmt$(c.coverage)} of ${c.policy}`],
+  [/score|risk\b/, ()=>`composite risk score <b>${c.risk_score}</b> (rule ${c.rule_score} / ML ${Math.round(c.ml_score)}) — ${c.decision}`],
+  [/smok|tobacco|cotinine/, ()=>`declared <b>${c.smoker}</b>${e.cotinine?`, cotinine lab ${e.cotinine}`:''}`],
+  [/blood pressure|\bbp\b/, ()=>`blood pressure <b>${c.bp}</b>`],
+  [/cholesterol|chol\b/, ()=>`total cholesterol <b>${c.chol} mg/dL</b>`],
+  [/condition|medical|health|diagnos/, ()=>`declared conditions: <b>${c.conditions||'None'}</b>`],
+  [/occupation|job|employ/, ()=>`<b>${c.occupation||'—'}</b>${c.employer?` at ${c.employer}`:''}${c.emp_status?` (${c.emp_status})`:''}`],
+  [/decision|status|verdict|outcome/, ()=>`<b>${c.decision}</b> — ${c.rate_class}`]];
+ for(const [re,fn] of F)if(re.test(q))return `<b>${c.name}</b> (<span class="mono">${c.id}</span>): ${fn()}.`;
+ return null;
+}
+function uwgFindByName(q){
+ // match an applicant by name: every token of the name present in the query
+ return CASES.find(c=>c.name.toLowerCase().split(/\s+/).every(t=>q.includes(t)))||null;
+}
 function uwgCaseAnswer(c){
  const st=wfGet(c.id);
  const conf=(c.conflicts||[]).map(k=>`${k.type.replace(/_/g,' ')} (${k.severity})`).join(', ');
@@ -2388,7 +2421,7 @@ function uwgToggle(){
  const p=document.getElementById('uwgPanel');const on=!p.classList.contains('on');
  p.classList.toggle('on',on);
  if(on&&!uwgBooted){uwgBooted=true;
-  uwgMsg('Hi — I’m the <b>UW Guide</b>. Ask me about underwriting guidelines, product rules, risk-scoring, or process — or give me a case ID (or open a case and ask “why is this case here?”).','bot');}
+  uwgMsg('Hi — I’m the <b>UW Guide</b>. Ask me about underwriting guidelines, product rules, risk-scoring, or process. I can also look up any applicant by name or case ID (“what is '+CASES[0].name+'’s weight?”) and rank the auto-approved or auto-declined book.','bot');}
  if(on){uwgChipsRender();const i=document.getElementById('uwgIn');if(i)i.focus();}
 }
 function uwgMsg(html,who){
@@ -2397,7 +2430,7 @@ function uwgMsg(html,who){
 }
 function uwgChipsRender(){
  const chips=(view==='case'&&activeId)?['Why is this case here?','What evidence does it need?','Who can change a decision?']
-  :['What are the decision bands?','How is the score built?','Who can change a decision?','What does NIGO mean?'];
+  :['What are the decision bands?','Rank the auto-approved candidates','Rank the auto-declined cases','Who can change a decision?'];
  document.getElementById('uwgChips').innerHTML=chips.map(c=>`<button class="uwg-chip" onclick="uwgAsk('${c.replace(/'/g,'&#39;')}')">${c}</button>`).join('');
 }
 function uwgAsk(q){const i=document.getElementById('uwgIn');if(i)i.value=q;uwgSend();}
@@ -2410,13 +2443,24 @@ function uwgAnswer(qRaw){
  const q=qRaw.toLowerCase();
  const idm=qRaw.toUpperCase().match(/APP-\d+/);
  if(idm){const c=CASES.find(x=>x.id===idm[0]);
-  return c?uwgCaseAnswer(c):`I can’t find <span class="mono">${idm[0]}</span> in the current book.`;}
+  if(!c)return `I can’t find <span class="mono">${idm[0]}</span> in the current book.`;
+  return uwgFieldAnswer(c,q)||uwgCaseAnswer(c);}
+ // ranked reads of the auto-decisioned book
+ const wantsRank=/rank|top |best|worst|order|ideal|first/.test(q);
+ const hitAppr=/auto[- ]?approv|approved (case|list|book|ones)|accept/.test(q);
+ const hitDecl=/auto[- ]?declin|declined (case|list|book|ones)|reject/.test(q);
+ if(wantsRank&&(hitAppr||hitDecl)){
+  const parts=[];if(hitAppr)parts.push(uwgRankAnswer('approve'));if(hitDecl)parts.push(uwgRankAnswer('decline'));
+  return parts.join('<br><br>');}
+ // applicant by name — field question or full case read
+ const byName=uwgFindByName(q);
+ if(byName)return uwgFieldAnswer(byName,q)||uwgCaseAnswer(byName);
  if(/(this case|current case|case here|explain (it|this)|why is (he|she|it))/.test(q)&&view==='case'&&activeId){
-  const c=CASES.find(x=>x.id===activeId);if(c)return uwgCaseAnswer(c);}
+  const c=CASES.find(x=>x.id===activeId);if(c)return uwgFieldAnswer(c,q)||uwgCaseAnswer(c);}
  let best=null,bestN=0;
  UWG_KB.forEach(e=>{let n=0;e.k.forEach(k=>{if(q.includes(k))n+=(k.length>4?2:1);});if(n>bestN){bestN=n;best=e;}});
  if(best)return best.a();
- return 'I cover the platform’s own rulebook: decision bands, the 6-check conflict screen, DOB / smoker policy, affordability, the requirements grid, desk routing, SLAs, evidence-anchored weights, the executive P&L, decision-change authority, exports and integrations. Try one of the suggestions below, or give me a case ID like <span class="mono">'+CASES[0].id+'</span>.';
+ return 'I cover the platform’s own rulebook: decision bands, the 6-check conflict screen, DOB / smoker policy, affordability, the requirements grid, desk routing, SLAs, evidence-anchored weights, the executive P&L, decision-change authority, exports and integrations. I can also look up any applicant — by case ID (<span class="mono">'+CASES[0].id+'</span>) or by name (“what is '+CASES[0].name+'’s income?”) — and rank the auto-approved or auto-declined book.';
 }
 render();
 // Esc returns from a case file to the queue with its context intact (§3.3).
