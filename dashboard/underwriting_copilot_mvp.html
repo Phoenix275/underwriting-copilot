@@ -2384,6 +2384,31 @@ const UWG_KB=[
    const cov=appr.reduce((s,c)=>s+(c.coverage||0),0);
    return `The book has accepted <b>${fmtBigMoney(cov)}</b> of coverage across ${appr.length} approved policies — ${(cov/APPETITE_MONTHLY*100).toFixed(0)}% of the ${fmtBigMoney(APPETITE_MONTHLY)} monthly appetite. Average approved policy: ${fmtBigMoney(appr.length?cov/appr.length:0)}.`;}}
 ];
+function uwgMetricAnswer(q){
+ // A question about a specific metric gets the EXACT live number first —
+ // the one-line computation after it, never a definition of the term.
+ const appr=CASES.filter(c=>finalOf(c)==='approve');
+ const prem=appr.reduce((s,c)=>s+(c.premium||0),0);
+ const claims=appr.reduce((s,c)=>s+expectedAnnualClaim(c),0);
+ const sga=prem*SGA_RATE;
+ const refN=CASES.filter(c=>c.verdict==='yellow').length;
+ const ops=CASES.length*COST_AUTO+refN*COST_HUMAN;
+ const opInc=prem-claims-sga-ops;
+ const loss=prem?claims/prem*100:0, exp=prem?(sga+ops)/prem*100:0, comb=loss+exp;
+ const cov=appr.reduce((s,c)=>s+(c.coverage||0),0);
+ const MM=[
+  [/loss ratio/,()=>`<b>${loss.toFixed(1)}%</b> — expected claims ${fmtMoneyK(claims)}/yr ÷ approved premium ${fmtMoneyK(prem)}/yr.`],
+  [/expense ratio/,()=>`<b>${exp.toFixed(1)}%</b> — (SG&A ${fmtMoneyK(sga)} + underwriting cost ${fmtMoneyK(ops)}) ÷ premium ${fmtMoneyK(prem)}/yr.`],
+  [/combined ratio/,()=>`<b>${comb.toFixed(1)}%</b> — loss ${loss.toFixed(1)}% + expense ${exp.toFixed(1)}%.`],
+  [/operating income|bottom line/,()=>`<b>${fmtMoneyK(opInc)}/yr</b> (≈${fmtMoneyK(opInc/12)}/month) — premium ${fmtMoneyK(prem)} − claims ${fmtMoneyK(claims)} − SG&A ${fmtMoneyK(sga)} − underwriting cost ${fmtMoneyK(ops)}.`],
+  [/straight.?through|\bstp\b/,()=>`<b>${(M.decisioning.straight_through_rate*100).toFixed(1)}%</b> decided with no human touch.`],
+  [/appetite/,()=>`<b>${(cov/APPETITE_MONTHLY*100).toFixed(0)}%</b> of the ${fmtBigMoney(APPETITE_MONTHLY)} monthly appetite — ${fmtBigMoney(cov)} accepted.`],
+  [/approved premium|premium (of|on|across) the book/,()=>`<b>${fmtMoneyK(prem)}/yr</b> (≈${fmtMoneyK(prem/12)}/month) across ${appr.length} approved policies.`],
+  [/expected claims|claims payout/,()=>`<b>${fmtMoneyK(claims)}/yr</b> of expected claims against ${fmtMoneyK(prem)}/yr of premium (loss ratio ${loss.toFixed(1)}%).`],
+  [/average (approved )?cover|avg cover/,()=>`<b>${fmtBigMoney(appr.length?cov/appr.length:0)}</b> average approved cover across ${appr.length} policies.`]];
+ for(const [re,fn] of MM)if(re.test(q))return fn()+' <i>Live from the current book.</i>';
+ return null;
+}
 function uwgRankAnswer(kind){
  // Ranked reads of the auto-decisioned book — the same ordering the
  // Auto-Approved space uses (expected margin), worst-first for declines.
@@ -2470,6 +2495,9 @@ function uwgAnswer(qRaw){
  // applicant by name — field question or full case read
  const byName=uwgFindByName(q);
  if(byName)return uwgFieldAnswer(byName,q)||uwgCaseAnswer(byName);
+ // a named metric → the exact live number, before any explanatory entry
+ const metric=uwgMetricAnswer(q);
+ if(metric)return metric;
  if(/(this case|current case|case here|explain (it|this)|why is (he|she|it))/.test(q)&&view==='case'&&activeId){
   const c=CASES.find(x=>x.id===activeId);if(c)return uwgFieldAnswer(c,q)||uwgCaseAnswer(c);}
  let best=null,bestN=0;
