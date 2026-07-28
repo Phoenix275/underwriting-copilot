@@ -367,6 +367,11 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 @keyframes loginIn{0%{opacity:0;transform:translateY(14px) scale(.985)}100%{opacity:1;transform:none}}
 @media (prefers-reduced-motion: reduce){#whoosh{display:none}#app.app-reveal,.login-card{animation:none}}
 .cap-cut td{text-align:center;font:600 10.5px 'JetBrains Mono',monospace;color:var(--warn);padding:10px 6px;border-top:2px dashed var(--warn) !important;border-bottom:2px dashed var(--warn);letter-spacing:.5px}
+/* ---- executive rail: book-at-a-glance instead of a case list ---- */
+.exec-rail{padding:6px 4px}
+.exec-rail .er-row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:9px 8px;border-bottom:1px solid var(--line);font:500 12px 'Poppins',sans-serif;color:var(--mut)}
+.exec-rail .er-row b{font:700 12.5px 'JetBrains Mono',monospace;color:var(--ink);white-space:nowrap}
+.exec-rail .er-note{font:500 11px 'Poppins',sans-serif;color:var(--mut);padding:12px 8px 0;line-height:1.5}
 /* ---- landing scene: orbiting case artifacts around the wordmark, before sign-in ---- */
 #landing{position:fixed;inset:0;z-index:1600;background:var(--bg);display:flex;align-items:center;justify-content:center;overflow:hidden;font-family:'Poppins',sans-serif;perspective:1200px}
 #landing::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 42%,rgba(106,103,247,0) 32%,rgba(106,103,247,.14) 64%,rgba(106,103,247,.36) 100%);pointer-events:none}
@@ -1116,6 +1121,9 @@ function buildNav(){
 }
 function rail(){
  buildNav();
+ if(CURRENT_ROLE==='executive'){execRail();return;}
+ document.getElementById('searchBox').style.display='';
+ document.querySelector('.pagination').style.display='';
  const list=currentList();
  document.getElementById('listTitle').textContent=SPACE_LABEL[space]||'Cases';
  document.getElementById('queueCount').textContent=list.length+(space==='review'?' to do':' cases');
@@ -1139,6 +1147,34 @@ function rail(){
  document.getElementById('pageLabel').textContent=(page+1)+" / "+(mx+1);
  document.getElementById('prevBtn').disabled=page<=0;document.getElementById('nextBtn').disabled=page>=mx;
  const cl=document.getElementById('caseList');if(cl)cl.scrollTop=railScroll;   // §3.3 preserve list position
+}
+function execRail(){
+ // The CUO never opens a case — the rail carries the book at a glance, not a case list.
+ document.getElementById('listTitle').textContent='Book at a glance';
+ document.getElementById('queueCount').textContent='live';
+ document.getElementById('searchBox').style.display='none';
+ document.querySelector('.pagination').style.display='none';
+ const appr=CASES.filter(c=>finalOf(c)==='approve'),decl=CASES.filter(c=>finalOf(c)==='decline');
+ const pend=CASES.length-appr.length-decl.length;
+ const covAppr=appr.reduce((s,c)=>s+(c.coverage||0),0);
+ const premAppr=appr.reduce((s,c)=>s+(c.premium||0),0);
+ const expClaims=appr.reduce((s,c)=>s+expectedAnnualClaim(c),0);
+ const referredN=CASES.filter(c=>c.verdict==='yellow').length;
+ const opsCost=CASES.length*COST_AUTO+referredN*COST_HUMAN;
+ const opInc=premAppr*(1-SGA_RATE)-expClaims-opsCost;
+ const combined=premAppr?((expClaims+premAppr*SGA_RATE+opsCost)/premAppr*100):0;
+ const appetitePct=covAppr/APPETITE_MONTHLY*100;
+ const stp=(M.decisioning.straight_through_rate*100);
+ const row=(l,v,col)=>`<div class="er-row"><span>${l}</span><b${col?` style="color:${col}"`:''}>${v}</b></div>`;
+ document.getElementById('caseList').innerHTML=`<div class="exec-rail">
+  ${row('Operating income',(opInc>=0?'':'−')+fmtMoneyK(Math.abs(opInc))+'/yr',opInc>=0?'var(--ok)':'var(--bad)')}
+  ${row('Combined ratio',combined.toFixed(0)+'%',combined<100?'var(--ok)':'var(--bad)')}
+  ${row('Coverage accepted',fmtBigMoney(covAppr))}
+  ${row('Approved premium',fmtMoneyK(premAppr)+'/yr')}
+  ${row('Appetite used',appetitePct.toFixed(0)+'%',appetitePct>100?'var(--warn)':'')}
+  ${row('Straight-through',stp.toFixed(0)+'%')}
+  ${row('App · pend · decl',appr.length+' · '+pend+' · '+decl.length)}
+  <div class="er-note">Portfolio-only view — the executive holds no individual cases. These figures update live as decisions are recorded.</div></div>`;
 }
 function spaceView(){
  const meta=SPACES.find(s=>s[0]===space)||SPACES[0];const list=currentList();
