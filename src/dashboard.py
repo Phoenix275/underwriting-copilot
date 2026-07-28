@@ -55,7 +55,10 @@ TEMPLATE = r"""
 .field label{display:block;font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--mut);margin-bottom:3px}
 .field .val{font-size:14px;font-weight:500}.mono{font-family:'JetBrains Mono',monospace}
 .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;box-shadow:0 1px 2px rgba(14,21,38,.05)}
-.stat .sv{font-family:'Space Grotesk',sans-serif;font-size:30px;font-weight:700}.stat .sl{font-size:11px;color:var(--mut);margin-top:3px;line-height:1.4}
+.stat .sv{font-family:'Space Grotesk',sans-serif;font-size:30px;font-weight:700}.stat .sl{font-size:11.5px;color:var(--mut);margin-top:2px;line-height:1.45}
+/* The metric's NAME carries equal weight to its value — number answers "how much",
+   the bold lead answers "of what"; only the explanation is quiet. */
+.stat .sl b{display:block;font-family:'Poppins',sans-serif;font-size:24px;font-weight:700;color:var(--ink);line-height:1.12;letter-spacing:-.01em;margin:0 0 5px}
 .doc-row{display:flex;align-items:center;gap:12px;padding:13px 16px;background:var(--bg);border:1px solid var(--line);border-radius:10px;margin-bottom:10px}
 .doc-row .dot{width:9px;height:9px;border-radius:50%;background:var(--ok);flex-shrink:0}.doc-row .dot.miss{background:var(--mut)}
 .dname{font-size:13.5px;font-weight:600;flex:1}.dstatus{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ok)}
@@ -1444,12 +1447,12 @@ function overview(){
   </div>
   <div class="note">Medical rule-engine weights are evidence-anchored: <b>points = round(28 × ln(relative-mortality multiple))</b> derived from NHANES + NCHS Linked Mortality data and cross-validated against real applicants — not hand-picked. Gradient boosting is chosen over a GLM for interaction capture, with logistic regression retained as the auditable in-browser stand-in. The rules layer is also the shock absorber for regime change (e.g. a 2020-style shift): a new knockout or threshold ships in days without a full retrain.</div></div>
  <div class="grid3">
-  <div class="stat"><div class="sv">${(M.extraction.field_level_accuracy*100).toFixed(1)}%</div><div class="sl">Extraction accuracy — field level vs ground truth</div></div>
-  <div class="stat"><div class="sv">${(M.conflict_screening.detection_recall*100).toFixed(0)}%</div><div class="sl">Injected-conflict detection recall (${M.conflict_screening.tp}/${M.conflict_screening.tp+M.conflict_screening.fn} caught, ${M.conflict_screening.fp} false alarms)</div></div>
-  <div class="stat"><div class="sv">${(gb.auc*100).toFixed(1)}%</div><div class="sl">Gradient Boosting AUC on ${M.risk_models.n_test.toLocaleString()} held-out records</div></div>
-  <div class="stat"><div class="sv">${(lr.auc*100).toFixed(1)}%</div><div class="sl">Logistic Regression AUC (auditable baseline)</div></div>
-  <div class="stat"><div class="sv">${(M.decisioning.straight_through_rate*100).toFixed(1)}%</div><div class="sl">Straight-through rate — decided with no human touch</div></div>
-  <div class="stat"><div class="sv">${M.risk_models.n_train.toLocaleString()}</div><div class="sl">Training records (test: ${M.risk_models.n_test.toLocaleString()}, base risk rate ${(M.risk_models.positive_rate*100).toFixed(0)}%)</div></div>
+  <div class="stat"><div class="sv">${(M.extraction.field_level_accuracy*100).toFixed(1)}%</div><div class="sl"><b>Extraction accuracy</b> — field level vs ground truth</div></div>
+  <div class="stat"><div class="sv">${(M.conflict_screening.detection_recall*100).toFixed(0)}%</div><div class="sl"><b>Conflict recall</b> — injected-conflict detection (${M.conflict_screening.tp}/${M.conflict_screening.tp+M.conflict_screening.fn} caught, ${M.conflict_screening.fp} false alarms)</div></div>
+  <div class="stat"><div class="sv">${(gb.auc*100).toFixed(1)}%</div><div class="sl"><b>Gradient Boosting AUC</b> — on ${M.risk_models.n_test.toLocaleString()} held-out records</div></div>
+  <div class="stat"><div class="sv">${(lr.auc*100).toFixed(1)}%</div><div class="sl"><b>Logistic Regression AUC</b> — auditable baseline</div></div>
+  <div class="stat"><div class="sv">${(M.decisioning.straight_through_rate*100).toFixed(1)}%</div><div class="sl"><b>Straight-through rate</b> — decided with no human touch</div></div>
+  <div class="stat"><div class="sv">${M.risk_models.n_train.toLocaleString()}</div><div class="sl"><b>Training records</b> — test: ${M.risk_models.n_test.toLocaleString()}, base risk rate ${(M.risk_models.positive_rate*100).toFixed(0)}%</div></div>
  </div>
  ${M.affordability?`<div class="card" style="margin-top:16px"><h3>Financial Viability — Portfolio Affordability</h3>
   <div class="legend-row">
@@ -1531,12 +1534,12 @@ function managerView(){
   <div class="stat" style="border-top:4px solid var(--bad)"><div class="sv" style="color:var(--bad)">${R.length}</div><div class="sl"><b>DECLINED</b> · ${pct(R)} · ${majors.length} tied to major conflicts</div></div>
  </div>
  <div class="grid3" style="margin-top:14px">
-  <div class="stat"><div class="sv">${(M.decisioning.straight_through_rate*100).toFixed(0)}%</div><div class="sl">Straight-through rate — decided with zero human minutes</div></div>
-  <div class="stat"><div class="sv">${fmtM(covAll)}</div><div class="sl">Total coverage requested · <span style="color:var(--ok)">${fmtM(covG)} auto-approved</span> · <span style="color:var(--warn)">${fmtM(covY)} pending</span> · <span style="color:var(--bad)">${fmtM(covR)} declined</span></div></div>
-  <div class="stat"><div class="sv">${avg(CASES,c=>c.risk_score).toFixed(0)}</div><div class="sl">Avg composite risk — green ${avg(G,c=>c.risk_score).toFixed(0)} · yellow ${avg(Y,c=>c.risk_score).toFixed(0)} · red ${avg(R,c=>c.risk_score).toFixed(0)}</div></div>
-  <div class="stat"><div class="sv">${conflicts.length}</div><div class="sl">Cases with cross-document conflicts (${majors.length} major) — recall ${(M.conflict_screening.detection_recall*100).toFixed(0)}%, ${M.conflict_screening.fp} false alarms</div></div>
-  <div class="stat"><div class="sv">${uniques.length}</div><div class="sl">Unique-circumstances disclosures — every one routed to a human</div></div>
-  <div class="stat"><div class="sv">${ovList.length}</div><div class="sl">Underwriter overrides recorded in this browser${(M.decisioning.n_overrides_learned||0)>0?` · ${M.decisioning.n_overrides_learned} already trained on`:''} — export from the Model Card</div></div>
+  <div class="stat"><div class="sv">${(M.decisioning.straight_through_rate*100).toFixed(0)}%</div><div class="sl"><b>Straight-through rate</b> — decided with zero human minutes</div></div>
+  <div class="stat"><div class="sv">${fmtM(covAll)}</div><div class="sl"><b>Coverage requested</b> · <span style="color:var(--ok)">${fmtM(covG)} auto-approved</span> · <span style="color:var(--warn)">${fmtM(covY)} pending</span> · <span style="color:var(--bad)">${fmtM(covR)} declined</span></div></div>
+  <div class="stat"><div class="sv">${avg(CASES,c=>c.risk_score).toFixed(0)}</div><div class="sl"><b>Avg composite risk</b> — green ${avg(G,c=>c.risk_score).toFixed(0)} · yellow ${avg(Y,c=>c.risk_score).toFixed(0)} · red ${avg(R,c=>c.risk_score).toFixed(0)}</div></div>
+  <div class="stat"><div class="sv">${conflicts.length}</div><div class="sl"><b>Conflict cases</b> — cross-document (${majors.length} major) — recall ${(M.conflict_screening.detection_recall*100).toFixed(0)}%, ${M.conflict_screening.fp} false alarms</div></div>
+  <div class="stat"><div class="sv">${uniques.length}</div><div class="sl"><b>Unique disclosures</b> — every one routed to a human</div></div>
+  <div class="stat"><div class="sv">${ovList.length}</div><div class="sl"><b>Overrides recorded</b> — in this browser${(M.decisioning.n_overrides_learned||0)>0?` · ${M.decisioning.n_overrides_learned} already trained on`:''} — export from the Model Card</div></div>
   ${M.affordability?`<div class="stat" style="border-top:4px solid var(--warn)"><div class="sv">${CASES.filter(c=>c.afford&&c.afford.verdict==='fail').length}</div><div class="sl"><b>NOT FINANCIALLY JUSTIFIED</b> · coverage or premium out of line with income — referred to financial underwriting (${(M.affordability.not_justified_rate*100).toFixed(0)}% pipeline-wide)</div></div>`:''}
  </div>
  <div class="card" style="margin-top:16px"><h3>Review Queue — largest exposure first (where senior time should go)</h3>
@@ -1705,11 +1708,11 @@ function executiveView(){
    </div>
    <div class="note">Total amount of risk underwritten (approved cover), this month against the same month last year — the executive's headline movement, held by no other role. The ${yr-1} figure is an illustrative baseline pending a real historical book; ${yr} is live.</div></div>`:''}
   ${execShown('ops')?`<div class="grid3" style="margin-top:14px">
-   ${tile(fmtBigMoney(avgCover),'Average approved cover per policy')}
-   ${tile(fmtAge(avgCycle),'Average time in queue — proxy for cycle time')}
+   ${tile(fmtBigMoney(avgCover),'<b>Avg cover / policy</b> — across the approved book')}
+   ${tile(fmtAge(avgCycle),'<b>Avg time in queue</b> — proxy for cycle time')}
    ${tile(overrideRate.toFixed(0)+'%','<b>Override rate</b> — human decisions against the model lean ('+nOv+' of '+decidedManual+')')}
-   ${tile(appr.length+' / '+pend.length+' / '+decl.length,'Approved / referred-pending / declined (count)')}
-   ${tile(fmtBigMoney(covAll),'Total coverage requested across the book')}
+   ${tile(appr.length+' / '+pend.length+' / '+decl.length,'<b>Decision counts</b> — approved · referred-pending · declined')}
+   ${tile(fmtBigMoney(covAll),'<b>Coverage requested</b> — total across the book')}
   </div>`:''}
   ${execShown('mix')?`<div class="card" style="margin-top:16px"><h3>Decision mix — cover per bucket</h3>
    <div class="mix-bar">
