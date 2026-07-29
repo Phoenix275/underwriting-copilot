@@ -2466,21 +2466,15 @@ function uwgFieldAnswer(c,q){
  const F=[
   [/case id|which id|the id\b/, ()=>`case ID <b><span class="mono">${c.id}</span></b>`],
   // "does it match across the documents?" — run the whole 6-check screen out loud
-  [/match(es|ed|ing)? across|consistent|consistency|same across|agree across|tally|cross.?document|all (the )?documents|verif/, ()=>{
-    const k=new Set((c.conflicts||[]).map(x=>x.type));
-    const row=(label,a,b,type)=>`${k.has(type)?'⚠':'✓'} ${label}: ${a==null?'—':a} vs ${b==null?'—':b}${k.has(type)?' — <b>MISMATCH</b>':''}`;
-    // fall back to the case's own values where a document field was not
-    // separately extracted — a clean packet reads as agreement, not as blanks
-    const g=(v,d)=>(v!=null&&v!=='')?v:d;
-    const inc=g(e.form_income,c.income),dbt=g(e.form_debt,c.debt);
-    const smk=(c.smoker||'').toLowerCase().indexOf('non')===0?'Non-smoker':c.smoker;
-    const rows=[row('Date of birth',g(e.form_dob,c.dob),g(e.paramed_dob,c.dob),'dob_mismatch'),
-      row('Income · form vs payslip',fmt$(inc),fmt$(g(e.payslip_income,c.income)),'income_mismatch'),
-      row('Income · form vs tax slip',fmt$(inc),fmt$(g(e.tax_income,c.income)),'tax_income_mismatch'),
-      row('Debt · declared vs bureau',fmt$(dbt),fmt$(g(e.bureau_debt,c.debt)),'debt_understated'),
-      row('Tobacco · form vs cotinine lab',e.form_tobacco_yes?'Smoker':smk,g(e.cotinine,smk==='Non-smoker'?'NEGATIVE':'—'),'smoker_nondisclosure'),
-      row('Deposits vs declared income',fmt$(g(e.bank_deposit_monthly!=null?e.bank_deposit_monthly*12:null,c.income)),fmt$(inc),'income_deposit_mismatch')];
-    return `the 6-check screen across the packet —<br>${rows.join('<br>')}<br>${k.size?`<b>${k.size} discrepancy(ies)</b> flagged`:'<b>every field agrees</b> across all five documents'}`;}],
+  // Consistency verdict is concise: one line when clean, and only the failing
+  // rows (with both values) when not. The third element claims the "all docs"
+  // words so the document-list intent doesn't fire on the same breath.
+  [/match(es|ed|ing)? across|consistent|consistency|same across|agree across|tally|cross.?document|all (the )?(documents|docs)( submitted)?|verif/, ()=>{
+    const k=c.conflicts||[];
+    if(!k.length)return `yes — all six cross-document checks pass: DOB, income (form vs payslip, tax slip, bank deposits), debt vs bureau, and tobacco vs the cotinine lab all agree`;
+    return `<b>${k.length} of the 6 cross-document checks fail</b>:<br>${k.map(x=>{const d=conflictDetail(c,x);
+      return d?`⚠ ${d.field}: ${d.a[0]} <b>${d.a[1]??'—'}</b> vs ${d.b[0]} <b>${d.b[1]??'—'}</b> (${x.severity})`:`⚠ ${x.type.replace(/_/g,' ')} (${x.severity})`;}).join('<br>')}`;},
+   /(all |the )?(docs|documents|paperwork|packet)( submitted)?/g],
   // "what is your AI recommendation for X" — spelling-tolerant on recommendation
   [/rec+o?m+|suggest|next step|advi[cs]e|what should i do|your take|your call/, ()=>{
     const r=caseRecommendation(c);
@@ -2543,6 +2537,9 @@ function uwgFieldAnswer(c,q){
  // across the documents?"). Resolve EVERY intent present, most specific first,
  // consuming the words each one claims so a generic pattern cannot re-answer
  // ground a precise one already covered.
+ // Consume most-specific first so a broad pattern can't steal a precise ask,
+ // but ANSWER in the order the user asked — "age and dob and does it match"
+ // leads with the age, not with whichever pattern happens to be longest.
  const scored=F.map(f=>{const m=q.match(f[0]);return {f,len:m?m[0].length:0};})
    .filter(x=>x.len>0).sort((a,b)=>b.len-a.len);
  let rem=q,hits=[];
@@ -2550,9 +2547,11 @@ function uwgFieldAnswer(c,q){
   if(hits.length>=3)return;
   const m=rem.match(s.f[0]);if(!m)return;                 // a longer intent already took these words
   rem=rem.replace(s.f[0],' '.repeat(m[0].length));
-  hits.push(s.f[1]());});
- if(hits.length===1)return `<b>${c.name}</b> (<span class="mono">${c.id}</span>): ${hits[0]}.`;
- if(hits.length>1)return `<b>${c.name}</b> (<span class="mono">${c.id}</span>):<br>${hits.map(h=>'• '+h).join('<br>')}`;
+  if(s.f[2])rem=rem.replace(s.f[2],x=>' '.repeat(x.length));   // words this answer subsumes
+  hits.push({pos:m.index,text:s.f[1]()});});
+ hits.sort((a,b)=>a.pos-b.pos);
+ if(hits.length===1)return `<b>${c.name}</b> (<span class="mono">${c.id}</span>): ${hits[0].text}.`;
+ if(hits.length>1)return `<b>${c.name}</b> (<span class="mono">${c.id}</span>):<br>${hits.map(h=>'• '+h.text).join('<br>')}`;
  return null;
 }
 /* Applicant matching is typo-tolerant: people type “almedia” for “Almeida”
@@ -2591,7 +2590,7 @@ function uwgNameMatches(q){
 function uwgFindByName(q){const m=uwgNameMatches(q);return m.list.length===1?m.list[0]:null;}
 function uwgAmbiguous(list){
  const shown=list.slice(0,5);
- return `${list.length} applicants share that name — give me the full name or a case ID:<br>${shown.map(c=>`<span class="mono">${c.id}</span> ${c.name} — ${fmt$(c.coverage)}, ${c.decision.toLowerCase()}`).join('<br>')}${list.length>shown.length?`<br>…and ${list.length-shown.length} more.`:''}`;
+ return `${list.length} applicants share that name — which one?<br>${shown.map(c=>`<span class="mono">${c.id}</span> ${c.name} — ${fmt$(c.coverage)}, ${c.decision.toLowerCase()}`).join('<br>')}${list.length>shown.length?`<br>…and ${list.length-shown.length} more.`:''}<br>Reply with just the number (“${shown[0].id.slice(4)}”), a full name, or “the first one” — I’ll pick up your original question from there.`;
 }
 function uwgCaseAnswer(c){
  const st=wfGet(c.id);
@@ -2608,6 +2607,7 @@ function uwgCaseAnswer(c){
  return lines.join('<br>');
 }
 let uwgBooted=false,uwgLastCase=null;   // last case discussed — resolves pronoun follow-ups
+let uwgPending=null;                    // an unanswered "which one?" ask: {list, q}
 function uwgToggle(){
  const p=document.getElementById('uwgPanel');const on=!p.classList.contains('on');
  p.classList.toggle('on',on);
@@ -2632,10 +2632,29 @@ function uwgSend(){
 }
 function uwgAnswer(qRaw){
  const q=qRaw.toLowerCase();
+ // When the last turn asked "which one?", this turn's job is to finish the
+ // ORIGINAL question — so the chosen case is answered with the intent the
+ // user started with, not dumped as a generic case read.
+ const pending=uwgPending;uwgPending=null;
+ const withIntent=(c)=>{uwgLastCase=c;
+  return uwgFieldAnswer(c,q)||(pending?uwgFieldAnswer(c,pending.q):null)||uwgCaseAnswer(c);};
  const idm=qRaw.toUpperCase().match(/APP-\d+/);
  if(idm){const c=CASES.find(x=>x.id===idm[0]);
   if(!c)return `I can’t find <span class="mono">${idm[0]}</span> in the current book.`;
-  uwgLastCase=c;return uwgFieldAnswer(c,q)||uwgCaseAnswer(c);}
+  return withIntent(c);}
+ // a bare case number — "1049" — is how people answer a disambiguation ask
+ const bare=q.match(/\b(\d{3,4})\b/);
+ if(bare){const c=CASES.find(x=>x.id==='APP-'+bare[1]);if(c)return withIntent(c);}
+ // or they pick from the shortlist by ordinal, name, or decision word
+ if(pending){
+  let c=null;
+  [['first',0],['1st',0],['second',1],['2nd',1],['third',2],['3rd',2],['fourth',3],['4th',3],['last',pending.list.length-1]]
+   .some(([w,i])=>{if(new RegExp('\\b'+w+'\\b').test(q)&&pending.list[i]){c=pending.list[i];return true;}return false;});
+  if(!c){const m=pending.list.filter(x=>x.name.toLowerCase().split(/\s+/).some(t=>t.length>=3&&q.includes(t)));if(m.length===1)c=m[0];}
+  if(!c){const m=pending.list.filter(x=>q.includes(x.decision.toLowerCase())||q.includes(x.verdict));if(m.length===1)c=m[0];}
+  if(c)return withIntent(c);
+  uwgPending=pending;   // not an answer to the ask — keep it alive one more turn
+ }
  // "who should I review first?" — the live queue order
  if(/review first|first in (the )?queue|(start|begin) with|next case|prioriti[sz]|what should i (review|work|do)|who should i/.test(q))
   return uwgQueueAnswer();
@@ -2654,7 +2673,7 @@ function uwgAnswer(qRaw){
  // wins outright; a fuzzy one waits behind the metric resolver so “loss ratio”
  // can never be mistaken for a surname.
  const nm=uwgNameMatches(q);
- const nameReply=()=>{if(nm.list.length>1)return uwgAmbiguous(nm.list);
+ const nameReply=()=>{if(nm.list.length>1){uwgPending={list:nm.list,q:q};return uwgAmbiguous(nm.list);}
   const c=nm.list[0];uwgLastCase=c;return uwgFieldAnswer(c,q)||uwgCaseAnswer(c);};
  if(nm.score>=3)return nameReply();
  // a named metric → the exact live number, before any explanatory entry
