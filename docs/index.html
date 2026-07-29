@@ -2581,6 +2581,24 @@ function uwgAmbiguous(list){
  const shown=list.slice(0,5);
  return `${list.length} applicants share that name — which one?<br>${shown.map(c=>`<span class="mono">${c.id}</span> ${c.name} — ${fmt$(c.coverage)}, ${c.decision.toLowerCase()}`).join('<br>')}${list.length>shown.length?`<br>…and ${list.length-shown.length} more.`:''}<br>Reply with just the number (“${shown[0].id.slice(4)}”), a full name, or “the first one” — I’ll pick up your original question from there.`;
 }
+function uwgCompareAnswer(list){
+ // Two or three applicants side by side — the underwriter's actual comparison
+ // fields, one row each, no prose.
+ const l=list.slice(0,3);
+ uwgLastCase=l[0];
+ const row=(label,fn)=>`<b>${label}</b> — ${l.map(c=>fn(c)).join(' · ')}`;
+ return `<b>${l.map(c=>`${c.name} (<span class="mono">${c.id}</span>)`).join(' vs ')}</b><br>${[
+  row('Age',c=>c.age),
+  row('Cover',c=>`${fmt$(c.coverage)} ${c.policy}`),
+  row('Premium',c=>fmt$(c.premium)+'/yr'),
+  row('Income',c=>fmt$(c.income)),
+  row('Risk',c=>`${c.risk_score} (rule ${c.rule_score} / ML ${Math.round(c.ml_score)})`),
+  row('Decision',c=>c.decision),
+  row('Conflicts',c=>(c.conflicts||[]).length?(c.conflicts||[]).map(x=>x.type.replace(/_/g,' ')).join(', '):'none'),
+  row('Affordability',c=>((c.afford||{}).label)||'—'),
+  row('Next step',c=>caseRecommendation(c)[0])
+ ].join('<br>')}`;
+}
 function uwgCaseAnswer(c){
  const st=wfGet(c.id);
  const conf=(c.conflicts||[]).map(k=>`${k.type.replace(/_/g,' ')} (${k.severity})`).join(', ');
@@ -2634,8 +2652,10 @@ function uwgAnswer(qRaw){
  // a bare case number — "1049" — is how people answer a disambiguation ask
  const bare=q.match(/\b(\d{3,4})\b/);
  if(bare){const c=CASES.find(x=>x.id==='APP-'+bare[1]);if(c)return withIntent(c);}
- // or they pick from the shortlist by ordinal, name, or decision word
+ // or they pick from the shortlist by ordinal, name, or decision word —
+ // and "both" / "all of them" means compare the shortlist, not pick one
  if(pending){
+  if(/\bboth\b|all of them|the two|all \d|compare/.test(q))return uwgCompareAnswer(pending.list);
   let c=null;
   [['first',0],['1st',0],['second',1],['2nd',1],['third',2],['3rd',2],['fourth',3],['4th',3],['last',pending.list.length-1]]
    .some(([w,i])=>{if(new RegExp('\\b'+w+'\\b').test(q)&&pending.list[i]){c=pending.list[i];return true;}return false;});
@@ -2662,6 +2682,9 @@ function uwgAnswer(qRaw){
  // wins outright; a fuzzy one waits behind the metric resolver so “loss ratio”
  // can never be mistaken for a surname.
  const nm=uwgNameMatches(q);
+ // naming two people (or asking to compare) is a comparison, not an ambiguity
+ if(nm.list.length>=2&&nm.list.length<=4&&/compar|versus|\bvs\b|difference|side.by.side|between|against/.test(q))
+  return uwgCompareAnswer(nm.list);
  const nameReply=()=>{if(nm.list.length>1){uwgPending={list:nm.list,q:q};return uwgAmbiguous(nm.list);}
   const c=nm.list[0];uwgLastCase=c;return uwgFieldAnswer(c,q)||uwgCaseAnswer(c);};
  if(nm.score>=3)return nameReply();
