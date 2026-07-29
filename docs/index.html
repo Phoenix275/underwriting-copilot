@@ -2330,7 +2330,7 @@ function scoreNow(){
 const UWG_KB=[
  {k:['band','threshold','line','cutoff','0-50','51','89','90','score range','how is a case decided'],
   a:()=>`Scores run <b>0–100</b>. Under <b>${A_LINE}</b> auto-approves, <b>${D_LINE}+</b> auto-declines, and the <b>${A_LINE}–${D_LINE-1}</b> middle band goes to a human underwriter. The two lines are configuration owned by underwriting leadership — tightening or loosening the book is a config change, not a retrain.`},
- {k:['conflict','check','screen','mismatch','discrepan','cross-document'],
+ {k:['conflict','6-check','conflict screen','mismatch','discrepan','cross-document'],
   a:()=>`The <b>6-check conflict screen</b> compares every packet across documents: income vs payslip, income vs tax slip, income vs bank deposits, declared debt vs bureau, DOB across form and paramedical, and declared tobacco vs the cotinine lab. Majors force manual review; smoker non-disclosure alone is treated as material misrepresentation.`},
  {k:['dob','date of birth','verify','data entry'],
   a:()=>`A <b>DOB mismatch is a data discrepancy, not fraud</b> — most are transcription errors. Policy: it forces <b>manual review</b> with an amber “verify” flag (never an auto-decline, never a silent approve). The underwriter confirms identity against the source documents, then decides.`},
@@ -2368,6 +2368,26 @@ const UWG_KB=[
   a:()=>`<b>NIGO</b> (“not in good order”) — incomplete or malformed applications — is the biggest single source of cycle-time loss. Underwriters send a case back with <b>Request information</b>, which stamps it Info Requested, logs what’s missing, and parks the SLA clock on the applicant’s side.`},
  {k:['refer','why manual','yellow','middle band','human review'],
   a:()=>`A case is referred when the system can’t safely decide alone: a mid-band score (${A_LINE}–${D_LINE-1}), a document conflict, a failed affordability screen, or disclosed unique circumstances. Open any referred case and ask me <i>“why is this case here?”</i> — I’ll read its actual drivers.`},
+ {k:['what can you do','what do you know','help me','your capabilities','what can i ask','how do i use you'],
+  a:()=>`Ask me anything about this platform or the book. I answer: <b>rules</b> (decision bands, conflict screen, affordability, requirements grid, routing, SLAs, weights) · <b>live numbers</b> (“what is my loss ratio right now?”, “how much are we earning a month?”) · <b>any applicant</b> by name or case ID, including single fields (“${CASES[0].name}’s credit score”, “does it match across the documents?”) · <b>rankings</b> (auto-approved by margin, auto-declined by risk, who to review first) · and <b>the app itself</b> (roles, exports, spaces, overrides, where things live).`},
+ {k:['what is this app','what is this platform','what does this do','what is underwriting copilot','about this system','what am i looking at'],
+  a:()=>`<b>Underwriting Copilot</b> — an AI-assisted life-insurance underwriting workbench. It reads a five-document application packet, runs a 6-check cross-document conflict screen, scores risk 0–100 on evidence-anchored weights plus a trained model, and routes only the ambiguous middle band to a human. It runs on a <b>synthetic book of ${CASES.length} applications</b> — a prototype, not a live carrier system — and the whole thing is one self-contained file that works offline.`},
+ {k:['spaces','review queue','completed','left rail','sidebar','navigation','case list','case spaces'],
+  a:()=>`The left rail holds four case spaces: <b>Review Queue</b> (the ${CASES.filter(c=>c.verdict==='yellow').length} cases needing a human, ranked by coverage + time), <b>Completed</b> (what you have decided), <b>Auto-Approved</b> (${CASES.filter(c=>c.verdict==='green').length} straight-through approvals, ranked by expected margin) and <b>Auto-Declined</b> (${CASES.filter(c=>c.verdict==='red').length}, kept as a record). The executive sees a live book-at-a-glance panel there instead — no case list.`},
+ {k:['keyboard','shortcut','esc','arrow key','navigate cases','next case'],
+  a:()=>`Inside a case file: <b>Esc</b> returns to the queue with your scroll position intact, and <b>←/→</b> walk to the previous or next case in the list you opened it from. The search box filters by applicant name or case ID.`},
+ {k:['theme','dark mode','light mode','colour','color scheme','toggle'],
+  a:()=>`The ☀️/🌙 button top-right switches light and dark; the app opens in <b>light mode</b> and remembers your choice in this browser.`},
+ {k:['tour','tutorial','walkthrough','guided','demo flow','how do i demo'],
+  a:()=>`The <b>🎓 Tutorial</b> button runs a guided tour: it opens with the insurance value chain and the pain it addresses, then follows <b>one case end to end</b> — junior desk, escalation by authority, senior review, evidence, decision — before touring the manager, executive and operations personas. It drives the real app as it goes.`},
+ {k:['bulk','approve all','batch','all at once'],
+  a:()=>`The Auto-Approved space has <b>Bulk approve all</b> — it records the batch under one rationale, but writes each case to its own audit trail individually, so the record stays per-case.`},
+ {k:['saved','stored','database','persist','local storage','where is the data','lose my work','real data'],
+  a:()=>`Everything runs <b>in your browser</b>: decisions, notes, assignments and evidence requests are stored in this browser only (localStorage), and the book itself is <b>synthetic data</b> — no real applicants, no server, no network calls. Clearing site data resets the demo to a clean book.`},
+ {k:['model card','fairness','calibration','feature importance','regulator','governance','bias'],
+  a:()=>`The <b>Portfolio & Model Card</b> (manager nav) is the regulator-facing page: score formula and bands, feature importance, calibration, <b>fairness by age band and group</b>, dataset provenance, and the evidence-anchored weight table. It exists so the model is defensible in an exam, not just accurate.`},
+ {k:['pdf','original document','view document','open the packet','attachment'],
+  a:()=>`Cases marked <b>· PDF</b> carry original scanned documents you can open inline from the Documents tab; every case also shows the parsed field-level extraction beside the source, so you can check what the reader pulled against the page.`},
  {k:['earning','earn','revenue','profit','making','money a month','per month','how much money','we making','am i making'],
   a:()=>{const appr=CASES.filter(c=>finalOf(c)==='approve');
    const prem=appr.reduce((s,c)=>s+(c.premium||0),0);
@@ -2434,6 +2454,26 @@ function uwgFieldAnswer(c,q){
  const st=wfGet(c.id);
  const F=[
   [/case id|which id|the id\b/, ()=>`case ID <b><span class="mono">${c.id}</span></b>`],
+  // "does it match across the documents?" — run the whole 6-check screen out loud
+  [/match(es|ed|ing)? across|consistent|consistency|same across|agree across|tally|cross.?document|all (the )?documents|verif/, ()=>{
+    const k=new Set((c.conflicts||[]).map(x=>x.type));
+    const row=(label,a,b,type)=>`${k.has(type)?'⚠':'✓'} ${label}: ${a==null?'—':a} vs ${b==null?'—':b}${k.has(type)?' — <b>MISMATCH</b>':''}`;
+    // fall back to the case's own values where a document field was not
+    // separately extracted — a clean packet reads as agreement, not as blanks
+    const g=(v,d)=>(v!=null&&v!=='')?v:d;
+    const inc=g(e.form_income,c.income),dbt=g(e.form_debt,c.debt);
+    const smk=(c.smoker||'').toLowerCase().indexOf('non')===0?'Non-smoker':c.smoker;
+    const rows=[row('Date of birth',g(e.form_dob,c.dob),g(e.paramed_dob,c.dob),'dob_mismatch'),
+      row('Income · form vs payslip',fmt$(inc),fmt$(g(e.payslip_income,c.income)),'income_mismatch'),
+      row('Income · form vs tax slip',fmt$(inc),fmt$(g(e.tax_income,c.income)),'tax_income_mismatch'),
+      row('Debt · declared vs bureau',fmt$(dbt),fmt$(g(e.bureau_debt,c.debt)),'debt_understated'),
+      row('Tobacco · form vs cotinine lab',e.form_tobacco_yes?'Smoker':smk,g(e.cotinine,smk==='Non-smoker'?'NEGATIVE':'—'),'smoker_nondisclosure'),
+      row('Deposits vs declared income',fmt$(g(e.bank_deposit_monthly!=null?e.bank_deposit_monthly*12:null,c.income)),fmt$(inc),'income_deposit_mismatch')];
+    return `the 6-check screen across the packet —<br>${rows.join('<br>')}<br>${k.size?`<b>${k.size} discrepancy(ies)</b> flagged`:'<b>every field agrees</b> across all five documents'}`;}],
+  // "what is your AI recommendation for X" — spelling-tolerant on recommendation
+  [/rec+o?m+|suggest|next step|advi[cs]e|what should i do|your take|your call/, ()=>{
+    const r=caseRecommendation(c);
+    return `the recommendation is <b>${r[0]}</b> — ${r[1]}. System call ${c.decision} at score ${c.risk_score} (${c.rate_class})${c.verdict==='yellow'?'. The call is yours; this is a suggested next step, not a decision':''}`;}],
   [/how long|in (the )?queue|waiting|queue time|\bsla\b/, ()=>{
     if(c.verdict!=='yellow')return `decided <b>straight-through, instantly</b> — no queue time (${c.decision.toLowerCase()})`;
     const h=ageHours(c);return `in the review queue for <b>${fmtAge(h)}</b>${h>=8?' — <b>over the 8-hour SLA</b>, flagged for chase':h>=6?' — inside SLA but past the 6-hour warning line':' — well inside the 8-hour SLA'}`;}],
@@ -2442,22 +2482,105 @@ function uwgFieldAnswer(c,q){
     return `the packet holds <b>5 parsed documents</b> — application form, payslip, paramedical exam, bank statement, tax slip${c.has_docs?' (PDF originals attached)':''}${out.length?`. Still outstanding by the age × amount grid: <b>${out.join(', ')}</b>`:'. No further evidence outstanding'}`;}],
   [/weight|height|bmi/, ()=>`height ${c.height} cm, weight <b>${c.weight} kg</b> (BMI ${c.bmi}), from the paramedical exam`],
   [/\bage\b|date of birth|\bdob\b|born/, ()=>`born ${c.dob} — age <b>${c.age}</b>`],
+  // specific-before-generic: "debt to income" must not fall into plain income,
+  // and "what is driving the score" must not fall into driving violations
+  [/debt.to.income|\bdti\b/, ()=>`debt-to-income ratio <b>${c.dti!=null?(c.dti*100).toFixed(0)+'%':'—'}</b> — ${fmt$(c.debt)} of debt against ${fmt$(c.income)} of income`],
+  [/\bdrivers?\b|factor|breakdown|driving .*score|score .*driv|why.* (high|low) score/, ()=>{
+    const f=(c.rule_factors||[]).filter(x=>x[2]>0).sort((a,b)=>b[2]-a[2]).slice(0,4);
+    return f.length?`top rule-engine drivers — ${f.map(x=>`${x[0]} (${x[1]}) <b>+${x[2]}</b>`).join(', ')}`:`no rule-engine risk factors fired — a clean file`;}],
   [/income|salary|earn/, ()=>`annual income <b>${fmt$(c.income)}</b> (${c.occupation||'—'}${c.employer?', '+c.employer:''})`],
   [/coverage|cover\b|face amount|sum assured/, ()=>`requesting <b>${fmt$(c.coverage)}</b> of cover — ${c.policy}`],
   [/premium/, ()=>`annual premium <b>${fmt$(c.premium)}</b> on ${fmt$(c.coverage)} of ${c.policy}`],
+  // credit before the generic score matcher — "credit score" is its own field
+  [/credit/, ()=>`credit score <b>${c.credit!=null?c.credit:'—'}</b>${c.credit!=null?` (${c.credit>=740?'excellent':c.credit>=670?'good':c.credit>=580?'fair':'poor'})`:''}`],
+  [/debt.to.income|\bdti\b/, ()=>`debt-to-income ratio <b>${c.dti!=null?(c.dti*100).toFixed(0)+'%':'—'}</b> — ${fmt$(c.debt)} of debt against ${fmt$(c.income)} of income`],
+  [/\bdebt\b|owe|liabilit/, ()=>`existing debt <b>${fmt$(c.debt)}</b> (DTI ${c.dti!=null?(c.dti*100).toFixed(0)+'%':'—'})`],
+  [/net worth|assets/, ()=>`net worth <b>${fmt$(c.net_worth)}</b>`],
+  [/bank|savings|balance|deposit/, ()=>`average bank balance <b>${fmt$(c.bank)}</b>${(c.extraction||{}).bank_deposit_monthly?`, monthly deposits ${fmt$(c.extraction.bank_deposit_monthly)}`:''}`],
+  [/expense|outflow|spending/, ()=>`monthly outflows <b>${fmt$(c.expenses)}</b>`],
+  [/family history|famil/, ()=>`family history <b>${c.family?'disclosed':'none disclosed'}</b>`],
+  [/driving|violation|\bmvr\b|traffic/, ()=>`<b>${c.violations||0}</b> driving violation(s) in the last three years${(c.decl||{}).dangerous_driving?' · dangerous driving declared in the last five years':''}`],
+  [/alcohol|drink/, ()=>`alcohol use <b>${c.alcohol||'None'}</b>`],
+  [/hazard|dangerous activit|hobb|sport|skydiv|div(ing|e)\b/, ()=>`hazardous activities: <b>${c.hazard&&c.hazard!=='None'?c.hazard:'none declared'}</b>`],
+  [/unique|circumstance|disclos|section 6|declaration/, ()=>{
+    const d=c.decl||{};const yes=[['prior_decline','a prior application declined'],['dangerous_driving','dangerous driving'],['drug_counselling','drug or alcohol counselling'],['criminal','a criminal offence'],['bankruptcy','bankruptcy'],['foreign_travel','foreign travel planned'],['weight_change','a weight change over 10 lb']].filter(([k])=>d[k]).map(([,l])=>l);
+    return `${c.unique?`unique circumstances: <b>${c.unique}</b>. `:''}${yes.length?`Section 6 answered YES to: <b>${yes.join(', ')}</b>`:(c.unique?'No Section 6 declarations':'nothing disclosed — no unique circumstances, no Section 6 declarations')}`;}],
+  [/afford|financially justif/, ()=>`affordability <b>${((c.afford||{}).label)||'—'}</b>${(c.afford||{}).verdict==='fail'?' — referred to financial underwriting':''}`],
+  [/conflict|flag|mismatch|discrepan/, ()=>{const k=c.conflicts||[];
+    return k.length?`<b>${k.length}</b> conflict(s): ${k.map(x=>x.type.replace(/_/g,' ')+' ('+x.severity+')').join(', ')}`:`<b>no document conflicts</b> — the packet is internally consistent`;}],
+  [/driver|factor|what.s driving|why.* (high|low) score|breakdown/, ()=>{
+    const f=(c.rule_factors||[]).filter(x=>x[2]>0).sort((a,b)=>b[2]-a[2]).slice(0,4);
+    return f.length?`top rule-engine drivers — ${f.map(x=>`${x[0]} (${x[1]}) <b>+${x[2]}</b>`).join(', ')}`:`no rule-engine risk factors fired — a clean file`;}],
+  [/assign|underwriter|desk|who owns|who has/, ()=>{
+    if(c.verdict!=='yellow')return `not assigned to a desk — decided straight-through (${c.decision.toLowerCase()})`;
+    return `assigned to <b>${st.assignee||'unassigned'}</b>${st.tier?` (${(UWS[st.tier]||{}).label} desk)`:''}, status ${WF_LABEL[st.status]||st.status}`;}],
+  [/rate class|rating|which class/, ()=>`rate class <b>${c.rate_class}</b>`],
+  [/polic(y|ies)|product|term|whole life/, ()=>`<b>${c.policy}</b> — ${fmt$(c.coverage)} of cover at ${fmt$(c.premium)}/yr`],
+  [/where do(es)?.*(live|reside|based)|which city|what city|\bcity\b|home address|lives? in/, ()=>`based in <b>${c.city||'—'}${c.state?', '+c.state:''}</b>`],
+  [/sex|gender|male|female/, ()=>`<b>${c.sex==='M'?'Male':'Female'}</b>, age ${c.age}`],
+  [/existing (cover|polic)|already (has|have)|replac/, ()=>`existing cover in force <b>${fmt$(c.existing_cov||0)}</b>${c.replacing?' — this application <b>replaces</b> an existing policy':''}`],
+  [/years employ|how long.*(work|employ)|tenure/, ()=>`<b>${c.years_emp!=null?c.years_emp+' years':'—'}</b> with ${c.employer||'the current employer'} (${c.emp_status||'—'})`],
   [/score|risk\b/, ()=>`composite risk score <b>${c.risk_score}</b> (rule ${c.rule_score} / ML ${Math.round(c.ml_score)}) — ${c.decision}`],
   [/smok|tobacco|cotinine/, ()=>`declared <b>${c.smoker}</b>${e.cotinine?`, cotinine lab ${e.cotinine}`:''}`],
   [/blood pressure|\bbp\b/, ()=>`blood pressure <b>${c.bp}</b>`],
   [/cholesterol|chol\b/, ()=>`total cholesterol <b>${c.chol} mg/dL</b>`],
   [/condition|medical|health|diagnos/, ()=>`declared conditions: <b>${c.conditions||'None'}</b>`],
   [/occupation|job|employ/, ()=>`<b>${c.occupation||'—'}</b>${c.employer?` at ${c.employer}`:''}${c.emp_status?` (${c.emp_status})`:''}`],
-  [/decision|status|verdict|outcome/, ()=>`<b>${c.decision}</b> — ${c.rate_class}`]];
- for(const [re,fn] of F)if(re.test(q))return `<b>${c.name}</b> (<span class="mono">${c.id}</span>): ${fn()}.`;
+  // "the decision" must not swallow "the decision bands" (a rulebook question)
+  [/verdict|outcome|final decision|decision (on|for|is)\b|(his|her|their|this) decision|the decision(?! ?band)|approved or declined/, ()=>`<b>${c.decision}</b> — ${c.rate_class}`]];
+ // A question can carry several asks at once ("age and DOB, and does it match
+ // across the documents?"). Resolve EVERY intent present, most specific first,
+ // consuming the words each one claims so a generic pattern cannot re-answer
+ // ground a precise one already covered.
+ const scored=F.map(f=>{const m=q.match(f[0]);return {f,len:m?m[0].length:0};})
+   .filter(x=>x.len>0).sort((a,b)=>b.len-a.len);
+ let rem=q,hits=[];
+ scored.forEach(s=>{
+  if(hits.length>=3)return;
+  const m=rem.match(s.f[0]);if(!m)return;                 // a longer intent already took these words
+  rem=rem.replace(s.f[0],' '.repeat(m[0].length));
+  hits.push(s.f[1]());});
+ if(hits.length===1)return `<b>${c.name}</b> (<span class="mono">${c.id}</span>): ${hits[0]}.`;
+ if(hits.length>1)return `<b>${c.name}</b> (<span class="mono">${c.id}</span>):<br>${hits.map(h=>'• '+h).join('<br>')}`;
  return null;
 }
-function uwgFindByName(q){
- // match an applicant by name: every token of the name present in the query
- return CASES.find(c=>c.name.toLowerCase().split(/\s+/).every(t=>q.includes(t)))||null;
+/* Applicant matching is typo-tolerant: people type “almedia” for “Almeida”
+   and half a name far more often than a clean full match. Tokens are scored
+   exact / near-miss (edit distance 1–2), and a tie asks rather than guesses. */
+const UWG_STOP=new Set(['what','whats','which','the','and','for','with','about','tell','show','give','how','why','who','whom','does','did','his','her','hers','their','they','them','this','that','been','has','have','was','were','are','file','files','case','cases','document','documents','docs','packet','queue','score','weight','height','income','premium','coverage','decision','status','long','much','many','from','into','right','now','our','your','ours','yours','review','reviewed','need','needs','there','then','also','please','info','information']);
+function uwgLev(a,b){
+ const m=a.length,n=b.length;if(Math.abs(m-n)>2)return 9;
+ let prev=Array.from({length:n+1},(_,i)=>i),cur=new Array(n+1);
+ for(let i=1;i<=m;i++){cur[0]=i;
+  for(let j=1;j<=n;j++)cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));
+  const t=prev;prev=cur;cur=t;}
+ return prev[n];
+}
+function uwgTokenScore(nameTok,qTok){
+ if(nameTok===qTok)return 3;                       // exact
+ if(nameTok.length<4||qTok.length<4)return 0;      // short tokens are too collision-prone
+ const d=uwgLev(nameTok,qTok);
+ if(d===1)return 2.5;                              // one typo
+ if(d===2&&nameTok.length>=6)return 1.5;           // transposition in a long surname
+ return 0;
+}
+function uwgNameMatches(q){
+ const qTok=q.replace(/[^a-z\s]/g,' ').split(/\s+/).filter(t=>t.length>=3&&!UWG_STOP.has(t));
+ if(!qTok.length)return {list:[],score:0};
+ let best=0,scored=[];
+ CASES.forEach(c=>{
+  let s=0,top=0;
+  c.name.toLowerCase().split(/\s+/).forEach(nt=>{
+   let b=0;qTok.forEach(qt=>{const v=uwgTokenScore(nt,qt);if(v>b)b=v;});
+   s+=b;if(b>top)top=b;});
+  // credible only on an exact/near-exact token, or a long surname near-miss
+  if(top>=2.5||(top>=1.5&&s>=1.5)){scored.push([c,s]);if(s>best)best=s;}});
+ return {list:scored.filter(x=>x[1]===best).map(x=>x[0]),score:best};
+}
+function uwgFindByName(q){const m=uwgNameMatches(q);return m.list.length===1?m.list[0]:null;}
+function uwgAmbiguous(list){
+ const shown=list.slice(0,5);
+ return `${list.length} applicants share that name — give me the full name or a case ID:<br>${shown.map(c=>`<span class="mono">${c.id}</span> ${c.name} — ${fmt$(c.coverage)}, ${c.decision.toLowerCase()}`).join('<br>')}${list.length>shown.length?`<br>…and ${list.length-shown.length} more.`:''}`;
 }
 function uwgCaseAnswer(c){
  const st=wfGet(c.id);
@@ -2516,20 +2639,37 @@ function uwgAnswer(qRaw){
  if(wantsRank&&(hitAppr||hitDecl)){
   const parts=[];if(hitAppr)parts.push(uwgRankAnswer('approve'));if(hitDecl)parts.push(uwgRankAnswer('decline'));
   return parts.join('<br><br>');}
- // applicant by name — field question or full case read
- const byName=uwgFindByName(q);
- if(byName){uwgLastCase=byName;return uwgFieldAnswer(byName,q)||uwgCaseAnswer(byName);}
+ // applicant by name — field question or full case read. A confident name match
+ // wins outright; a fuzzy one waits behind the metric resolver so “loss ratio”
+ // can never be mistaken for a surname.
+ const nm=uwgNameMatches(q);
+ const nameReply=()=>{if(nm.list.length>1)return uwgAmbiguous(nm.list);
+  const c=nm.list[0];uwgLastCase=c;return uwgFieldAnswer(c,q)||uwgCaseAnswer(c);};
+ if(nm.score>=3)return nameReply();
  // a named metric → the exact live number, before any explanatory entry
  const metric=uwgMetricAnswer(q);
  if(metric)return metric;
- if(/(this case|current case|case here|explain (it|this)|why is (he|she|it))/.test(q)&&view==='case'&&activeId){
-  const c=CASES.find(x=>x.id===activeId);if(c){uwgLastCase=c;return uwgFieldAnswer(c,q)||uwgCaseAnswer(c);}}
- // pronoun follow-up — "what is her case id" refers to the case we just discussed
- if(uwgLastCase&&/\b(he|she|his|her|hers|their|theirs|they|them|this person|that person|this applicant)\b/.test(q)){
-  const f=uwgFieldAnswer(uwgLastCase,q);if(f)return f;
-  if(/who|about|tell me/.test(q))return uwgCaseAnswer(uwgLastCase);}
+ if(nm.list.length)return nameReply();
+ // Conversation memory: once we have been talking about someone, an unqualified
+ // follow-up stays with them — "and his credit score?", "how long in queue?",
+ // "does it match across documents?" — no need to repeat the name. The case on
+ // screen serves the same role when no one has been named yet.
+ const ctx=uwgLastCase||((view==='case'&&activeId)?CASES.find(x=>x.id===activeId):null);
+ // Only an actual follow-up inherits the context — a pronoun, a continuation
+ // opener, or a terse fragment. A full general question still goes to the
+ // rulebook, so "what are the decision bands?" never becomes a case lookup.
+ const isFollowUp=/^(and|also|what about|how about|then|ok|okay)\b/.test(q)
+   ||/\b(he|she|his|her|hers|him|they|them|their|theirs|it|its|this person|that person|this applicant|this case|current case)\b/.test(q)
+   ||q.split(/\s+/).filter(Boolean).length<=4;
+ if(ctx&&isFollowUp){
+  const f=uwgFieldAnswer(ctx,q);
+  if(f){uwgLastCase=ctx;return f;}
+  if(/\b(he|she|his|her|hers|they|them|their|theirs|this person|that person|this applicant|this case|current case|about (him|her|them|it))\b/.test(q)){uwgLastCase=ctx;return uwgCaseAnswer(ctx);}}
+ // score by how much of the question a topic actually accounts for — longer and
+ // multi-word keys beat incidental short ones, so “affordability screen” lands on
+ // affordability rather than on any entry that happens to mention a screen.
  let best=null,bestN=0;
- UWG_KB.forEach(e=>{let n=0;e.k.forEach(k=>{if(q.includes(k))n+=(k.length>4?2:1);});if(n>bestN){bestN=n;best=e;}});
+ UWG_KB.forEach(e=>{let n=0;e.k.forEach(k=>{if(q.includes(k))n+=k.includes(' ')?k.length+4:k.length;});if(n>bestN){bestN=n;best=e;}});
  if(best)return best.a();
  return 'I cover the platform’s own rulebook: decision bands, the 6-check conflict screen, DOB / smoker policy, affordability, the requirements grid, desk routing, SLAs, evidence-anchored weights, the executive P&L, decision-change authority, exports and integrations. I can also look up any applicant — by case ID (<span class="mono">'+CASES[0].id+'</span>) or by name (“what is '+CASES[0].name+'’s income?”), with follow-ups (“what is her case ID?”) — read live metrics (“what is my loss ratio right now?”), rank the auto-approved or auto-declined book, and tell you who to review first in the queue.';
 }
