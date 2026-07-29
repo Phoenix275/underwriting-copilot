@@ -8,6 +8,12 @@
       "port": 8137
     },
     {
+      "name": "propell",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/tegh/propell", "run", "dev", "--", "--port", "5199", "--strictPort"],
+      "port": 5199
+    },
+    {
       "name": "web",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "web", "run", "dev", "--", "--port", "5173", "--strictPort"],

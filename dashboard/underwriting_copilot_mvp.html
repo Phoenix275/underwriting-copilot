@@ -2419,10 +2419,27 @@ function uwgRankAnswer(kind){
  const l=CASES.filter(c=>c.verdict==='red').sort((a,b)=>b.risk_score-a.risk_score).slice(0,5);
  return `<b>Auto-declined, ranked highest risk first</b>:<br>${l.map((c,i)=>`${i+1}. <span class="mono">${c.id}</span> ${c.name} — score ${c.risk_score}${(c.reasons||[])[0]?', '+c.reasons[0].toLowerCase():''}`).join('<br>')}<br>Every one is filed with its rationale in the <b>Auto-Declined</b> space — and any can be pulled back into manual review.`;
 }
+function uwgQueueAnswer(){
+ // "Who should I review first?" — the queue’s own priority order, live.
+ const pend=CASES.filter(c=>c.verdict==='yellow'&&!wfGet(c.id).decision);
+ let mine=pend,scopeNote='';
+ if(CURRENT_ROLE==='underwriter'){const m=pend.filter(c=>wfGet(c.id).assigneeUid===CURRENT_UID);if(m.length){mine=m;scopeNote=' in your queue';}}
+ if(!mine.length)return 'The review queue is empty — nothing is waiting on a human right now.';
+ const l=mine.slice().sort((a,b)=>priorityScore(b)-priorityScore(a)).slice(0,5);
+ return `<b>Work top-down${scopeNote}</b> — ranked by coverage + time-in-queue (never by risk score):<br>${l.map((c,i)=>{const h=ageHours(c);return `${i+1}. <span class="mono">${c.id}</span> ${c.name} — ${fmt$(c.coverage)}, ${fmtAge(h)} in queue${h>=8?' · <b style="color:var(--bad)">SLA BREACH</b>':''}, priority ${priorityScore(c)}/100`;}).join('<br>')}${mine.length>5?`<br>(${mine.length-5} more behind them.)`:''}`;
+}
 function uwgFieldAnswer(c,q){
  // A specific field of a specific applicant — answer just that, from the packet.
  const e=c.extraction||{};
+ const st=wfGet(c.id);
  const F=[
+  [/case id|which id|the id\b/, ()=>`case ID <b><span class="mono">${c.id}</span></b>`],
+  [/how long|in (the )?queue|waiting|queue time|\bsla\b/, ()=>{
+    if(c.verdict!=='yellow')return `decided <b>straight-through, instantly</b> — no queue time (${c.decision.toLowerCase()})`;
+    const h=ageHours(c);return `in the review queue for <b>${fmtAge(h)}</b>${h>=8?' — <b>over the 8-hour SLA</b>, flagged for chase':h>=6?' — inside SLA but past the 6-hour warning line':' — well inside the 8-hour SLA'}`;}],
+  [/document|packet|paperwork|\bfile\b|\bdocs\b/, ()=>{
+    const out=reqOutstandingList(c);
+    return `the packet holds <b>5 parsed documents</b> — application form, payslip, paramedical exam, bank statement, tax slip${c.has_docs?' (PDF originals attached)':''}${out.length?`. Still outstanding by the age × amount grid: <b>${out.join(', ')}</b>`:'. No further evidence outstanding'}`;}],
   [/weight|height|bmi/, ()=>`height ${c.height} cm, weight <b>${c.weight} kg</b> (BMI ${c.bmi}), from the paramedical exam`],
   [/\bage\b|date of birth|\bdob\b|born/, ()=>`born ${c.dob} — age <b>${c.age}</b>`],
   [/income|salary|earn/, ()=>`annual income <b>${fmt$(c.income)}</b> (${c.occupation||'—'}${c.employer?', '+c.employer:''})`],
@@ -2456,7 +2473,7 @@ function uwgCaseAnswer(c){
  if(st.decision)lines.push(`Human decision on record: <b>${st.decision.action}</b> by ${st.decision.by}, ${st.decision.at}.`);
  return lines.join('<br>');
 }
-let uwgBooted=false;
+let uwgBooted=false,uwgLastCase=null;   // last case discussed — resolves pronoun follow-ups
 function uwgToggle(){
  const p=document.getElementById('uwgPanel');const on=!p.classList.contains('on');
  p.classList.toggle('on',on);
@@ -2484,7 +2501,14 @@ function uwgAnswer(qRaw){
  const idm=qRaw.toUpperCase().match(/APP-\d+/);
  if(idm){const c=CASES.find(x=>x.id===idm[0]);
   if(!c)return `I can’t find <span class="mono">${idm[0]}</span> in the current book.`;
-  return uwgFieldAnswer(c,q)||uwgCaseAnswer(c);}
+  uwgLastCase=c;return uwgFieldAnswer(c,q)||uwgCaseAnswer(c);}
+ // "who should I review first?" — the live queue order
+ if(/review first|first in (the )?queue|(start|begin) with|next case|prioriti[sz]|what should i (review|work|do)|who should i/.test(q))
+  return uwgQueueAnswer();
+ // "tell me about specific cases" — show what a case lookup can do, with real examples
+ if(/specific case|about (a |the |some )?cases|which cases|examples? of (a )?case|show me (a|some) case/.test(q)){
+  const ex=CASES.filter(c=>c.verdict==='yellow').slice(0,3);
+  return `Absolutely — ask by case ID or applicant name: ${ex.map(c=>`<span class="mono">${c.id}</span> (${c.name})`).join(', ')}… I can read a case’s full story (“why is ${ex[0].name} referred?”), one field (“what is ${ex[0].name}’s weight?”), its documents (“what documents are in ${ex[0].name}’s file?”), or its queue time (“how long has ${ex[0].name} been in queue?”).`;}
  // ranked reads of the auto-decisioned book
  const wantsRank=/rank|top |best|worst|order|ideal|first/.test(q);
  const hitAppr=/auto[- ]?approv|approved (case|list|book|ones)|accept/.test(q);
@@ -2494,16 +2518,20 @@ function uwgAnswer(qRaw){
   return parts.join('<br><br>');}
  // applicant by name — field question or full case read
  const byName=uwgFindByName(q);
- if(byName)return uwgFieldAnswer(byName,q)||uwgCaseAnswer(byName);
+ if(byName){uwgLastCase=byName;return uwgFieldAnswer(byName,q)||uwgCaseAnswer(byName);}
  // a named metric → the exact live number, before any explanatory entry
  const metric=uwgMetricAnswer(q);
  if(metric)return metric;
  if(/(this case|current case|case here|explain (it|this)|why is (he|she|it))/.test(q)&&view==='case'&&activeId){
-  const c=CASES.find(x=>x.id===activeId);if(c)return uwgFieldAnswer(c,q)||uwgCaseAnswer(c);}
+  const c=CASES.find(x=>x.id===activeId);if(c){uwgLastCase=c;return uwgFieldAnswer(c,q)||uwgCaseAnswer(c);}}
+ // pronoun follow-up — "what is her case id" refers to the case we just discussed
+ if(uwgLastCase&&/\b(he|she|his|her|hers|their|theirs|they|them|this person|that person|this applicant)\b/.test(q)){
+  const f=uwgFieldAnswer(uwgLastCase,q);if(f)return f;
+  if(/who|about|tell me/.test(q))return uwgCaseAnswer(uwgLastCase);}
  let best=null,bestN=0;
  UWG_KB.forEach(e=>{let n=0;e.k.forEach(k=>{if(q.includes(k))n+=(k.length>4?2:1);});if(n>bestN){bestN=n;best=e;}});
  if(best)return best.a();
- return 'I cover the platform’s own rulebook: decision bands, the 6-check conflict screen, DOB / smoker policy, affordability, the requirements grid, desk routing, SLAs, evidence-anchored weights, the executive P&L, decision-change authority, exports and integrations. I can also look up any applicant — by case ID (<span class="mono">'+CASES[0].id+'</span>) or by name (“what is '+CASES[0].name+'’s income?”) — and rank the auto-approved or auto-declined book.';
+ return 'I cover the platform’s own rulebook: decision bands, the 6-check conflict screen, DOB / smoker policy, affordability, the requirements grid, desk routing, SLAs, evidence-anchored weights, the executive P&L, decision-change authority, exports and integrations. I can also look up any applicant — by case ID (<span class="mono">'+CASES[0].id+'</span>) or by name (“what is '+CASES[0].name+'’s income?”), with follow-ups (“what is her case ID?”) — read live metrics (“what is my loss ratio right now?”), rank the auto-approved or auto-declined book, and tell you who to review first in the queue.';
 }
 render();
 // Esc returns from a case file to the queue with its context intact (§3.3).
