@@ -2435,7 +2435,7 @@ const UWG_KB=[
   a:()=>`This is a synthetic prototype, so it is not certified against any regime — but it is built for the questions regulators actually ask: <b>explainability</b> (published weights, factor-level reasons), <b>human oversight</b> (every borderline case goes to a person, and the model advises rather than decides), <b>auditability</b> (attributed, timestamped, exportable trail), <b>fairness measurement</b> (Model Card reports by group), and <b>data minimisation</b> (document-intake only, no external profiling). In the target markets that maps to insurance-authority conduct rules plus the local data-protection act; the specifics belong in a pilot's compliance review, not in a demo's claims.`},
  {k:['two underwriters at once','same case at once','simultaneous','collision','locking','concurrent','claim the case','take over'],
   a:()=>`Cases are <b>assigned</b> rather than locked. Each referred case routes to one desk by authority, shows its owner, and another underwriter can explicitly <b>Take over</b> — which is logged as a reassignment in the audit trail. Since state lives in your browser in this demo, there is no server-side lock; a live build would add optimistic locking so two people cannot record conflicting decisions on the same case.`},
- {k:['hand over','handover','vacation','out of office','cover for me','absence','reassign my queue','my backlog'],
+ {k:['hand over','handover','hand it','give it to','pass it to','someone else','reassign','transfer the case','vacation','out of office','cover for me','absence','my backlog'],
   a:()=>`Per-case today: open a case and use <b>Take over</b> to move ownership, which logs the reassignment. Bulk handover of a whole desk is not built — and it is exactly what the operations roadmap calls workforce and queue balancing: reassigning a backed-up desk, forecasting capacity, and covering absence. The admin's <b>Workload by desk</b> panel already shows where the load sits, which is the input that decision needs.`},
  {k:['bulk decline','decline all','batch decline','mass decline'],
   a:()=>`No — and that asymmetry is intentional. <b>Bulk approve</b> exists for the auto-approved space because those cases already cleared the screen and the score, so the batch action confirms a decision the system already made. A decline is adverse: it needs a case-by-case rationale you would have to defend one applicant at a time. Auto-declines are recorded automatically with their reason, and any of them can be pulled into manual review individually.`},
@@ -2558,30 +2558,42 @@ function uwgRankAnswer(kind){
    "what is the average risk score?" — computed live over the current book,
    because an underwriter asks the book questions, not just case questions. */
 function uwgSubset(q){
+ // A subset has two independent parts: a SCOPE (which pile of cases) and
+ // ATTRIBUTES (what is true of them). "Smokers in the queue" is one of each,
+ // so they intersect rather than the first one winning.
  const undecidedY=CASES.filter(c=>c.verdict==='yellow'&&!wfGet(c.id).decision);
- const S=[
-  [/\bsla\b|breach|over the 8|past due|overdue/,'over the 8-hour SLA',()=>undecidedY.filter(c=>ageHours(c)>=8)],
+ const SCOPE=[
+  [/my desk|my queue|my cases|assigned to me|on my plate|\bmine\b/,'open on your desk',()=>undecidedY.filter(c=>CURRENT_ROLE!=='underwriter'||wfGet(c.id).assigneeUid===CURRENT_UID)],
+  [/which desk|what desk|whose desk|which underwriter|who holds|which team/,'in manual review (the only cases on a desk)',()=>undecidedY],
+  [/review queue|in (the )?queue|manual review|referred|need a human|pending|undecided|awaiting|not decided/,'in manual review',()=>undecidedY],
+  [/auto.?declin|\bdeclined\b|rejected|decline pile/,'auto-declined',()=>CASES.filter(c=>c.verdict==='red')],
+  [/auto.?approv|\bapproved\b|straight.?through/,'auto-approved',()=>CASES.filter(c=>c.verdict==='green')]];
+ const ATTR=[
+  [/\bsla\b|breach|over the 8|past due|overdue/,'past the 8-hour SLA',()=>CASES.filter(c=>c.verdict==='yellow'&&!wfGet(c.id).decision&&ageHours(c)>=8)],
   [/conflict|mismatch|discrepan|flagged/,'with document conflicts',()=>CASES.filter(c=>(c.conflicts||[]).length)],
   [/smoker|tobacco|cotinine/,'smokers',()=>CASES.filter(c=>/smok/i.test(c.smoker||'')&&!/non/i.test(c.smoker||''))],
-  [/auto.?declin|declined|rejected/,'auto-declined',()=>CASES.filter(c=>c.verdict==='red')],
-  [/auto.?approv|approved|straight.?through/,'auto-approved',()=>CASES.filter(c=>c.verdict==='green')],
-  [/manual review|referred|review queue|in (the )?queue|the queue|need a human|pending|undecided|awaiting/,'in manual review',()=>undecidedY],
   [/afford/,'failing the affordability screen',()=>CASES.filter(c=>c.afford&&c.afford.verdict==='fail')],
   [/unique|disclos|section 6/,'with unique circumstances disclosed',()=>CASES.filter(c=>c.unique)],
   [/pdf|scanned|original doc/,'with original PDFs attached',()=>CASES.filter(c=>c.has_docs)],
   [/condition|medical|diabet|hypertens/,'with declared medical conditions',()=>CASES.filter(c=>c.conditions&&c.conditions!=='None')],
-  [/hazard|skydiv|dangerous activit/,'with hazardous activities',()=>CASES.filter(c=>c.hazard&&c.hazard!=='None')],
-  [/which desk|what desk|whose desk|which underwriter|who holds|which team/,'in manual review (the only cases on a desk)',()=>undecidedY],
-  [/my desk|my queue|my cases|assigned to me|on my plate|\bmine\b/,'open on your desk',()=>undecidedY.filter(c=>CURRENT_ROLE!=='underwriter'||wfGet(c.id).assigneeUid===CURRENT_UID)]];
- const hits=[];
- for(const [re,label,fn] of S)if(re.test(q))hits.push({label,fn});
- if(!hits.length)return null;
- // "both a conflict and a failed affordability" = the intersection
- if(hits.length>1&&/\bboth\b|as well as|and also|at the same time/.test(q)){
-  let l=CASES.slice();hits.forEach(h=>{const ids=new Set(h.fn().map(c=>c.id));l=l.filter(c=>ids.has(c.id));});
-  return {label:hits.map(h=>h.label).join(' AND '),list:l};
+  [/hazard|skydiv|dangerous activit/,'with hazardous activities',()=>CASES.filter(c=>c.hazard&&c.hazard!=='None')]];
+ let scope=null;
+ for(const [re,label,fn] of SCOPE)if(re.test(q)){scope={label,fn};break;}
+ const attrs=[];
+ for(const [re,label,fn] of ATTR)if(re.test(q))attrs.push({label,fn});
+ if(!scope&&!attrs.length)return null;
+ const keep=[];
+ if(attrs.length){
+  // multiple attributes intersect only on an explicit conjunction
+  if(attrs.length>1&&/\bboth\b|as well as|and also|at the same time/.test(q))keep.push(...attrs);
+  else keep.push(attrs[0]);
  }
- return {label:hits[0].label,list:hits[0].fn()};
+ let list=CASES.slice();
+ keep.forEach(a=>{const ids=new Set(a.fn().map(c=>c.id));list=list.filter(c=>ids.has(c.id));});
+ if(scope){const ids=new Set(scope.fn().map(c=>c.id));list=list.filter(c=>ids.has(c.id));}
+ const attrLabel=keep.map(a=>a.label).join(' AND ');
+ const label=[attrLabel,scope?scope.label:''].filter(Boolean).join(' ')||'in the book';
+ return {label,list};
 }
 function uwgMetricOf(q){
  // `worse` gives each metric a direction, so "the worst credit score" means the
@@ -2619,12 +2631,24 @@ function uwgAggregateAnswer(q){
  // a numeric qualifier: "over 60", "above $700k", "score under 40"
  let list=sub?sub.list:CASES.slice(),label=sub?sub.label:'in the book';
  const num=q.match(/(over|above|more than|greater than|under|below|less than|at least)\s*\$?\s*([\d.,]+)\s*(k|m|million|thousand)?/);
- if(num&&met){
+ if(num){
   let v=parseFloat(num[2].replace(/,/g,''));const u=(num[3]||'').toLowerCase();
+  const money=/\$/.test(q)||!!u;
   if(u==='k'||u==='thousand')v*=1000;if(u==='m'||u==='million')v*=1e6;
-  const up=/over|above|more than|greater than|at least/.test(num[1]);
-  list=list.filter(c=>up?met.get(c)>=v:met.get(c)<=v);
-  label=`${label==='in the book'?'':label+' '}with ${met.label} ${up?'over':'under'} ${met.fmt(v)}`;
+  // a bare small number is an age or a score, never a dollar amount
+  let fm=met;
+  if(!money&&v<=130){
+   fm=(/score|risk/.test(q)&&!/credit/.test(q))?uwgMetricOf('risk score')
+     :/credit/.test(q)?uwgMetricOf('credit')
+     :/\bbmi\b/.test(q)?uwgMetricOf('bmi')
+     :(!met||met.sum||met.label==='age')?uwgMetricOf('years old'):met;
+  }
+  if(fm){
+   const up=/over|above|more than|greater than|at least/.test(num[1]);
+   list=list.filter(c=>up?fm.get(c)>=v:fm.get(c)<=v);
+   label=`${label==='in the book'?'':label+' '}with ${fm.label} ${up?'over':'under'} ${fm.fmt(v)}`;
+   if(!met)met=fm;
+  }
  }
  const ex=l=>l.slice(0,3).map(c=>`<span class="mono">${c.id}</span> ${c.name}`).join(', ');
  if(wantsSum&&!met&&/money|dollar|value|tied up|worth|exposure|capital/.test(q))met=uwgMetricOf('coverage');
@@ -2699,7 +2723,16 @@ function uwgWhatIfAnswer(q){
    const then=CASES.filter(c=>c.risk_score<v&&!(c.conflicts||[]).some(k=>k.severity==='major')).length;
    const d=then-now;
    const newCov=CASES.filter(c=>c.risk_score<v&&!(c.conflicts||[]).some(k=>k.severity==='major')).reduce((s,c)=>s+(c.coverage||0),0);
-   return `Moving the approval line from <b>${A_LINE}</b> to <b>${v}</b>: auto-approvals go from <b>${now}</b> to <b>${then}</b> (<b>${d>=0?'+':''}${d}</b> cases, ${(then/CASES.length*100).toFixed(0)}% straight-through), and accepted cover would be about <b>${fmtBigMoney(newCov)}</b> against the ${fmtBigMoney(APPETITE_MONTHLY)} appetite. ${d>0?`Those ${d} case(s) stop getting a human look — the trade is throughput for scrutiny.`:'Fewer cases clear automatically; more underwriter time per policy.'}`;
+   // and what that does to the money, since the line is the executive's lever
+   const clean=c=>!(c.conflicts||[]).some(k=>k.severity==='major');
+   const setFor=L=>CASES.filter(c=>c.risk_score<L&&clean(c));
+   const pnl=L=>{const a=setFor(L);const prem=a.reduce((s,c)=>s+(c.premium||0),0);
+    const cl=a.reduce((s,c)=>s+expectedAnnualClaim(c),0);
+    const ref=CASES.filter(c=>c.risk_score>=L&&c.risk_score<D_LINE).length;
+    const ops=CASES.length*COST_AUTO+ref*COST_HUMAN;
+    return {prem:prem,op:prem-cl-prem*SGA_RATE-ops,comb:prem?((cl+prem*SGA_RATE+ops)/prem*100):0};};
+   const b=pnl(A_LINE),n2=pnl(v);
+   return `Moving the approval line from <b>${A_LINE}</b> to <b>${v}</b>:<br>• Auto-approvals go from <b>${now}</b> to <b>${then}</b> (<b>${d>=0?'+':''}${d}</b> cases, ${(then/CASES.length*100).toFixed(0)}% straight-through), accepted cover about <b>${fmtBigMoney(newCov)}</b> against the ${fmtBigMoney(APPETITE_MONTHLY)} appetite.<br>• Approved premium <b>${fmtMoneyK(b.prem)} → ${fmtMoneyK(n2.prem)}</b>/yr.<br>• Expected operating income <b>${fmtMoneyK(b.op)} → ${n2.op>=0?'':'−'}${fmtMoneyK(Math.abs(n2.op))}</b>/yr, combined ratio <b>${b.comb.toFixed(0)}% → ${n2.comb.toFixed(0)}%</b>.<br>${d>0?`The trade is throughput for scrutiny: ${d} more case(s) clear with no human look, and the extra premium arrives with the extra mortality attached.`:`Tighter book: ${Math.abs(d)} case(s) that used to clear now need underwriter time, which costs $${COST_HUMAN} each but buys a look at the risk.`} The line is configuration, so this is a decision, not a model change.`;
   }
  }
  const worse=q.match(/claims?[^\d]{0,24}(\d{1,3})\s*%|(\d{1,3})\s*%[^.]{0,24}(worse|higher|more claims)/);
@@ -2774,7 +2807,7 @@ function uwgFactorTable(){
 }
 function uwgFactorAnswer(q){
  // "how many points does heavy alcohol cost?", "does a criminal record matter?"
- if(!/how many points|points does|how much does .{0,24}(add|cost|count)|weigh|weight of|red flag|does .{0,20}matter|affect the score|hurt the score|count against|penal/.test(q))return null;
+ if(!/\bpoints?\b|weigh|weight of|red flag|does .{0,20}matter|affect the score|hurt the score|count against|penal|worse than|more serious/.test(q))return null;
  const terms=q.replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(w=>w.length>=3&&!UWG_STOP.has(w));
  if(!terms.length)return null;
  const scored=uwgFactorTable().map(f=>{
@@ -2782,6 +2815,17 @@ function uwgFactorAnswer(q){
   let sc=0;terms.forEach(w=>{if(hay.indexOf(w)>=0)sc+=w.length;});
   return {f,sc};}).filter(x=>x.sc>=3).sort((a,b)=>b.sc-a.sc||b.f.pts-a.f.pts);
  if(!scored.length)return null;
+ // an explicit comparison ("X vs Y", "more points than") gets a verdict
+ if(/more .{0,14}than|less .{0,14}than|worse than|versus|\bvs\b|compared to|bigger than|heavier than|or a\b/.test(q)){
+  const seen=new Set(),picks=[];
+  scored.forEach(x=>{if(picks.length<2&&!seen.has(x.f.label+x.f.detail)){seen.add(x.f.label+x.f.detail);picks.push(x.f);}});
+  if(picks.length===2){
+   const [a,b]=picks;const hi=a.pts>=b.pts?a:b,lo=a.pts>=b.pts?b:a;
+   return a.pts===b.pts
+    ? `They carry the <b>same</b> weight: <b>${a.label} — ${a.detail}</b> and <b>${b.label} — ${b.detail}</b> are both <b>+${a.pts}</b> point(s). Both are mortality-anchored (<span class="mono">round(28 × ln(relative mortality))</span>), so equal points means the evidence puts them at the same relative mortality.`
+    : `<b>${hi.label} — ${hi.detail}</b> costs more: <b>+${hi.pts}</b> point(s) against <b>+${lo.pts}</b> for <b>${lo.label} — ${lo.detail}</b> — a ${hi.pts-lo.pts}-point difference. Points are <span class="mono">round(28 × ln(relative mortality))</span>, so that gap is the mortality evidence, not a judgement about which is morally worse. Against the ${A_LINE}-point approval line, ${hi.pts} point(s) is ${(hi.pts/A_LINE*100).toFixed(0)}% of the way to a referral on its own.`;
+  }
+ }
  const top=scored.slice(0,4).map(x=>x.f);
  return `From the live weight table (points are <span class="mono">round(28 × ln(relative mortality))</span>, so they are mortality evidence, not opinion):<br>${top.map(f=>`<b>${f.label} — ${f.detail}</b>: <b>+${f.pts}</b> point(s), seen on ${f.n} case(s) in this book`).join('<br>')}<br>For scale, the approval line is <b>${A_LINE}</b> and the decline line <b>${D_LINE}</b> — so ${top[0].pts} point(s) is ${(top[0].pts/A_LINE*100).toFixed(0)}% of the way to a referral on its own. No single factor decides; they accumulate into the composite.`;
 }
@@ -2838,7 +2882,7 @@ function uwgFieldAnswer(c,q){
   // Consistency verdict is concise: one line when clean, and only the failing
   // rows (with both values) when not. The third element claims the "all docs"
   // words so the document-list intent doesn't fire on the same breath.
-  [/match(es|ed|ing)? across|consistent|consistency|same across|agree across|tally|cross.?document|all (the )?(documents|docs)( submitted)?|verif/, ()=>{
+  [/match(es|ed|ing)? across|consistent|consistency|same across|agree|tally|cross.?document|(all|the) (documents|docs)( submitted| agree| match)?|line up|verif/, ()=>{
     const k=c.conflicts||[];
     if(!k.length)return `yes — all six cross-document checks pass: DOB, income (form vs payslip, tax slip, bank deposits), debt vs bureau, and tobacco vs the cotinine lab all agree`;
     return `<b>${k.length} of the 6 cross-document checks fail</b>:<br>${k.map(x=>{const d=conflictDetail(c,x);
@@ -2879,7 +2923,7 @@ function uwgFieldAnswer(c,q){
   [/unique|circumstance|disclos|section 6|declaration/, ()=>{
     const d=c.decl||{};const yes=[['prior_decline','a prior application declined'],['dangerous_driving','dangerous driving'],['drug_counselling','drug or alcohol counselling'],['criminal','a criminal offence'],['bankruptcy','bankruptcy'],['foreign_travel','foreign travel planned'],['weight_change','a weight change over 10 lb']].filter(([k])=>d[k]).map(([,l])=>l);
     return `${c.unique?`unique circumstances: <b>${c.unique}</b>. `:''}${yes.length?`Section 6 answered YES to: <b>${yes.join(', ')}</b>`:(c.unique?'No Section 6 declarations':'nothing disclosed — no unique circumstances, no Section 6 declarations')}`;}],
-  [/in line with|proportion|multiple of income|relative to .{0,12}income|sensible|reasonable|too much cover|over.?insured/, ()=>{
+  [/in line with|proportion|multiple of income|relative to .{0,12}income|sensible|reasonable|justif|too much cover|over.?insured|support that much/, ()=>{
     const mult=c.income?(c.coverage||0)/c.income:0;const pp=c.income?(c.premium||0)/c.income*100:0;
     return `${fmt$(c.coverage)} of cover on ${fmt$(c.income)} of income is a <b>${mult.toFixed(1)}× income multiple</b>, with the premium at <b>${pp.toFixed(1)}%</b> of income — affordability screen says <b>${((c.afford||{}).label)||'—'}</b>${(c.afford||{}).verdict!=='pass'?', so it refers to financial underwriting rather than declining':''}`;}],
   [/afford|financially justif/, ()=>`affordability <b>${((c.afford||{}).label)||'—'}</b>${(c.afford||{}).verdict==='fail'?' — referred to financial underwriting':''}`],
@@ -2916,12 +2960,12 @@ function uwgFieldAnswer(c,q){
    .filter(x=>x.len>0).sort((a,b)=>b.len-a.len);
  let rem=q,hits=[];
  scored.forEach(s=>{
-  if(hits.length>=3)return;
   const m=rem.match(s.f[0]);if(!m)return;                 // a longer intent already took these words
   rem=rem.replace(s.f[0],' '.repeat(m[0].length));
   if(s.f[2])rem=rem.replace(s.f[2],x=>' '.repeat(x.length));   // words this answer subsumes
   hits.push({pos:m.index,text:s.f[1]()});});
  hits.sort((a,b)=>a.pos-b.pos);
+ hits=hits.slice(0,5);   // consume longest-first, but keep the asks the user made first
  if(hits.length===1)return `<b>${c.name}</b> (<span class="mono">${c.id}</span>): ${hits[0].text}.`;
  if(hits.length>1)return `<b>${c.name}</b> (<span class="mono">${c.id}</span>):<br>${hits.map(h=>'• '+h.text).join('<br>')}`;
  return null;
@@ -3041,6 +3085,19 @@ function uwgAnswer(qRaw){
  uwgHistory.push(qRaw);uwgLastAnswer=a;
  return a;
 }
+function uwgKbBest(q){
+ let best=null,bestN=0;
+ UWG_KB.forEach(e=>{let n=0;e.k.forEach(k=>{if(uwgKeyHit(q,k))n+=k.indexOf(' ')>=0?k.length+4:k.length;});if(n>bestN){bestN=n;best=e;}});
+ return {entry:best,score:bestN};
+}
+function uwgWithFollowOn(ans,q){
+ // "who owns the riskiest case AND can I hand it to someone else" — two asks
+ // aimed at two different subsystems; answer both rather than dropping one.
+ if(!/\band\b|also|plus|as well/.test(q))return ans;
+ const kb=uwgKbBest(q);
+ if(kb.entry&&kb.score>=14)return ans+'<br><br>'+kb.entry.a();
+ return ans;
+}
 function uwgAnswerCore(qRaw,prevQ,prevA){
  const q=qRaw.toLowerCase();
  // When the last turn asked "which one?", this turn's job is to finish the
@@ -3084,15 +3141,15 @@ function uwgAnswerCore(qRaw,prevQ,prevA){
  }
  // scenarios, judgement calls, group-bys and the shift briefing before case lookups
  const wi=uwgWhatIfAnswer(q);if(wi)return wi;
- const pr=uwgProfileAnswer(q);if(pr)return pr;
+ const pr=uwgProfileAnswer(q);if(pr)return uwgWithFollowOn(pr,q);
  const sh=uwgSharedAnswer(q);if(sh)return sh;
  const fa=uwgFactorAnswer(q);if(fa)return fa;
  if(/worry about|anything i should know|brief me|briefing|summar(y|ise|ize) my (day|shift|queue)|how is my day|what.s on my plate/.test(q))return uwgBriefingAnswer();
- const grp=uwgGroupAnswer(q);if(grp)return grp;
+ const grp=uwgGroupAnswer(q);if(grp)return uwgWithFollowOn(grp,q);
  // book-level analytics before anything case-specific: "how many…", "which
  // case has the highest…", "what is the average…", "is there any case with…"
  const agg=uwgAggregateAnswer(q);
- if(agg)return agg;
+ if(agg)return uwgWithFollowOn(agg,q);
  // "who should I review first?" — the live queue order
  if(/review first|first in (the )?queue|(start|begin) with|next case|prioriti[sz]|what should i (review|work|do)|who should i/.test(q))
   return uwgQueueAnswer();
@@ -3151,8 +3208,7 @@ function uwgAnswerCore(qRaw,prevQ,prevA){
  // score by how much of the question a topic actually accounts for — longer and
  // multi-word keys beat incidental short ones, so “affordability screen” lands on
  // affordability rather than on any entry that happens to mention a screen.
- let best=null,bestN=0;
- UWG_KB.forEach(e=>{let n=0;e.k.forEach(k=>{if(uwgKeyHit(q,k))n+=k.indexOf(' ')>=0?k.length+4:k.length;});if(n>bestN){bestN=n;best=e;}});
+ const kb=uwgKbBest(q);let best=kb.entry,bestN=kb.score;
  if(best)return best.a();
  if(nm.list.length)return nameReply();   // no rulebook hit: try the loose name match
  return 'I cover the platform’s own rulebook: decision bands, the 6-check conflict screen, DOB / smoker policy, affordability, the requirements grid, desk routing, SLAs, evidence-anchored weights, the executive P&L, decision-change authority, exports and integrations. I can also look up any applicant — by case ID (<span class="mono">'+CASES[0].id+'</span>) or by name (“what is '+CASES[0].name+'’s income?”), with follow-ups (“what is her case ID?”) — read live metrics (“what is my loss ratio right now?”), rank the auto-approved or auto-declined book, and tell you who to review first in the queue.';
