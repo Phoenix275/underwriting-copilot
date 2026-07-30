@@ -505,6 +505,45 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 .role-chip.sel b{color:var(--acc)}
 @media (max-width:880px){.login-shell{grid-template-columns:1fr;max-width:460px}.login-brand{padding:26px 30px 22px}.lb-h{font-size:18px}.lb-foot{padding-top:14px}.lb-rings{display:none}}
 @media (prefers-reduced-motion:reduce){.lb-sweep{animation:none}}
+/* ---------- sign-in ambience: 3D geometry in the empty field ----------
+   Wireframe cubes turning in true 3D, a tilted orbital disc, floating gems and
+   a receding grid floor — all pointer-events:none, behind the shell, and still
+   in both themes when motion is reduced. */
+#login{perspective:1300px}
+.login-shell{position:relative;z-index:2}
+.lg-geo{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;transform-style:preserve-3d}
+.geo-floor{position:absolute;left:-22%;right:-22%;bottom:-14%;height:48%;
+ background:repeating-linear-gradient(0deg,rgba(106,103,247,.15) 0 1px,transparent 1px 46px),repeating-linear-gradient(90deg,rgba(106,103,247,.15) 0 1px,transparent 1px 46px);
+ transform:perspective(760px) rotateX(63deg);transform-origin:bottom;
+ -webkit-mask-image:linear-gradient(to top,rgba(0,0,0,.75),transparent 82%);mask-image:linear-gradient(to top,rgba(0,0,0,.75),transparent 82%)}
+.geo-cube{position:absolute;transform-style:preserve-3d;animation:geoTurn 36s linear infinite}
+.geo-cube b{position:absolute;inset:0;border:1.5px solid rgba(106,103,247,.38);background:rgba(106,103,247,.045)}
+.geo-cube.c1{width:130px;height:130px;left:9%;top:15%}
+.geo-cube.c1 b:nth-child(1){transform:translateZ(65px)}.geo-cube.c1 b:nth-child(2){transform:rotateY(180deg) translateZ(65px)}
+.geo-cube.c1 b:nth-child(3){transform:rotateY(90deg) translateZ(65px)}.geo-cube.c1 b:nth-child(4){transform:rotateY(-90deg) translateZ(65px)}
+.geo-cube.c1 b:nth-child(5){transform:rotateX(90deg) translateZ(65px)}.geo-cube.c1 b:nth-child(6){transform:rotateX(-90deg) translateZ(65px)}
+.geo-cube.c2{width:74px;height:74px;right:8%;top:12%;animation-duration:26s;animation-direction:reverse}
+.geo-cube.c2 b:nth-child(1){transform:translateZ(37px)}.geo-cube.c2 b:nth-child(2){transform:rotateY(180deg) translateZ(37px)}
+.geo-cube.c2 b:nth-child(3){transform:rotateY(90deg) translateZ(37px)}.geo-cube.c2 b:nth-child(4){transform:rotateY(-90deg) translateZ(37px)}
+.geo-cube.c2 b:nth-child(5){transform:rotateX(90deg) translateZ(37px)}.geo-cube.c2 b:nth-child(6){transform:rotateX(-90deg) translateZ(37px)}
+.geo-cube.c3{width:48px;height:48px;left:17%;bottom:19%;animation-duration:44s}
+.geo-cube.c3 b:nth-child(1){transform:translateZ(24px)}.geo-cube.c3 b:nth-child(2){transform:rotateY(180deg) translateZ(24px)}
+.geo-cube.c3 b:nth-child(3){transform:rotateY(90deg) translateZ(24px)}.geo-cube.c3 b:nth-child(4){transform:rotateY(-90deg) translateZ(24px)}
+.geo-cube.c3 b:nth-child(5){transform:rotateX(90deg) translateZ(24px)}.geo-cube.c3 b:nth-child(6){transform:rotateX(-90deg) translateZ(24px)}
+@keyframes geoTurn{from{transform:rotateX(-18deg) rotateY(0deg)}to{transform:rotateX(-18deg) rotateY(360deg)}}
+.geo-disc{position:absolute;right:-6%;bottom:-8%;width:560px;height:560px;transform:rotateX(71deg);transform-style:preserve-3d}
+.geo-disc i{position:absolute;inset:0;border:1px dashed rgba(106,103,247,.34);border-radius:50%;animation:discSpin 40s linear infinite}
+.geo-disc i:nth-child(2){inset:86px;border-style:solid;border-color:rgba(106,103,247,.22);animation-duration:58s;animation-direction:reverse}
+@keyframes discSpin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.geo-gem{position:absolute;width:13px;height:13px;border:1.5px solid rgba(106,103,247,.55);background:rgba(106,103,247,.12);transform:rotate(45deg);animation:gemFloat 7s ease-in-out infinite}
+.geo-gem.g1{left:24%;top:31%;animation-delay:0s}
+.geo-gem.g2{right:19%;top:40%;width:9px;height:9px;animation-delay:1.8s}
+.geo-gem.g3{left:12%;top:64%;width:17px;height:17px;animation-delay:3.1s;animation-duration:9s}
+.geo-gem.g4{right:11%;bottom:30%;animation-delay:4.4s}
+@keyframes gemFloat{0%,100%{transform:rotate(45deg) translateY(0)}50%{transform:rotate(45deg) translateY(-16px)}}
+:root[data-theme="light"] .geo-cube b{border-color:rgba(106,103,247,.30);background:rgba(106,103,247,.05)}
+@media (prefers-reduced-motion:reduce){.geo-cube,.geo-disc i,.geo-gem{animation:none}}
+@media (max-width:880px){.geo-cube.c1{left:2%;top:6%}.geo-disc{width:380px;height:380px}}
 /* ---------- UW Guide — embedded knowledge assistant ---------- */
 #uwgBtn{position:fixed;right:20px;bottom:20px;z-index:960;display:none;align-items:center;gap:6px;font:600 12.5px 'Poppins',sans-serif;color:#fff;background:var(--acc);border:none;border-radius:999px;padding:11px 18px;cursor:pointer;box-shadow:0 8px 24px rgba(106,103,247,.38)}
 #uwgBtn:hover{filter:brightness(1.08)}
@@ -557,6 +596,14 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
  </div>
 </div>
 <div id="login">
+ <div class="lg-geo" aria-hidden="true">
+  <div class="geo-floor"></div>
+  <div class="geo-disc d1"><i></i><i></i></div>
+  <div class="geo-cube c1"><b></b><b></b><b></b><b></b><b></b><b></b></div>
+  <div class="geo-cube c2"><b></b><b></b><b></b><b></b><b></b><b></b></div>
+  <div class="geo-cube c3"><b></b><b></b><b></b><b></b><b></b><b></b></div>
+  <span class="geo-gem g1"></span><span class="geo-gem g2"></span><span class="geo-gem g3"></span><span class="geo-gem g4"></span>
+ </div>
  <div class="login-shell">
   <div class="login-brand">
    <div class="lb-sweep"></div>
@@ -2529,7 +2576,7 @@ const UWG_KB=[
   a:()=>`They answer different questions. The <b>rule engine</b> is transparent and evidence-anchored: each factor carries published points (<span class="mono">28 × ln(relative mortality)</span>) you can read off the case, so any score can be explained line by line. The <b>ML model</b> catches interactions no rule table encodes, trained on ${(M.risk_models.n_train||0).toLocaleString()} records (AUC ${(M.risk_models.gradient_boosting.auc*100).toFixed(1)}%). The composite is a <b>50/50 blend</b> — the rules keep it defensible, the model keeps it accurate, and a sharp divergence between them refers the case to a human.`},
  {k:['single factor','one factor','enough to decline','automatically decline','auto decline someone','one condition','by itself'],
   a:()=>`No single medical or lifestyle factor declines an application on its own. Every factor contributes <b>points</b> to a 0–100 composite, and only the composite crosses a line — so a high BMI, a condition, or heavy alcohol use raises the score but is judged in the whole-person context. The one exception is <b>material misrepresentation</b>: a declared non-smoker with a positive cotinine lab auto-declines regardless of score, because the evidence contradicts a sworn answer.`},
- {k:['how long does','turnaround','how much does','cost of','how expensive','vendor time','what does an aps cost'],
+ {k:['how long does','turnaround','how much does an','how expensive','vendor time','what does an aps cost','evidence cost'],
   a:()=>`Typical evidence turnaround and cost: <b>APS ~$350, weeks</b> (the slowest and priciest) · paramed exam ~$150, days–weeks · EKG ~$180, days–weeks · labs ~$120, days · cognitive ~$90, days · MVR ~$12, hours–days · Rx history ~$15, hours–days · MIB ~$8, hours. That spread is why the AI pre-check flags a non-indicated or duplicate order <i>before</i> dispatch — an unnecessary APS costs both the money and the weeks.`},
  {k:['bias','biased','fair','discriminat','protected','age bias','unfair'],
   a:()=>`Three defences. <b>Inputs</b>: the rule weights are derived from published mortality evidence (NHANES + NCHS linked mortality), not from historical accept/decline decisions, so past human bias is not learned as signal. <b>Measurement</b>: the Model Card reports <b>fairness by age band and group</b> alongside calibration, so drift is visible rather than assumed away. <b>Process</b>: no protected characteristic is a rule factor, every borderline case gets a human, and every decision carries a written reason in an audit trail a regulator can read.`},
@@ -2588,6 +2635,9 @@ function uwgMetricAnswer(q){
   [/expense ratio/,()=>`<b>${exp.toFixed(1)}%</b> — (SG&A ${fmtMoneyK(sga)} + underwriting cost ${fmtMoneyK(ops)}) ÷ premium ${fmtMoneyK(prem)}/yr.`],
   [/combined ratio/,()=>`<b>${comb.toFixed(1)}%</b> — loss ${loss.toFixed(1)}% + expense ${exp.toFixed(1)}%.`],
   [/operating income|bottom line/,()=>`<b>${fmtMoneyK(opInc)}/yr</b> (≈${fmtMoneyK(opInc/12)}/month) — premium ${fmtMoneyK(prem)} − claims ${fmtMoneyK(claims)} − SG&A ${fmtMoneyK(sga)} − underwriting cost ${fmtMoneyK(ops)}.`],
+  [/making money|profitable|in the black|break.?even|before or after the cost|money before|money after/,()=>{
+    const before=prem-claims-sga, after=before-ops;
+    return `Both, in this book — but the honest cut is <b>after</b>. Before underwriting cost: <b>${fmtMoneyK(before)}/yr</b> (premium ${fmtMoneyK(prem)} − claims ${fmtMoneyK(claims)} − SG&A ${fmtMoneyK(sga)}). After the ${fmtMoneyK(ops)} cost to underwrite: <b>${after>=0?'':'−'}${fmtMoneyK(Math.abs(after))}/yr</b> operating income. Underwriting cost is ${(ops/prem*100).toFixed(1)}% of premium, so automation is what keeps the after-number close to the before-number.`;}],
   [/straight.?through|\bstp\b/,()=>`<b>${(M.decisioning.straight_through_rate*100).toFixed(1)}%</b> decided with no human touch.`],
   [/appetite/,()=>`<b>${(cov/APPETITE_MONTHLY*100).toFixed(0)}%</b> of the ${fmtBigMoney(APPETITE_MONTHLY)} monthly appetite — ${fmtBigMoney(cov)} accepted.`],
   [/approved premium|premium (of|on|across) the book/,()=>`<b>${fmtMoneyK(prem)}/yr</b> (≈${fmtMoneyK(prem/12)}/month) across ${appr.length} approved policies.`],
@@ -2919,6 +2969,66 @@ function uwgLineGapAnswer(q){
   return `${explain} <b>${uwgLastCase.name}</b> (<span class="mono">${uwgLastCase.id}</span>) scores <b>${uwgLastCase.risk_score}</b>, so it needs <b>${uwgLastCase.risk_score-(A_LINE-1)}</b> point(s) to clear the line.`;
  return `${explain} Referred cases sit ${A_LINE}–${D_LINE-1}, so between <b>1</b> and <b>${D_LINE-A_LINE}</b> point(s) depending on the case — give me a case ID, a name or an age and I’ll do the arithmetic.`;
 }
+function uwgOwnerAnswer(q){
+ // "which underwriter is sitting on the most coverage?" — group the open queue
+ // BY PERSON and sum, rather than listing cases.
+ if(!/which (underwriter|uw\b|analyst|person|desk holder)|who ((is |'s )?(sitting on|holding|holds|has|carries|owns)) the most|busiest underwriter|most loaded/.test(q))return null;
+ const met=uwgMetricOf(q)||uwgMetricOf('coverage');
+ const open=CASES.filter(c=>c.verdict==='yellow'&&!wfGet(c.id).decision);
+ const g={};open.forEach(c=>{const st=wfGet(c.id);const k=st.assignee||'Unassigned';
+  (g[k]=g[k]||{n:0,v:0,tier:st.tier}).n++;g[k].v+=met.get(c);});
+ const rows=Object.entries(g).sort((a,b)=>b[1].v-a[1].v);
+ if(!rows.length)return 'The review queue is empty — no underwriter is holding open cases right now.';
+ const fmtv=v=>met.label==='time in queue'?fmtAge(v):met.sum?fmt$(v):String(Math.round(v));
+ const [name,top]=rows[0];
+ return `<b>${name}</b>${top.tier?` (${(UWS[top.tier]||{}).label} desk)`:''} — <b>${fmtv(top.v)}</b> of ${met.label} across ${top.n} open case(s).<br>${rows.map(([n,x])=>`${n} — ${fmtv(x.v)} · ${x.n} case(s)`).join('<br>')}<br>Open referred cases only — decided and straight-through cases sit on no one’s desk.`;
+}
+function uwgAgreementAnswer(q){
+ // "what fraction of referred cases agree with the model?" — computed from the
+ // decisions actually recorded, never answered with model-card prose.
+ if(!/agree(ing)? with the model|agreement rate|fraction .{0,48}agree|(what|how) (share|percent|fraction).{0,48}(agree|overr)|how often .{0,40}(agree|disagree|overr)|override rate|match the model|side with the model|end up agreeing|humans? (vs|versus) (the )?model/.test(q))return null;
+ const dec=allDecisions();
+ const leaned=dec.filter(d=>d.model==='APPROVE'||d.model==='DECLINE');
+ const humanCall=dec.length-leaned.length;
+ if(!dec.length)return `No human decisions are recorded in this browser yet, so there is nothing to measure — the agreement column starts filling the moment an underwriter decides a case (it is also a column in the decision-trail export and the pilot benchmark CSV). Pipeline-side, ${(M.decisioning.n_overrides_learned||0)} recorded override(s) have already been folded back into training.`;
+ const agree=leaned.filter(d=>(d.model==='APPROVE'&&d.action==='APPROVED')||(d.model==='DECLINE'&&d.action==='DECLINED')).length;
+ return `Of <b>${dec.length}</b> recorded decision(s): <b>${leaned.length}</b> had a model lean, and <b>${agree}</b> agreed — <b>${leaned.length?(agree/leaned.length*100).toFixed(0):0}%</b> agreement, ${leaned.length-agree} override(s).${humanCall?` The other ${humanCall} were mid-band referrals where the model deliberately takes no side — those are human calls by design, not agreements or disagreements.`:''} Every pair is in the decision trail with the model lean beside the human action.`;
+}
+function uwgAuditAnswer(q){
+ // "show me every case the admin has amended" — read the records, not the rules.
+ if(!/(show|list|which|what|every|any) .{0,30}(amend|overrid|overrode|reopen|changed decision)|amended cases|has (the )?(admin|manager|ops) (amended|overridden|changed)|amendments (made|recorded)/.test(q))return null;
+ const wantOps=/admin|ops|operations/.test(q),wantMgr=/manager/.test(q);
+ const wb=wfAll(),out=[];
+ CASES.forEach(c=>{const st=wb[c.id];if(!st)return;
+  if(st.decision&&(st.decision.opsAmendment||st.decision.managerOverride)){
+   const kind=st.decision.opsAmendment?'OPS AMENDMENT':'MANAGER OVERRIDE';
+   if((wantOps&&!st.decision.opsAmendment)||(wantMgr&&!st.decision.managerOverride))return;
+   out.push(`<span class="mono">${c.id}</span> ${c.name} — <b>${kind}</b> → ${st.decision.action} by ${st.decision.by}, ${st.decision.at} (superseded ${st.decision.supersedes||'—'}) — “${st.decision.rationale}”`);}
+  else if((st.history||[]).some(h=>/Reopened for review by (operations|manager)/.test(h.action))&&/reopen/.test(q)){
+   const h=(st.history||[]).filter(h2=>/Reopened for review/.test(h2.action)).pop();
+   out.push(`<span class="mono">${c.id}</span> ${c.name} — <b>REOPENED</b> by ${h.by}, ${h.at}`);}});
+ if(!out.length)return `None yet — no ${wantOps?'ops amendments':wantMgr?'manager overrides':'amendments or overrides'} are recorded in this browser. When one happens it is logged with who acted, what it superseded and the written reason, and it will show up here and in the decision-trail export.`;
+ return `<b>${out.length}</b> changed decision(s) on record:<br>${out.join('<br>')}`;
+}
+function uwgCounterfactualAnswer(c,q){
+ // "if Farah Iyer quit smoking, would her case auto-approve?" — actually do the
+ // arithmetic: remove the factor's points, reblend, compare to the line.
+ if(!/\bif\b|would (it|she|he|they|her case|his case|the case)|without (the )?/.test(q))return null;
+ if(!/quit|stopp?ed|gave up|no longer|without|dropped|lost|wasn.?t|weren.?t|didn.?t have|removed|cleared up/.test(q))return null;
+ const MAP=[[/smok|tobacco|cigarette/, /tobacco|smok/i],[/alcohol|drink/, /alcohol/i],[/bmi|weight|obes/, /bmi|build|weight/i],
+  [/diabet|condition|hypertens|illness/, /condition|diabet|hypertens/i],[/credit/, /credit/i],[/driv|violation/, /driving|violation/i],
+  [/hazard|skydiv/, /hazard/i],[/bankrupt/, /bankrupt/i],[/debt|dti/, /debt/i]];
+ let factRe=null;for(const [qre,fre] of MAP)if(qre.test(q)){factRe=fre;break;}
+ if(!factRe){if(/\bage\b|younger|older/.test(q))return `Age is the one factor no applicant can change — I can model quitting smoking, clearing a condition, or improving credit, but not being younger.`;return null;}
+ const hits=(c.rule_factors||[]).filter(f=>f[2]>0&&(factRe.test(String(f[0]))||factRe.test(String(f[1]))));
+ const pts=hits.reduce((s2,f)=>s2+f[2],0);
+ if(!pts)return `<b>${c.name}</b> (<span class="mono">${c.id}</span>): that factor isn’t costing any points — the rule engine scored it 0 on this case (score ${c.risk_score}: rule ${c.rule_score} / ML ${Math.round(c.ml_score)}), so removing it changes nothing.`;
+ const newRule=Math.max(0,(c.rule_score||0)-pts);
+ const newComp=Math.round((newRule+(c.ml_score||0))/2);
+ const now=c.risk_score;
+ const verdict=newComp<A_LINE?`clears the <b>${A_LINE}</b>-point line — it would <b>auto-approve</b>`:newComp<D_LINE?`still sits in the ${A_LINE}–${D_LINE-1} band — <b>still referred</b>, ${newComp-(A_LINE-1)} point(s) short`:`still at or above the ${D_LINE} decline line`;
+ return `<b>${c.name}</b> (<span class="mono">${c.id}</span>): ${hits.map(f=>`${f[0]} (${f[1]}) is <b>+${f[2]}</b>`).join(', ')}. Remove ${pts} point(s) and the rule half goes ${c.rule_score} → <b>${newRule}</b>, blending to a composite of about <b>${newComp}</b> (from ${now}) — which ${verdict}. One honest caveat: the ML half also learned from this factor, so the true new score would likely be a little lower still — this estimate is conservative. And the change must be evidenced (a clean cotinine on retest), not just declared.`;
+}
 function uwgQueueAnswer(){
  // "Who should I review first?" — the queue’s own priority order, live.
  const pend=CASES.filter(c=>c.verdict==='yellow'&&!wfGet(c.id).decision);
@@ -3182,7 +3292,7 @@ function uwgAnswerCore(qRaw,prevQ,prevA){
  // user started with, not dumped as a generic case read.
  const pending=uwgPending;uwgPending=null;
  const withIntent=(c)=>{uwgLastCase=c;
-  return uwgFieldAnswer(c,q)||(pending?uwgFieldAnswer(c,pending.q):null)||uwgCaseAnswer(c);};
+  return uwgCounterfactualAnswer(c,q)||uwgFieldAnswer(c,q)||(pending?uwgFieldAnswer(c,pending.q):null)||uwgCaseAnswer(c);};
  const idm=qRaw.toUpperCase().match(/APP-\d+/);
  if(idm){const c=CASES.find(x=>x.id===idm[0]);
   if(!c)return `I can’t find <span class="mono">${idm[0]}</span> in the current book.`;
@@ -3220,6 +3330,9 @@ function uwgAnswerCore(qRaw,prevQ,prevA){
  const wi=uwgWhatIfAnswer(q);if(wi)return wi;
  const pr=uwgProfileAnswer(q);if(pr)return uwgWithFollowOn(pr,q);
  const sh=uwgSharedAnswer(q);if(sh)return sh;
+ const own=uwgOwnerAnswer(q);if(own)return own;
+ const agr=uwgAgreementAnswer(q);if(agr)return agr;
+ const aud=uwgAuditAnswer(q);if(aud)return aud;
  const lg=uwgLineGapAnswer(q);if(lg)return lg;
  const fa=uwgFactorAnswer(q);if(fa)return fa;
  if(/worry about|anything i should know|brief me|briefing|summar(y|ise|ize) my (day|shift|queue)|how is my day|what.s on my plate/.test(q))return uwgBriefingAnswer();
@@ -3261,7 +3374,7 @@ function uwgAnswerCore(qRaw,prevQ,prevA){
   if(cmp.length>=2)return uwgCompareAnswer(cmp);
  }
  const nameReply=()=>{if(nm.list.length>1){uwgPending={list:nm.list,q:q};return uwgAmbiguous(nm.list);}
-  const c=nm.list[0];uwgLastCase=c;return uwgFieldAnswer(c,q)||uwgCaseAnswer(c);};
+  const c=nm.list[0];uwgLastCase=c;return uwgCounterfactualAnswer(c,q)||uwgFieldAnswer(c,q)||uwgCaseAnswer(c);};
  if(nm.score>=3)return nameReply();
  // a named metric → the exact live number, before any explanatory entry
  const metric=uwgMetricAnswer(q);
