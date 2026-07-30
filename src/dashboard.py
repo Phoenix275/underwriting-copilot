@@ -2559,11 +2559,16 @@ function uwgFieldAnswer(c,q){
    exact / near-miss (edit distance 1–2), and a tie asks rather than guesses. */
 const UWG_STOP=new Set(['what','whats','which','the','and','for','with','about','tell','show','give','how','why','who','whom','does','did','his','her','hers','their','they','them','this','that','been','has','have','was','were','are','file','files','case','cases','document','documents','docs','packet','queue','score','weight','height','income','premium','coverage','decision','status','long','much','many','from','into','right','now','our','your','ours','yours','review','reviewed','need','needs','there','then','also','please','info','information']);
 function uwgLev(a,b){
+ // Damerau (OSA): a swapped pair — "asiha" for "aisha" — is ONE error, the
+ // single most common typo shape in a hand-typed name.
  const m=a.length,n=b.length;if(Math.abs(m-n)>2)return 9;
- let prev=Array.from({length:n+1},(_,i)=>i),cur=new Array(n+1);
+ let prev2=null,prev=Array.from({length:n+1},(_,i)=>i),cur=new Array(n+1);
  for(let i=1;i<=m;i++){cur[0]=i;
-  for(let j=1;j<=n;j++)cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));
-  const t=prev;prev=cur;cur=t;}
+  for(let j=1;j<=n;j++){
+   cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));
+   if(prev2&&i>1&&j>1&&a[i-1]===b[j-2]&&a[i-2]===b[j-1])cur[j]=Math.min(cur[j],prev2[j-2]+1);
+  }
+  prev2=prev.slice();const t=prev;prev=cur;cur=t;}
  return prev[n];
 }
 function uwgTokenScore(nameTok,qTok){
@@ -2576,16 +2581,19 @@ function uwgTokenScore(nameTok,qTok){
 }
 function uwgNameMatches(q){
  const qTok=q.replace(/[^a-z\s]/g,' ').split(/\s+/).filter(t=>t.length>=3&&!UWG_STOP.has(t));
- if(!qTok.length)return {list:[],score:0};
+ if(!qTok.length)return {list:[],score:0,allScored:[]};
  let best=0,scored=[];
  CASES.forEach(c=>{
-  let s=0,top=0;
+  let s=0,top=0;const toks=new Set();
   c.name.toLowerCase().split(/\s+/).forEach(nt=>{
-   let b=0;qTok.forEach(qt=>{const v=uwgTokenScore(nt,qt);if(v>b)b=v;});
-   s+=b;if(b>top)top=b;});
+   let b=0,bq=null;qTok.forEach(qt=>{const v=uwgTokenScore(nt,qt);if(v>b){b=v;bq=qt;}});
+   s+=b;if(b>0)toks.add(bq);if(b>top)top=b;});
   // credible only on an exact/near-exact token, or a long surname near-miss
-  if(top>=2.5||(top>=1.5&&s>=1.5)){scored.push([c,s]);if(s>best)best=s;}});
- return {list:scored.filter(x=>x[1]===best).map(x=>x[0]),score:best};
+  if(top>=2.5||(top>=1.5&&s>=1.5)){scored.push([c,s,toks]);if(s>best)best=s;}});
+ scored.sort((a,b)=>b[1]-a[1]);
+ // allScored keeps every credible match with the query tokens it consumed —
+ // a two-person question resolves each person from here, not just the best tie
+ return {list:scored.filter(x=>x[1]===best).map(x=>x[0]),score:best,allScored:scored};
 }
 function uwgFindByName(q){const m=uwgNameMatches(q);return m.list.length===1?m.list[0]:null;}
 function uwgAmbiguous(list){
@@ -2607,6 +2615,7 @@ function uwgCompareAnswer(list){
   row('Decision',c=>c.decision),
   row('Conflicts',c=>(c.conflicts||[]).length?(c.conflicts||[]).map(x=>x.type.replace(/_/g,' ')).join(', '):'none'),
   row('Affordability',c=>((c.afford||{}).label)||'—'),
+  row('Why',c=>(c.reasons&&c.reasons[0])||'clean file — no flags'),
   row('Next step',c=>caseRecommendation(c)[0])
  ].join('<br>')}`;
 }
@@ -2693,9 +2702,20 @@ function uwgAnswer(qRaw){
  // wins outright; a fuzzy one waits behind the metric resolver so “loss ratio”
  // can never be mistaken for a surname.
  const nm=uwgNameMatches(q);
- // naming two people (or asking to compare) is a comparison, not an ambiguity
- if(nm.list.length>=2&&nm.list.length<=4&&/compar|versus|\bvs\b|difference|side.by.side|between|against/.test(q))
-  return uwgCompareAnswer(nm.list);
+ // naming two people (or asking to compare) is a comparison, not an ambiguity.
+ // One case per PERSON mentioned: walk credible matches best-first and take a
+ // case only when it matched a query token no earlier pick covered — so
+ // "arjun novak vs asiha mensah" yields one Novak and one Mensah, never two
+ // Novaks. If the tokens can't split (compare the two Whitfields), take the tie.
+ if(nm.allScored.length>=2&&/compar|versus|\bvs\b|difference|side.by.side|between|against|why was one|which one is (better|riskier|safer)/.test(q)){
+  const picked=[],covered=new Set();
+  for(const [cc,,toks] of nm.allScored){
+   if(picked.length>=3)break;
+   if(!picked.length||[...toks].some(t=>!covered.has(t))){picked.push(cc);toks.forEach(t=>covered.add(t));}
+  }
+  const cmp=picked.length>=2?picked:nm.list.slice(0,3);
+  if(cmp.length>=2)return uwgCompareAnswer(cmp);
+ }
  const nameReply=()=>{if(nm.list.length>1){uwgPending={list:nm.list,q:q};return uwgAmbiguous(nm.list);}
   const c=nm.list[0];uwgLastCase=c;return uwgFieldAnswer(c,q)||uwgCaseAnswer(c);};
  if(nm.score>=3)return nameReply();
