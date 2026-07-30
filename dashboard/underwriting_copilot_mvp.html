@@ -425,7 +425,9 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 .tour-actions .sp{flex:1}
 .tour-btn{font:600 12px 'Poppins',sans-serif;border:none;border-radius:999px;padding:8px 15px;cursor:pointer;background:#26262E;color:#fff}
 .tour-btn.prim{background:var(--acc)}
-.tour-btn.ghost{background:transparent;color:var(--mut);padding-left:0}
+/* tertiary text button: symmetric padding so the label stays centred even if a
+   theme rule gives it a background */
+.tour-btn.ghost{background:transparent;color:var(--mut);padding:8px 12px}
 .tour-btn.doit{background:var(--ok);color:#fff;margin-top:11px}
 .tour-btn:disabled{opacity:.4;cursor:default}
 .tour-prog{height:4px;background:var(--line);border-radius:999px;overflow:hidden;margin-top:13px}
@@ -433,6 +435,9 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 :root[data-theme="light"] .tour-btn{background:#EAECF2;color:var(--ink)}
 :root[data-theme="light"] .tour-btn.prim{background:var(--acc);color:#fff}
 :root[data-theme="light"] .tour-btn.doit{background:var(--ok);color:#fff}
+/* the ghost button must stay text-only in light mode too — the generic light
+   .tour-btn rule outranks .tour-btn.ghost on specificity */
+:root[data-theme="light"] .tour-btn.ghost{background:transparent;color:var(--mut)}
 :root[data-theme="light"] #tourPanel{box-shadow:0 22px 60px rgba(30,32,60,.22)}
 :root[data-theme="light"]{
  --bg:#E7E8F0;--card:#FFFFFF;--ink:#1B1B26;--mut:#5B5C69;--line:#E4E6EE;
