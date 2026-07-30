@@ -2369,16 +2369,30 @@ const UWG_KB=[
   a:()=>`Exports: the admin’s <b>decision trail</b> (CSV/JSON, attributed and timestamped), the manager’s <b>pilot benchmark CSV</b> (every case with scores, flags and routing beside any human decision), and a per-case <b>decision memo</b>. Every case action lands in its audit trail automatically.`},
  {k:['product','term','whole life','policy type','rate class','premium calc'],
   a:()=>`The book carries term (10/20/30-yr), whole life and universal life. Premiums scale with age, smoker status, face amount and product. Rate classes follow the decision: approved cases price standard-or-better; referred cases can come back rated (Table B–D) after review.`},
+ {k:['manager and the admin','manager vs','admin vs','manager or the admin','what does the manager do','what does the admin do','role difference','difference between the roles','manager and admin'],
+  a:()=>`Different jobs. The <b>manager</b> owns the <b>risk call</b>: portfolio oversight, the regulator-facing Model Card, and the authority to reopen or override any recorded decision. The <b>operations admin</b> owns the <b>flow</b>: the decision feed, chasing evidence vendors, SLA watch, workload balance across desks, compliance exports, and correcting decisions recorded in error. Neither underwrites; the manager judges risk, ops keeps cases moving.`},
  {k:['role','login','persona','who sees','which view'],
   a:()=>`Each role sees a different product: <b>underwriters</b> get the review queue and case desk, the <b>manager</b> gets oversight + the Model Card, the <b>executive</b> gets the money view only, and the <b>operations admin</b> gets the decision feed, evidence chasing and SLA watch. Sign-in is the role selector.`},
  {k:['appetite','capacity','monthly target','lever','45m','how much can we write'],
   a:()=>`The monthly appetite is <b>$45M of accepted cover</b> — a config lever, not a model output. The Auto-Approved space ranks candidates by expected underwriting margin so a capacity-constrained book accepts the best N first; the dashed line marks where appetite runs out. The executive owns the approve/decline lines that throttle it.`},
- {k:['integration','crm','api','tpa','connector','agent portal','claims system','address verification','notification'],
+ {k:['integration','crm','api','tpa','connector','agent portal','claims system','address verification','notification','send email','emails','notify','callback','webhook'],
   a:()=>`The demo is <b>document-intake-only</b> by design. The pilot integration surface: internal — CRM, new-business platform, agent portal, notification services, claims; external — medical/health data APIs, address verification, TPAs and risk-data providers. Each lands behind the same extraction layer, so connectors add evidence without changing the engine.`},
  {k:['nigo','incomplete','not in good order','info request','missing information'],
   a:()=>`<b>NIGO</b> (“not in good order”) — incomplete or malformed applications — is the biggest single source of cycle-time loss. Underwriters send a case back with <b>Request information</b>, which stamps it Info Requested, logs what’s missing, and parks the SLA clock on the applicant’s side.`},
  {k:['refer','why manual','yellow','middle band','human review'],
   a:()=>`A case is referred when the system can’t safely decide alone: a mid-band score (${A_LINE}–${D_LINE-1}), a document conflict, a failed affordability screen, or disclosed unique circumstances. Open any referred case and ask me <i>“why is this case here?”</i> — I’ll read its actual drivers.`},
+ {k:['disagree','disagreement','two underwriters','conflicting opinion','who wins','tie break','second opinion'],
+  a:()=>`Two kinds of disagreement. <b>Model disagreement</b> — when the rule engine and the ML model diverge sharply on the same file — is itself a referral trigger: the case goes to a human rather than being auto-decided. <b>Human disagreement</b> resolves by authority: the case belongs to whoever holds it, and only a <b>manager</b> can override a recorded decision (logged as MANAGER OVERRIDE, with a written reason and what it superseded). Operations can amend a decision recorded in error, but that is a correction, not a risk opinion.`},
+ {k:['rule engine vs','rule half','ml half','difference between the rule','rules vs the model','why two models','why both'],
+  a:()=>`They answer different questions. The <b>rule engine</b> is transparent and evidence-anchored: each factor carries published points (<span class="mono">28 × ln(relative mortality)</span>) you can read off the case, so any score can be explained line by line. The <b>ML model</b> catches interactions no rule table encodes, trained on ${(M.risk_models.n_train||0).toLocaleString()} records (AUC ${(M.risk_models.gradient_boosting.auc*100).toFixed(1)}%). The composite is a <b>50/50 blend</b> — the rules keep it defensible, the model keeps it accurate, and a sharp divergence between them refers the case to a human.`},
+ {k:['single factor','one factor','enough to decline','automatically decline','auto decline someone','one condition','by itself'],
+  a:()=>`No single medical or lifestyle factor declines an application on its own. Every factor contributes <b>points</b> to a 0–100 composite, and only the composite crosses a line — so a high BMI, a condition, or heavy alcohol use raises the score but is judged in the whole-person context. The one exception is <b>material misrepresentation</b>: a declared non-smoker with a positive cotinine lab auto-declines regardless of score, because the evidence contradicts a sworn answer.`},
+ {k:['how long does','turnaround','how much does','cost of','how expensive','vendor time','what does an aps cost'],
+  a:()=>`Typical evidence turnaround and cost: <b>APS ~$350, weeks</b> (the slowest and priciest) · paramed exam ~$150, days–weeks · EKG ~$180, days–weeks · labs ~$120, days · cognitive ~$90, days · MVR ~$12, hours–days · Rx history ~$15, hours–days · MIB ~$8, hours. That spread is why the AI pre-check flags a non-indicated or duplicate order <i>before</i> dispatch — an unnecessary APS costs both the money and the weeks.`},
+ {k:['bias','biased','fair','discriminat','protected','age bias','unfair'],
+  a:()=>`Three defences. <b>Inputs</b>: the rule weights are derived from published mortality evidence (NHANES + NCHS linked mortality), not from historical accept/decline decisions, so past human bias is not learned as signal. <b>Measurement</b>: the Model Card reports <b>fairness by age band and group</b> alongside calibration, so drift is visible rather than assumed away. <b>Process</b>: no protected characteristic is a rule factor, every borderline case gets a human, and every decision carries a written reason in an audit trail a regulator can read.`},
+ {k:['who owns','who changes','who signs off','who decides the line','change the threshold','approval line owner','governance of'],
+  a:()=>`The acceptance lines (<b>approve under ${A_LINE}</b>, <b>decline at ${D_LINE}</b>) and the ${fmtBigMoney(APPETITE_MONTHLY)} monthly appetite are <b>configuration owned by underwriting leadership</b> — the Chief Underwriting Officer's levers, versioned, not baked into the model. Tightening or loosening the book is a config change with an owner, not a retrain. Individual case authority sits with the desks; decision changes sit with the manager; ops owns the flow.`},
  {k:['what can you do','what do you know','help me','your capabilities','what can i ask','how do i use you'],
   a:()=>`Ask me anything about this platform or the book. I answer: <b>rules</b> (decision bands, conflict screen, affordability, requirements grid, routing, SLAs, weights) · <b>live numbers</b> (“what is my loss ratio right now?”, “how much are we earning a month?”) · <b>any applicant</b> by name or case ID, including single fields (“${CASES[0].name}’s credit score”, “does it match across the documents?”) · <b>rankings</b> (auto-approved by margin, auto-declined by risk, who to review first) · and <b>the app itself</b> (roles, exports, spaces, overrides, where things live).`},
  {k:['what is this app','what is this platform','what does this do','what is underwriting copilot','about this system','what am i looking at'],
@@ -2393,7 +2407,7 @@ const UWG_KB=[
   a:()=>`The <b>🎓 Tutorial</b> button runs a guided tour: it opens with the insurance value chain and the pain it addresses, then follows <b>one case end to end</b> — junior desk, escalation by authority, senior review, evidence, decision — before touring the manager, executive and operations personas. It drives the real app as it goes.`},
  {k:['bulk','approve all','batch','all at once'],
   a:()=>`The Auto-Approved space has <b>Bulk approve all</b> — it records the batch under one rationale, but writes each case to its own audit trail individually, so the record stays per-case.`},
- {k:['saved','stored','database','persist','local storage','where is the data','lose my work','real data'],
+ {k:['saved','stored','database','persist','local storage','where is the data','lose my work','real data','refresh','reload','close the browser','start over','reset the demo'],
   a:()=>`Everything runs <b>in your browser</b>: decisions, notes, assignments and evidence requests are stored in this browser only (localStorage), and the book itself is <b>synthetic data</b> — no real applicants, no server, no network calls. Clearing site data resets the demo to a clean book.`},
  {k:['model card','fairness','calibration','feature importance','regulator','governance','bias'],
   a:()=>`The <b>Portfolio & Model Card</b> (manager nav) is the regulator-facing page: score formula and bands, feature importance, calibration, <b>fairness by age band and group</b>, dataset provenance, and the evidence-anchored weight table. It exists so the model is defensible in an exam, not just accurate.`},
@@ -2449,6 +2463,78 @@ function uwgRankAnswer(kind){
  }
  const l=CASES.filter(c=>c.verdict==='red').sort((a,b)=>b.risk_score-a.risk_score).slice(0,5);
  return `<b>Auto-declined, ranked highest risk first</b>:<br>${l.map((c,i)=>`${i+1}. <span class="mono">${c.id}</span> ${c.name} — score ${c.risk_score}${(c.reasons||[])[0]?', '+c.reasons[0].toLowerCase():''}`).join('<br>')}<br>Every one is filed with its rationale in the <b>Auto-Declined</b> space — and any can be pulled back into manual review.`;
+}
+/* ---- book-level analytics: counts, averages, superlatives, existence ----
+   "How many cases breached SLA?", "which case has the highest coverage?",
+   "what is the average risk score?" — computed live over the current book,
+   because an underwriter asks the book questions, not just case questions. */
+function uwgSubset(q){
+ const undecidedY=CASES.filter(c=>c.verdict==='yellow'&&!wfGet(c.id).decision);
+ const S=[
+  [/\bsla\b|breach|over the 8|past due|overdue/,'over the 8-hour SLA',()=>undecidedY.filter(c=>ageHours(c)>=8)],
+  [/conflict|mismatch|discrepan|flagged/,'with document conflicts',()=>CASES.filter(c=>(c.conflicts||[]).length)],
+  [/smoker|tobacco|cotinine/,'smokers',()=>CASES.filter(c=>/smok/i.test(c.smoker||'')&&!/non/i.test(c.smoker||''))],
+  [/auto.?declin|declined|rejected/,'auto-declined',()=>CASES.filter(c=>c.verdict==='red')],
+  [/auto.?approv|approved|straight.?through/,'auto-approved',()=>CASES.filter(c=>c.verdict==='green')],
+  [/manual review|referred|in (the )?queue|need a human|pending/,'in manual review',()=>undecidedY],
+  [/afford/,'failing the affordability screen',()=>CASES.filter(c=>c.afford&&c.afford.verdict==='fail')],
+  [/unique|disclos|section 6/,'with unique circumstances disclosed',()=>CASES.filter(c=>c.unique)],
+  [/pdf|scanned|original doc/,'with original PDFs attached',()=>CASES.filter(c=>c.has_docs)],
+  [/condition|medical|diabet|hypertens/,'with declared medical conditions',()=>CASES.filter(c=>c.conditions&&c.conditions!=='None')],
+  [/hazard|skydiv|dangerous activit/,'with hazardous activities',()=>CASES.filter(c=>c.hazard&&c.hazard!=='None')]];
+ for(const [re,label,fn] of S)if(re.test(q))return {label,list:fn()};
+ return null;
+}
+function uwgMetricOf(q){
+ if(/years? old|yrs old|aged \d|\bage of\b/.test(q))return {label:'age',get:c=>c.age||0,fmt:v=>Math.round(v)+' years'};
+ if(/queue|waiting|sla|time in/.test(q))return {label:'time in queue',get:c=>ageHours(c),fmt:v=>fmtAge(v)};
+ if(/coverage|cover\b|face amount|exposure/.test(q))return {label:'coverage',get:c=>c.coverage||0,fmt:v=>fmt$(v)};
+ if(/premium/.test(q))return {label:'premium',get:c=>c.premium||0,fmt:v=>fmt$(v)+'/yr'};
+ if(/\bage\b|oldest|youngest/.test(q))return {label:'age',get:c=>c.age||0,fmt:v=>Math.round(v)+' years'};
+ if(/credit/.test(q))return {label:'credit score',get:c=>c.credit||0,fmt:v=>Math.round(v)};
+ if(/\bbmi\b/.test(q))return {label:'BMI',get:c=>c.bmi||0,fmt:v=>v.toFixed(1)};
+ if(/income|salary/.test(q))return {label:'income',get:c=>c.income||0,fmt:v=>fmt$(v)};
+ if(/score|risk/.test(q))return {label:'risk score',get:c=>c.risk_score||0,fmt:v=>Math.round(v)};
+ return null;
+}
+function uwgAggregateAnswer(q){
+ const wantsCount=/how many|number of|count of|how much of the book/.test(q);
+ const wantsPct=/what (percent|percentage|share)|percentage of|what pc/.test(q);
+ const wantsAvg=/average|mean |typical/.test(q);
+ const wantsMax=/highest|largest|biggest|most |top |maximum|longest|oldest|worst/.test(q);
+ const wantsMin=/lowest|smallest|least|minimum|shortest|youngest|cheapest|best score/.test(q);
+ const wantsAny=/^(is|are|does|do) (there|any|anyone|anybody)|\bany case|\banyone (who|with|over|under)/.test(q);
+ if(!(wantsCount||wantsPct||wantsAvg||wantsMax||wantsMin||wantsAny))return null;
+ const sub=uwgSubset(q);
+ const met=uwgMetricOf(q);
+ // a numeric qualifier: "over 60", "above $700k", "score under 40"
+ let list=sub?sub.list:CASES.slice(),label=sub?sub.label:'in the book';
+ const num=q.match(/(over|above|more than|greater than|under|below|less than|at least)\s*\$?\s*([\d.,]+)\s*(k|m|million|thousand)?/);
+ if(num&&met){
+  let v=parseFloat(num[2].replace(/,/g,''));const u=(num[3]||'').toLowerCase();
+  if(u==='k'||u==='thousand')v*=1000;if(u==='m'||u==='million')v*=1e6;
+  const up=/over|above|more than|greater than|at least/.test(num[1]);
+  list=list.filter(c=>up?met.get(c)>=v:met.get(c)<=v);
+  label=`${label==='in the book'?'':label+' '}with ${met.label} ${up?'over':'under'} ${met.fmt(v)}`;
+ }
+ const ex=l=>l.slice(0,3).map(c=>`<span class="mono">${c.id}</span> ${c.name}`).join(', ');
+ if(wantsMax||wantsMin){
+  if(!met)return null;
+  const sorted=list.slice().sort((a,b)=>wantsMax?met.get(b)-met.get(a):met.get(a)-met.get(b));
+  const top=sorted.slice(0,3);if(!top.length)return `No cases ${label}.`;
+  uwgLastCase=top[0];
+  return `${wantsMax?'Highest':'Lowest'} <b>${met.label}</b> ${label==='in the book'?'in the book':label}:<br>${top.map((c,i)=>`${i+1}. <span class="mono">${c.id}</span> ${c.name} — <b>${met.fmt(met.get(c))}</b>${met.label!=='risk score'?`, score ${c.risk_score}`:''}, ${c.decision.toLowerCase()}`).join('<br>')}`;
+ }
+ if(wantsAvg){
+  if(!met)return null;
+  if(!list.length)return `No cases ${label} to average.`;
+  const avg=list.reduce((s,c)=>s+met.get(c),0)/list.length;
+  return `Average <b>${met.label}</b> ${label==='in the book'?'across the book':label} is <b>${met.fmt(avg)}</b> over ${list.length} case(s).`;
+ }
+ // count / percentage / existence
+ const pct=(list.length/CASES.length*100).toFixed(0);
+ if(wantsAny)return list.length?`Yes — <b>${list.length}</b> case(s) ${label}: ${ex(list)}${list.length>3?`, and ${list.length-3} more`:''}.`:`No — nothing ${label} in the current book.`;
+ return `<b>${list.length}</b> of ${CASES.length} case(s) ${label} — <b>${pct}%</b> of the book.${list.length?` For example ${ex(list)}.`:''}`;
 }
 function uwgQueueAnswer(){
  // "Who should I review first?" — the queue’s own priority order, live.
@@ -2684,6 +2770,10 @@ function uwgAnswer(qRaw){
   if(c)return withIntent(c);
   uwgPending=pending;   // not an answer to the ask — keep it alive one more turn
  }
+ // book-level analytics before anything case-specific: "how many…", "which
+ // case has the highest…", "what is the average…", "is there any case with…"
+ const agg=uwgAggregateAnswer(q);
+ if(agg)return agg;
  // "who should I review first?" — the live queue order
  if(/review first|first in (the )?queue|(start|begin) with|next case|prioriti[sz]|what should i (review|work|do)|who should i/.test(q))
   return uwgQueueAnswer();
