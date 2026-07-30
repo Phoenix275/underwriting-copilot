@@ -422,7 +422,7 @@ html.preauth{overflow:hidden}
 #landing .ld-orbits{position:absolute;left:50%;top:50%;z-index:1}
 #landing .ld-orb{position:absolute;left:0;top:0;padding:7px 12px;border-radius:10px;border:1px solid rgba(106,103,247,.38);background:var(--card);color:var(--mut);font:600 11px 'JetBrains Mono',monospace;letter-spacing:.4px;white-space:nowrap;box-shadow:0 8px 24px rgba(106,103,247,.16);animation:ldOrbit var(--t) linear infinite}
 /* radar sweep: the copilot scanning the book — a slow beam over the ring field */
-#landing .ld-sweep{position:absolute;left:50%;top:50%;width:240vmax;height:240vmax;margin:-120vmax 0 0 -120vmax;border-radius:50%;pointer-events:none;background:conic-gradient(from 0deg,rgba(106,103,247,0) 0deg,rgba(106,103,247,.10) 46deg,rgba(106,103,247,.26) 58deg,rgba(106,103,247,0) 72deg,rgba(106,103,247,0) 360deg);animation:ldSpin 22s linear infinite}
+#landing .ld-sweep{position:absolute;left:50%;top:50%;width:150vmax;height:150vmax;margin:-75vmax 0 0 -75vmax;border-radius:50%;pointer-events:none;background:conic-gradient(from 0deg,rgba(106,103,247,0) 0deg,rgba(106,103,247,.10) 46deg,rgba(106,103,247,.26) 58deg,rgba(106,103,247,0) 72deg,rgba(106,103,247,0) 360deg);animation:ldSpin 22s linear infinite;will-change:transform}
 @keyframes ldSpin{to{transform:rotate(360deg)}}
 #landing .ld-orb.far{opacity:.55;filter:blur(.4px);font-size:10px}
 @keyframes ldOrbit{0%{transform:translate(-50%,-50%) rotate(var(--a)) translateX(var(--r)) rotate(calc(-1*var(--a)))}100%{transform:translate(-50%,-50%) rotate(calc(var(--a) + 360deg)) translateX(var(--r)) rotate(calc(-1*var(--a) - 360deg))}}
@@ -436,6 +436,13 @@ html.preauth{overflow:hidden}
 @keyframes ldOut{0%{opacity:1}100%{opacity:0}}
 #landing.out .ld-center{animation:ldCenterOut .9s cubic-bezier(.5,0,.15,1) forwards}
 @keyframes ldCenterOut{0%{opacity:1;transform:none}100%{opacity:0;transform:scale(5.5)}}
+/* The exit is a pure crossfade: freeze every ambient animation the moment
+   .out lands (they are fading out anyway) so the GPU blends two static
+   layers instead of re-rendering the sweep, glows and orbits mid-fade, and
+   give the zooming centre its own composited layer. */
+#landing.out .ld-sweep,#landing.out .ld-glow,#landing.out .ld-orb,#landing.out .ld-btn{animation-play-state:paused}
+#landing.out .ld-scene{transition:none}
+#landing .ld-center{will-change:transform,opacity}
 @media (prefers-reduced-motion: reduce){#landing .ld-orb,#landing .ld-glow,#landing .ld-center,#landing .ld-sweep,#landing .ld-btn{animation:none}#landing .ld-scene{transform:none !important}}
 /* interactive tutorial */
 #tourBtn{position:fixed;top:14px;right:66px;z-index:2000;height:40px;padding:0 16px;border-radius:999px;border:none;background:var(--acc);color:#fff;font:600 12.5px 'Poppins',sans-serif;cursor:pointer;box-shadow:0 6px 18px rgba(87,84,240,.4);display:flex;align-items:center;gap:6px}
@@ -535,14 +542,16 @@ html.preauth{overflow:hidden}
    A continuous stream of hairline triangles flying out of the centre behind
    the console, twisting as they expand past the screen edges — the whole
    viewport is the effect. Nine rings in flight at any moment on a 9s loop,
-   so the tunnel never pauses. Hairline strokes stay 1px at any scale
-   (vector-effect), which keeps it crisp instead of chunky. */
+   so the tunnel never pauses. Strokes scale with the ring (thicker as it
+   nears the camera) — this lets the browser raster each ring once and fly
+   it on the compositor; non-scaling-stroke forced nine full-screen SVG
+   re-tessellations per frame and made every transition stutter. */
 .login-shell{position:relative;z-index:2}
 .lg-geo{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
 .warp{position:absolute;inset:0}
 .wt{position:absolute;left:50%;top:50%;width:36vmax;height:31.3vmax;overflow:visible;opacity:0;
  animation:warpFly 9s linear infinite;animation-delay:var(--d);will-change:transform,opacity}
-.wt polygon{fill:none;stroke:rgba(116,113,250,.62);stroke-width:1.3;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+.wt polygon{fill:none;stroke:rgba(116,113,250,.62);stroke-width:.55;stroke-linejoin:round}
 /* glow is a per-frame filter recalculation on a scaling element — accent every
    third ring instead of paying for it nine times */
 .wt:nth-child(3n) polygon{filter:drop-shadow(0 0 7px rgba(106,103,247,.45))}
@@ -562,7 +571,7 @@ html.preauth{overflow:hidden}
  background:radial-gradient(circle,rgba(139,136,255,.5),rgba(106,103,247,.12) 55%,transparent 72%);
  filter:blur(18px);animation:coreBreath 5s ease-in-out infinite}
 @keyframes coreBreath{0%,100%{opacity:.55;transform:translate(-50%,-50%) scale(1)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.25)}}
-:root[data-theme="light"] .wt polygon{stroke-width:1.5}
+:root[data-theme="light"] .wt polygon{stroke-width:.65}
 @media (prefers-reduced-motion:reduce){
  .wt{animation:none;opacity:.22}
  .wt:nth-child(1){transform:translate(-50%,-50%) scale(.6) rotate(12deg)}
@@ -909,9 +918,13 @@ function doLogin(){
  else if(CURRENT_ROLE==='executive'){queueScope='team';view='executive';}
  else if(CURRENT_ROLE==='admin'){queueScope='team';view='admin';}
  else{queueScope='mine';space='review';view='space';}
- render();
  const _uwg=document.getElementById('uwgBtn');if(_uwg)_uwg.style.display='flex';
- if(hasEnteredApp)roleSwapPlay();else{hasEnteredApp=true;whooshPlay();}}
+ if(hasEnteredApp){render();roleSwapPlay();}
+ else{hasEnteredApp=true;
+  // Paint the whoosh cover in the very first frame after the click, THEN
+  // build the workbench DOM behind it — the heavy first render used to run
+  // before the cover existed, freezing the click for its whole layout pass.
+  if(whooshPlay())setTimeout(render,60);else render();}}
 let hasEnteredApp=false;   // first entry gets the brand whoosh; later logins get the seat-change
 function roleSwapPlay(){
  try{if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;}catch(e){}
@@ -929,7 +942,7 @@ function roleSwapPlay(){
 function whooshPlay(){
  // 3D brand transition from sign-in into the workbench. Decorative only:
  // pointer-events none, skipped entirely under prefers-reduced-motion.
- try{if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;}catch(e){}
+ try{if(matchMedia('(prefers-reduced-motion: reduce)').matches)return false;}catch(e){}
  const old=document.getElementById('whoosh');if(old)old.remove();
  const d=document.createElement('div');d.id='whoosh';
  d.innerHTML='<div class="w-ring"></div><div class="wz"><div class="w-mark">Underwriting <b>Copilot</b></div><div class="w-sub">EXTRACTION · CONFLICT SCREEN · RISK SCORE · DECISION</div></div>';
@@ -937,6 +950,7 @@ function whooshPlay(){
  const app=document.getElementById('app');
  if(app){app.classList.remove('app-reveal');void app.offsetWidth;app.classList.add('app-reveal');}
  setTimeout(()=>{d.remove();},1750);
+ return true;
 }
 function landingGo(){
  // Landing → sign-in: the center zooms through the camera, echoing the whoosh.
