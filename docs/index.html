@@ -505,23 +505,33 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 .role-chip.sel b{color:var(--acc)}
 @media (max-width:880px){.login-shell{grid-template-columns:1fr;max-width:460px}.login-brand{padding:26px 30px 22px}.lb-h{font-size:18px}.lb-foot{padding-top:14px}.lb-rings{display:none}}
 @media (prefers-reduced-motion:reduce){.lb-sweep{animation:none}}
-/* ---------- sign-in ambience: one composition, not scattered shapes ----------
-   A fine dot-grid field, two slow breathing glows, and a centred halo of
-   rings the shell sits inside — symmetric and deliberate. Pure CSS,
-   pointer-events none, reduced-motion safe. */
+/* ---------- sign-in ambience: gradient beams + frosted glass panes ----------
+   Stripe-style diagonal colour beams sweeping behind the shell, with frosted
+   glass slabs floating over them at the same angle — the blur through the
+   glass is real (backdrop-filter), which is what sells the depth. A different
+   vocabulary from the landing page: no rings, no orbits, no dots. */
 .login-shell{position:relative;z-index:2}
 .lg-geo{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
-.lg-dots{position:absolute;inset:0;background-image:radial-gradient(rgba(106,103,247,.20) 1px,transparent 1.5px);background-size:28px 28px;
- -webkit-mask-image:radial-gradient(ellipse 130% 120% at 50% 50%,rgba(0,0,0,.9),transparent 78%);mask-image:radial-gradient(ellipse 130% 120% at 50% 50%,rgba(0,0,0,.9),transparent 78%)}
-.lg-glow{position:absolute;width:680px;height:680px;border-radius:50%;filter:blur(95px);opacity:.5;animation:lgBreathe 16s ease-in-out infinite alternate}
-.lg-glow.ga{background:#8B88FF;top:-240px;left:-200px}
-.lg-glow.gb{background:#5A57E0;bottom:-280px;right:-220px;animation-delay:-8s}
-@keyframes lgBreathe{from{transform:translate(0,0) scale(1)}to{transform:translate(56px,36px) scale(1.07)}}
-.lg-halo{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border:1px solid rgba(106,103,247,.30);border-radius:50%;width:980px;height:980px}
-.lg-halo.h2{width:1280px;height:1280px;border-color:rgba(106,103,247,.17)}
-.lg-halo.h3{width:1580px;height:1580px;border-color:rgba(106,103,247,.09)}
-:root[data-theme="light"] .lg-glow{opacity:.34}
-@media (prefers-reduced-motion:reduce){.lg-glow{animation:none}}
+.lg-beams{position:absolute;inset:-12%;transform:rotate(-16deg)}
+.lg-beams i{position:absolute;left:-8%;right:-8%;border-radius:999px;filter:blur(26px);animation:beamDrift 22s ease-in-out infinite alternate}
+.lg-beams .b1{top:12%;height:120px;background:linear-gradient(90deg,transparent,#8B88FF 30%,#6A67F7 60%,transparent);opacity:.55}
+.lg-beams .b2{top:30%;height:74px;background:linear-gradient(90deg,transparent,#C4B5FD 40%,#A78BFA 70%,transparent);opacity:.45;animation-delay:-7s}
+.lg-beams .b3{top:62%;height:150px;background:linear-gradient(90deg,transparent 10%,#5B58E8 45%,#8B88FF 75%,transparent);opacity:.5;animation-delay:-13s}
+.lg-beams .b4{top:82%;height:64px;background:linear-gradient(90deg,transparent,#B9A8F5 50%,transparent);opacity:.4;animation-delay:-18s}
+@keyframes beamDrift{from{transform:translateX(-70px)}to{transform:translateX(70px)}}
+.lg-pane{position:absolute;border-radius:22px;border:1px solid rgba(255,255,255,.5);
+ background:linear-gradient(135deg,rgba(255,255,255,.20),rgba(255,255,255,.04) 55%,rgba(255,255,255,.10));
+ backdrop-filter:blur(13px) saturate(1.25);-webkit-backdrop-filter:blur(13px) saturate(1.25);
+ box-shadow:0 24px 60px rgba(40,38,120,.16),inset 0 1px 0 rgba(255,255,255,.55);
+ transform:rotate(-16deg);animation:paneFloat 11s ease-in-out infinite alternate}
+.lg-pane.p1{width:250px;height:330px;right:4.5%;top:7%}
+.lg-pane.p2{width:200px;height:265px;left:3.5%;bottom:9%;animation-delay:-4s}
+.lg-pane.p3{width:110px;height:140px;left:13%;top:13%;animation-delay:-8s;border-radius:16px}
+@keyframes paneFloat{from{transform:rotate(-16deg) translateY(0)}to{transform:rotate(-16deg) translateY(-18px)}}
+:root[data-theme="light"] .lg-beams i{opacity:.32}
+:root[data-theme="light"] .lg-beams .b1{opacity:.4}
+@media (prefers-reduced-motion:reduce){.lg-beams i,.lg-pane{animation:none}}
+@media (max-width:880px){.lg-pane.p1{right:-8%}.lg-pane.p2{left:-8%}.lg-pane.p3{display:none}}
 /* ---------- UW Guide — embedded knowledge assistant ---------- */
 #uwgBtn{position:fixed;right:20px;bottom:20px;z-index:960;display:none;align-items:center;gap:6px;font:600 12.5px 'Poppins',sans-serif;color:#fff;background:var(--acc);border:none;border-radius:999px;padding:11px 18px;cursor:pointer;box-shadow:0 8px 24px rgba(106,103,247,.38)}
 #uwgBtn:hover{filter:brightness(1.08)}
@@ -575,12 +585,10 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 </div>
 <div id="login">
  <div class="lg-geo" aria-hidden="true">
-  <div class="lg-dots"></div>
-  <div class="lg-glow ga"></div>
-  <div class="lg-glow gb"></div>
-  <div class="lg-halo"></div>
-  <div class="lg-halo h2"></div>
-  <div class="lg-halo h3"></div>
+  <div class="lg-beams"><i class="b1"></i><i class="b2"></i><i class="b3"></i><i class="b4"></i></div>
+  <div class="lg-pane p1"></div>
+  <div class="lg-pane p2"></div>
+  <div class="lg-pane p3"></div>
  </div>
  <div class="login-shell">
   <div class="login-brand">
