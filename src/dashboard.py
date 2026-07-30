@@ -447,7 +447,13 @@ html.preauth{overflow:hidden}
 /* interactive tutorial */
 #tourBtn{position:fixed;top:14px;right:66px;z-index:2000;height:40px;padding:0 16px;border-radius:999px;border:none;background:var(--acc);color:#fff;font:600 12.5px 'Poppins',sans-serif;cursor:pointer;box-shadow:0 6px 18px rgba(87,84,240,.4);display:flex;align-items:center;gap:6px}
 #tourBtn:hover{filter:brightness(1.07)}
-#tourPanel{position:fixed;bottom:20px;right:20px;z-index:2100;width:372px;max-width:calc(100vw - 40px);background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 22px 60px rgba(0,0,0,.45);padding:18px 20px;display:none;font-family:'Poppins',sans-serif}
+#tourPanel{position:fixed;bottom:20px;right:20px;z-index:2100;width:372px;max-width:calc(100vw - 40px);max-height:calc(100vh - 40px);overflow-y:auto;background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 22px 60px rgba(0,0,0,.45);padding:18px 20px;display:none;font-family:'Poppins',sans-serif}
+/* The tour and the UW Guide both live bottom-right — when the tour is running
+   it would sit exactly on top of the assistant it just told you to open, so
+   the assistant moves to the opposite corner for the duration. */
+#tourPanel.on~#uwgPanel{right:auto;left:20px}
+#tourPanel.on~#uwgBtn{right:auto;left:20px}
+@media (max-width:900px){#tourPanel.on~#uwgPanel,#tourPanel.on~#uwgBtn{left:8px}}
 #tourPanel.on{display:block}
 .tour-step{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.6px;text-transform:uppercase;color:var(--acc)}
 .tour-title{font-size:16px;font-weight:700;color:var(--ink);margin:4px 0 9px;line-height:1.25}
@@ -717,6 +723,7 @@ let tourIdx=0;
 function tourLogin(u,p){if(typeof CURRENT_ROLE!=='undefined'&&CURRENT_ROLE)signOut();
  document.getElementById('loginUser').value=u;document.getElementById('loginPass').value=p;doLogin();}
 function tourOpenConflictCase(){const c=CASES.find(x=>(x.conflicts||[]).some(k=>k.type==='dob_mismatch'))||CASES.find(x=>(x.conflicts||[]).length);if(c)sel(c.id);}
+function tourOpenGuide(){const p=document.getElementById('uwgPanel');if(p&&!p.classList.contains('on'))uwgToggle();}
 function tourShowTab(n){selTab(n);const el=document.querySelector('.tabs');if(el)el.scrollIntoView({block:'start'});}
 const TUTORIAL_STEPS=[
  {title:`The Underwriting Copilot`,
@@ -772,7 +779,7 @@ const TUTORIAL_STEPS=[
   action:{label:`Go to Auto-Approved`,fn:()=>{if(CURRENT_ROLE!=='underwriter')tourLogin('mrivera','senior');goSpace('auto_approved');}}},
  {title:`The Manager`,
   do:`Switching roles: signing in as the manager.`,
-  learn:`Nadia Sethi, manager. She gets an oversight dashboard, a <b>"Decided cases"</b> list, and can <b>reopen or override</b> any underwriter's decision — with a logged reason. Only the manager has this power.`,
+  learn:`Nadia Sethi, manager. She gets an oversight dashboard, a <b>"Decided cases"</b> list, and can <b>reopen or override</b> any underwriter's decision — with a logged reason. Two roles can change a recorded decision, and the trail keeps them distinct: the manager overrides on <b>underwriting authority</b> (logged MANAGER OVERRIDE), operations amends to <b>correct an error</b> (logged OPS AMENDMENT). Either way the entry records who, when, why, and what it superseded.`,
   action:{label:`Sign in as the manager`,fn:()=>tourLogin('nsethi','oversight')}},
  {title:`The Model Card (regulator-facing)`,
   do:`Portfolio & Model Card, from the left nav.`,
@@ -780,14 +787,21 @@ const TUTORIAL_STEPS=[
   action:{label:`Open the Model Card`,fn:()=>{if(CURRENT_ROLE!=='manager')tourLogin('nsethi','oversight');goOverview();}}},
  {title:`The Executive view`,
   do:`Switching roles: signing in as the Chief Underwriting Officer.`,
-  learn:`Marcus Vale, CUO. A <b>money-only</b> view — coverage accepted vs declined, and a full <b>portfolio P&L</b>: expected claims payout against the approved premium, SG&A, the cost to underwrite, down to <b>operating income</b> and the combined ratio. Plus the cost-per-application economics that make small-premium policies viable. No individual cases, and no other role sees this.`,
+  learn:`Marcus Vale, CUO. A <b>money-only</b> view — coverage accepted vs declined, and a full <b>portfolio P&L</b>: expected claims payout against the approved premium, SG&A, the cost to underwrite, down to <b>operating income</b> and the combined ratio. Plus the cost-per-application economics that make small-premium policies viable. The rail sizes figures by importance — operating income largest, context smallest — and <b>⚙ Customize view</b> shows or hides any reporting block, so finance, ops and the board each keep their own view of the same live numbers. No individual cases, and no other role sees this.`,
   action:{label:`Sign in as the executive`,fn:()=>tourLogin('mvale','executive')}},
  {title:`The Operations Admin`,
   do:`Switching roles: signing in as operations admin.`,
-  learn:`Priya Anand, ops. The full <b>decision feed</b> — every recorded decision, attributed and timestamped, <b>exportable to CSV/JSON</b> for compliance — plus the outstanding evidence requests raised by underwriters.`,
+  learn:`Priya Anand, ops. The full <b>decision feed</b> — every recorded decision, attributed and timestamped, <b>exportable to CSV/JSON</b> for compliance — plus the outstanding evidence requests raised by underwriters. Ops doesn't just watch it: every row carries <b>↺ Reopen</b> and <b>Amend</b>, so a decision recorded in error can be corrected without chasing the underwriter who made it. The correction logs as an OPS AMENDMENT and keeps what it superseded.`,
   action:{label:`Sign in as the admin`,fn:()=>tourLogin('panand','admin')}},
+ {title:`Where this sits in the estate`,
+  do:`Integration coverage, on the admin view.`,
+  learn:`No underwriting platform lives alone. This panel names every system a pilot would connect — internal: <b>New Business Platform, Agent/Producer Portal, Notification Services, CRM, Claims</b>; external: <b>medical &amp; health APIs, address verification, risk-data providers, TPAs</b> — each marked <b>Simulated in demo</b> or <b>Pilot connector</b>, so nobody has to guess what is real today. The scope rule holds: connectors add evidence behind the same extraction layer; the scoring contract doesn't change.`},
+ {title:`Ask it anything — the UW Guide`,
+  do:`The UW Guide, open at the bottom right. It's on every screen after sign-in.`,
+  learn:()=>`A knowledge assistant that answers from <b>this book, live</b> — not a canned FAQ. Four kinds of question, all of them computed at the moment you ask:<br>· the rulebook — “what are the decision bands?”<br>· any applicant, by name or case ID — “what is Farah Iyer’s credit score?”<br>· the whole book — “how many smokers are in the queue?”, “rank the auto-approved candidates”, “what is the combined ratio right now?”<br>· a what-if — “if I move the approval line to 60, how many more auto-approve?”<br>It remembers who you were just discussing, so “and her queue time?” stays on Farah. Nothing is pre-written, so it cannot drift from the product.${uwgLlm===true?` <b>This deployment runs on Claude</b> — it reasons over the live book in open language rather than matching keywords.`:` <b>Two brains, one interface:</b> with an API key configured it runs on <b>Claude</b> and reasons in open language; without one it uses the built-in offline engine — what you're seeing now — so the demo works with no network at all.`}`,
+  action:{label:`Open the UW Guide`,fn:()=>tourOpenGuide()}},
  {title:`That's the whole product 🎉`,
-  learn:`Every application read, screened, scored, and routed — with a human on every borderline call and an audit trail behind every decision. This tour can be re-launched anytime from the <b>🎓 Tutorial</b> button.`}
+  learn:`Every application read, screened, scored, and routed — with a human on every borderline call and an audit trail behind every decision. Six seats on one product: junior and senior desks, manager oversight, executive P&L, operations correction — plus an assistant that can explain any of it on demand. This tour can be re-launched anytime from the <b>🎓 Tutorial</b> button.`}
 ];
 function tourStart(){const ld=document.getElementById('landing');if(ld)ld.remove();
  tourIdx=0;const p=document.getElementById('tourPanel');if(p)p.classList.add('on');tourRender();}
@@ -800,7 +814,7 @@ function tourRender(){
  p.innerHTML=`<div class="tour-step">Step ${tourIdx+1} of ${TUTORIAL_STEPS.length} · Guided tour</div>
   <div class="tour-title">${s.title}</div>
   ${s.do?`<div class="tour-do"><b>On screen:</b> ${s.do}</div>`:''}
-  <div class="tour-learn">${s.learn}</div>
+  <div class="tour-learn">${typeof s.learn==='function'?s.learn():s.learn}</div>
   ${s.action?`<button class="tour-btn doit" onclick="tourAct()">▶ ${s.action.label}</button>`:''}
   <div class="tour-prog"><div style="width:${(tourIdx+1)/TUTORIAL_STEPS.length*100}%"></div></div>
   <div class="tour-actions">
@@ -3201,8 +3215,10 @@ function uwgFieldAnswer(c,q){
   [/income|salary|earn/, ()=>`annual income <b>${fmt$(c.income)}</b> (${c.occupation||'—'}${c.employer?', '+c.employer:''})`],
   [/coverage|cover\b|face amount|sum assured/, ()=>`requesting <b>${fmt$(c.coverage)}</b> of cover — ${c.policy}`],
   [/premium/, ()=>`annual premium <b>${fmt$(c.premium)}</b> on ${fmt$(c.coverage)} of ${c.policy}`],
-  // credit before the generic score matcher — "credit score" is its own field
-  [/credit/, ()=>`credit score <b>${c.credit!=null?c.credit:'—'}</b>${c.credit!=null?` (${c.credit>=740?'excellent':c.credit>=670?'good':c.credit>=580?'fair':'poor'})`:''}`],
+  // credit before the generic score matcher — and the pattern swallows the
+  // trailing "score"/"rating" itself, so "credit score" is ONE ask and can't
+  // also trip the composite-risk-score answer on the leftover word
+  [/credit(\s+(score|rating))?/, ()=>`credit score <b>${c.credit!=null?c.credit:'—'}</b>${c.credit!=null?` (${c.credit>=740?'excellent':c.credit>=670?'good':c.credit>=580?'fair':'poor'})`:''}`],
   [/debt.to.income|\bdti\b/, ()=>`debt-to-income ratio <b>${c.dti!=null?(c.dti*100).toFixed(0)+'%':'—'}</b> — ${fmt$(c.debt)} of debt against ${fmt$(c.income)} of income`],
   [/\bdebt\b|owe|liabilit/, ()=>`existing debt <b>${fmt$(c.debt)}</b> (DTI ${c.dti!=null?(c.dti*100).toFixed(0)+'%':'—'})`],
   [/net worth|assets/, ()=>`net worth <b>${fmt$(c.net_worth)}</b>`],
