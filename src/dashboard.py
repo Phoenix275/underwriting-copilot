@@ -11,6 +11,13 @@ OUT = os.path.join(os.path.dirname(__file__), "..", "output")
 
 TEMPLATE = r"""
 <meta charset="utf-8">
+<script>
+/* Theme must be set BEFORE first paint: the main script sits at the end of a
+   ~1MB document, and applying the light default there caused a visible
+   dark-to-light flash on first open. */
+(function(){var t='light';try{if(localStorage.getItem('uw_theme')==='dark')t='dark';}catch(e){}
+if(t==='light')document.documentElement.setAttribute('data-theme','light');})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -527,8 +534,13 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 .warp{position:absolute;inset:0}
 .wt{position:absolute;left:50%;top:50%;width:36vmax;height:31.3vmax;overflow:visible;opacity:0;
  animation:warpFly 9s linear infinite;animation-delay:var(--d);will-change:transform,opacity}
-.wt polygon{fill:none;stroke:rgba(116,113,250,.62);stroke-width:1.3;vector-effect:non-scaling-stroke;stroke-linejoin:round;
- filter:drop-shadow(0 0 7px rgba(106,103,247,.45))}
+.wt polygon{fill:none;stroke:rgba(116,113,250,.62);stroke-width:1.3;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+/* glow is a per-frame filter recalculation on a scaling element — accent every
+   third ring instead of paying for it nine times */
+.wt:nth-child(3n) polygon{filter:drop-shadow(0 0 7px rgba(106,103,247,.45))}
+/* the tunnel is invisible behind the landing overlay — don't animate two
+   full-screen systems at once on first paint */
+#landing~#login .wt,#landing~#login .warp-core{animation-play-state:paused}
 .wt:nth-child(2n) polygon{stroke:rgba(172,170,255,.55)}
 .wt:nth-child(3n) polygon{stroke:rgba(90,87,224,.6)}
 @keyframes warpFly{
