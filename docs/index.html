@@ -505,45 +505,23 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 .role-chip.sel b{color:var(--acc)}
 @media (max-width:880px){.login-shell{grid-template-columns:1fr;max-width:460px}.login-brand{padding:26px 30px 22px}.lb-h{font-size:18px}.lb-foot{padding-top:14px}.lb-rings{display:none}}
 @media (prefers-reduced-motion:reduce){.lb-sweep{animation:none}}
-/* ---------- sign-in ambience: 3D geometry in the empty field ----------
-   Wireframe cubes turning in true 3D, a tilted orbital disc, floating gems and
-   a receding grid floor — all pointer-events:none, behind the shell, and still
-   in both themes when motion is reduced. */
-#login{perspective:1300px}
+/* ---------- sign-in ambience: one composition, not scattered shapes ----------
+   A fine dot-grid field, two slow breathing glows, and a centred halo of
+   rings the shell sits inside — symmetric and deliberate. Pure CSS,
+   pointer-events none, reduced-motion safe. */
 .login-shell{position:relative;z-index:2}
-.lg-geo{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;transform-style:preserve-3d}
-.geo-floor{position:absolute;left:-22%;right:-22%;bottom:-14%;height:48%;
- background:repeating-linear-gradient(0deg,rgba(106,103,247,.15) 0 1px,transparent 1px 46px),repeating-linear-gradient(90deg,rgba(106,103,247,.15) 0 1px,transparent 1px 46px);
- transform:perspective(760px) rotateX(63deg);transform-origin:bottom;
- -webkit-mask-image:linear-gradient(to top,rgba(0,0,0,.75),transparent 82%);mask-image:linear-gradient(to top,rgba(0,0,0,.75),transparent 82%)}
-.geo-cube{position:absolute;transform-style:preserve-3d;animation:geoTurn 36s linear infinite}
-.geo-cube b{position:absolute;inset:0;border:1.5px solid rgba(106,103,247,.38);background:rgba(106,103,247,.045)}
-.geo-cube.c1{width:130px;height:130px;left:9%;top:15%}
-.geo-cube.c1 b:nth-child(1){transform:translateZ(65px)}.geo-cube.c1 b:nth-child(2){transform:rotateY(180deg) translateZ(65px)}
-.geo-cube.c1 b:nth-child(3){transform:rotateY(90deg) translateZ(65px)}.geo-cube.c1 b:nth-child(4){transform:rotateY(-90deg) translateZ(65px)}
-.geo-cube.c1 b:nth-child(5){transform:rotateX(90deg) translateZ(65px)}.geo-cube.c1 b:nth-child(6){transform:rotateX(-90deg) translateZ(65px)}
-.geo-cube.c2{width:74px;height:74px;right:8%;top:12%;animation-duration:26s;animation-direction:reverse}
-.geo-cube.c2 b:nth-child(1){transform:translateZ(37px)}.geo-cube.c2 b:nth-child(2){transform:rotateY(180deg) translateZ(37px)}
-.geo-cube.c2 b:nth-child(3){transform:rotateY(90deg) translateZ(37px)}.geo-cube.c2 b:nth-child(4){transform:rotateY(-90deg) translateZ(37px)}
-.geo-cube.c2 b:nth-child(5){transform:rotateX(90deg) translateZ(37px)}.geo-cube.c2 b:nth-child(6){transform:rotateX(-90deg) translateZ(37px)}
-.geo-cube.c3{width:48px;height:48px;left:17%;bottom:19%;animation-duration:44s}
-.geo-cube.c3 b:nth-child(1){transform:translateZ(24px)}.geo-cube.c3 b:nth-child(2){transform:rotateY(180deg) translateZ(24px)}
-.geo-cube.c3 b:nth-child(3){transform:rotateY(90deg) translateZ(24px)}.geo-cube.c3 b:nth-child(4){transform:rotateY(-90deg) translateZ(24px)}
-.geo-cube.c3 b:nth-child(5){transform:rotateX(90deg) translateZ(24px)}.geo-cube.c3 b:nth-child(6){transform:rotateX(-90deg) translateZ(24px)}
-@keyframes geoTurn{from{transform:rotateX(-18deg) rotateY(0deg)}to{transform:rotateX(-18deg) rotateY(360deg)}}
-.geo-disc{position:absolute;right:-6%;bottom:-8%;width:560px;height:560px;transform:rotateX(71deg);transform-style:preserve-3d}
-.geo-disc i{position:absolute;inset:0;border:1px dashed rgba(106,103,247,.34);border-radius:50%;animation:discSpin 40s linear infinite}
-.geo-disc i:nth-child(2){inset:86px;border-style:solid;border-color:rgba(106,103,247,.22);animation-duration:58s;animation-direction:reverse}
-@keyframes discSpin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
-.geo-gem{position:absolute;width:13px;height:13px;border:1.5px solid rgba(106,103,247,.55);background:rgba(106,103,247,.12);transform:rotate(45deg);animation:gemFloat 7s ease-in-out infinite}
-.geo-gem.g1{left:24%;top:31%;animation-delay:0s}
-.geo-gem.g2{right:19%;top:40%;width:9px;height:9px;animation-delay:1.8s}
-.geo-gem.g3{left:12%;top:64%;width:17px;height:17px;animation-delay:3.1s;animation-duration:9s}
-.geo-gem.g4{right:11%;bottom:30%;animation-delay:4.4s}
-@keyframes gemFloat{0%,100%{transform:rotate(45deg) translateY(0)}50%{transform:rotate(45deg) translateY(-16px)}}
-:root[data-theme="light"] .geo-cube b{border-color:rgba(106,103,247,.30);background:rgba(106,103,247,.05)}
-@media (prefers-reduced-motion:reduce){.geo-cube,.geo-disc i,.geo-gem{animation:none}}
-@media (max-width:880px){.geo-cube.c1{left:2%;top:6%}.geo-disc{width:380px;height:380px}}
+.lg-geo{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.lg-dots{position:absolute;inset:0;background-image:radial-gradient(rgba(106,103,247,.20) 1px,transparent 1.5px);background-size:28px 28px;
+ -webkit-mask-image:radial-gradient(ellipse 130% 120% at 50% 50%,rgba(0,0,0,.9),transparent 78%);mask-image:radial-gradient(ellipse 130% 120% at 50% 50%,rgba(0,0,0,.9),transparent 78%)}
+.lg-glow{position:absolute;width:680px;height:680px;border-radius:50%;filter:blur(95px);opacity:.5;animation:lgBreathe 16s ease-in-out infinite alternate}
+.lg-glow.ga{background:#8B88FF;top:-240px;left:-200px}
+.lg-glow.gb{background:#5A57E0;bottom:-280px;right:-220px;animation-delay:-8s}
+@keyframes lgBreathe{from{transform:translate(0,0) scale(1)}to{transform:translate(56px,36px) scale(1.07)}}
+.lg-halo{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border:1px solid rgba(106,103,247,.30);border-radius:50%;width:980px;height:980px}
+.lg-halo.h2{width:1280px;height:1280px;border-color:rgba(106,103,247,.17)}
+.lg-halo.h3{width:1580px;height:1580px;border-color:rgba(106,103,247,.09)}
+:root[data-theme="light"] .lg-glow{opacity:.34}
+@media (prefers-reduced-motion:reduce){.lg-glow{animation:none}}
 /* ---------- UW Guide — embedded knowledge assistant ---------- */
 #uwgBtn{position:fixed;right:20px;bottom:20px;z-index:960;display:none;align-items:center;gap:6px;font:600 12.5px 'Poppins',sans-serif;color:#fff;background:var(--acc);border:none;border-radius:999px;padding:11px 18px;cursor:pointer;box-shadow:0 8px 24px rgba(106,103,247,.38)}
 #uwgBtn:hover{filter:brightness(1.08)}
@@ -597,12 +575,12 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 </div>
 <div id="login">
  <div class="lg-geo" aria-hidden="true">
-  <div class="geo-floor"></div>
-  <div class="geo-disc d1"><i></i><i></i></div>
-  <div class="geo-cube c1"><b></b><b></b><b></b><b></b><b></b><b></b></div>
-  <div class="geo-cube c2"><b></b><b></b><b></b><b></b><b></b><b></b></div>
-  <div class="geo-cube c3"><b></b><b></b><b></b><b></b><b></b><b></b></div>
-  <span class="geo-gem g1"></span><span class="geo-gem g2"></span><span class="geo-gem g3"></span><span class="geo-gem g4"></span>
+  <div class="lg-dots"></div>
+  <div class="lg-glow ga"></div>
+  <div class="lg-glow gb"></div>
+  <div class="lg-halo"></div>
+  <div class="lg-halo h2"></div>
+  <div class="lg-halo h3"></div>
  </div>
  <div class="login-shell">
   <div class="login-brand">
