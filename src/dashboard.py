@@ -2481,6 +2481,8 @@ const UWG_KB=[
   a:()=>`The business does not stop. The two halves fail differently: the <b>rule engine</b> is a deterministic weight table that always scores, and the <b>ML half</b> is exported coefficients evaluated in the page, so there is no live service to be down — the demo has no runtime dependency at all. If a pilot's model service were unavailable, the safe posture is to route everything to <b>manual review</b> rather than fall back to the rule half alone: underwriting continues at manual cost and manual speed, which is the pre-automation baseline, and nothing gets auto-decided on half the evidence.`},
  {k:['score a','what would a','hypothetical','test an applicant','try a case','new application','price out','run a scenario for'],
   a:()=>`Use the <b>Score a new application</b> form (on the Portfolio & Model Card page) — enter age, tobacco, build, conditions and the financials and it runs the same engine in your browser: composite score, both halves, the factor breakdown and the band. I cannot score an applicant from a sentence, because a real score needs the full field set the form asks for, and inventing the missing fields would give you a confident wrong number. Tell me the profile you want to test and I will tell you which fields drive it.`},
+ {k:['reviewed first','identical score','same score','tiebreak','tie-break','a tie','who goes first','queue order','order of the queue','ordering','decides who gets','review order','which gets looked at'],
+  a:()=>`Score doesn’t decide it at all — two applicants with identical scores are ordered exactly like everyone else. Queue priority is <b>60% coverage + 40% time-in-queue</b>: bigger exposure and older cases rise, and the risk score is <b>deliberately excluded</b> from the ordering so the model never chooses who gets human attention first. If both coverage and age match too, the tie is immaterial — both cases carry the same SLA clock and both get reviewed.`},
  {k:['disagree','disagreement','two underwriters','conflicting opinion','who wins','tie break','second opinion'],
   a:()=>`Two kinds of disagreement. <b>Model disagreement</b> — when the rule engine and the ML model diverge sharply on the same file — is itself a referral trigger: the case goes to a human rather than being auto-decided. <b>Human disagreement</b> resolves by authority: the case belongs to whoever holds it, and only a <b>manager</b> can override a recorded decision (logged as MANAGER OVERRIDE, with a written reason and what it superseded). Operations can amend a decision recorded in error, but that is a correction, not a risk opinion.`},
  {k:['rule engine vs','rule half','ml half','difference between the rule','rules vs the model','why two models','why both'],
@@ -2582,6 +2584,7 @@ function uwgSubset(q){
  const ATTR=[
   [/\bsla\b|breach|over the 8|past due|overdue/,'past the 8-hour SLA',()=>CASES.filter(c=>c.verdict==='yellow'&&!wfGet(c.id).decision&&ageHours(c)>=8)],
   [/conflict|mismatch|discrepan|flagged/,'with document conflicts',()=>CASES.filter(c=>(c.conflicts||[]).length)],
+  [/non.?disclos|misrepresent|undeclared smok|hid(ing|den)? (their |the )?(smoking|tobacco)|lied about|lying about|positive cotinine|cotinine .{0,24}(but|no|non|without)|no smoker flag|didn.?t declare|failed to declare/,'with smoker non-disclosure (declared non-smoker, cotinine positive — material misrepresentation)',()=>CASES.filter(c=>(c.conflicts||[]).some(k=>k.type==='smoker_nondisclosure'))],
   [/smoker|tobacco|cotinine/,'smokers',()=>CASES.filter(c=>/smok/i.test(c.smoker||'')&&!/non/i.test(c.smoker||''))],
   [/afford/,'failing the affordability screen',()=>CASES.filter(c=>c.afford&&c.afford.verdict==='fail')],
   [/unique|disclos|section 6/,'with unique circumstances disclosed',()=>CASES.filter(c=>c.unique)],
@@ -2610,6 +2613,8 @@ function uwgMetricOf(q){
  // `worse` gives each metric a direction, so "the worst credit score" means the
  // LOWEST while "the worst risk score" means the highest. `sum` marks the
  // metrics it is meaningful to total.
+ if(/\bgap\b|diverg|disagree|difference between|rule .{0,12}(vs|versus|and) .{0,6}ml|ml .{0,12}(vs|versus|and) .{0,6}rule|split between/.test(q)&&/rule|ml|model|score/.test(q))
+  return {label:'rule-vs-ML gap',get:c=>Math.abs((c.rule_score||0)-(c.ml_score||0)),fmt:v=>Math.round(v)+' pts',worse:'high',gap:1};
  if(/years? old|yrs old|aged \d|\bage of\b/.test(q))return {label:'age',get:c=>c.age||0,fmt:v=>Math.round(v)+' years',worse:'high'};
  if(/coverage|cover\b|face amount|exposure/.test(q))return {label:'coverage',get:c=>c.coverage||0,fmt:v=>fmt$(v),worse:'high',sum:1};
  if(/premium/.test(q))return {label:'premium',get:c=>c.premium||0,fmt:v=>fmt$(v)+'/yr',worse:'low',sum:1};
@@ -2628,7 +2633,7 @@ function uwgAggregateAnswer(q){
  const wantsAvg=/average|mean |typical/.test(q);
  const wantsMax=/highest|largest|biggest|most |top |maximum|longest|oldest|worst|riskiest|most risky/.test(q);
  const wantsMin=/lowest|smallest|least|minimum|shortest|youngest|cheapest|best score|safest|least risky/.test(q);
- const wantsAny=/^(is|are|does|do) (there|any|anyone|anybody)|\bany case|\banyone (who|with|over|under)/.test(q);
+ const wantsAny=/^(is|are|does|do|has|have|did) (there|any|anyone|anybody)|\bany case|\banyone (who|with|over|under|lied|hid|declared)/.test(q);
  // "how much premium is sitting in the queue" — a total, not a count. Excludes
  // price questions ("how much does an APS cost"), which belong to the rulebook.
  const wantsSum=/how much|\btotal\b|combined|sum of|aggregate|worth of|how many dollars/.test(q)
@@ -2636,6 +2641,9 @@ function uwgAggregateAnswer(q){
  if(!(wantsCount||wantsPct||wantsAvg||wantsMax||wantsMin||wantsAny||wantsSum))return null;
  const sub=uwgSubset(q);
  let met=uwgMetricOf(q);
+ // a question about a gap/difference must resolve to the gap metric or not at all —
+ // substituting "risk score" here is how a confidently wrong answer happens
+ if(/\bgap\b|diverg|difference between|delta between|spread between/.test(q)&&(!met||!met.gap))return null;
  if(!met&&(wantsMax||wantsMin)&&/largest|biggest|smallest|most expensive|cheapest/.test(q))met=uwgMetricOf('coverage');
  if(!met&&(wantsMax||wantsMin)&&/worst|best|riskiest|safest/.test(q))met=uwgMetricOf('risk score');
  if(!sub&&!met)return null;   // no subject and no metric: not an analytics question
@@ -2681,7 +2689,7 @@ function uwgAggregateAnswer(q){
   const top=sorted.slice(0,3);if(!top.length)return `No cases ${label}.`;
   uwgLastCase=top[0];
   return `${wantsMaxL?'Highest':'Lowest'} <b>${met.label}</b> ${label==='in the book'?'in the book':label}:<br>${top.map((c,i)=>{const st=wfGet(c.id);
-    return `${i+1}. <span class="mono">${c.id}</span> ${c.name} — <b>${met.fmt(met.get(c))}</b>${met.label!=='risk score'?`, score ${c.risk_score}`:''}, ${c.decision.toLowerCase()}${(c.verdict==='yellow'&&st.assignee)?` · ${st.assignee} (${(UWS[st.tier]||{}).label||''} desk)`:''}`;}).join('<br>')}`;
+    return `${i+1}. <span class="mono">${c.id}</span> ${c.name} — <b>${met.fmt(met.get(c))}</b>${met.gap?` (rule ${c.rule_score} / ML ${Math.round(c.ml_score)})`:met.label!=='risk score'?`, score ${c.risk_score}`:''}, ${c.decision.toLowerCase()}${(c.verdict==='yellow'&&st.assignee)?` · ${st.assignee} (${(UWS[st.tier]||{}).label||''} desk)`:''}`;}).join('<br>')}${met.gap?`<br>A wide split matters: strong rule/ML disagreement is itself a referral trigger — neither half is trusted alone when they can’t agree.`:''}`;
  }
  if(wantsAvg){
   if(!met)return null;
@@ -2818,6 +2826,7 @@ function uwgFactorTable(){
 }
 function uwgFactorAnswer(q){
  // "how many points does heavy alcohol cost?", "does a criminal record matter?"
+ if(/(lose|drop|shed|cut) .{0,16}points?|points? .{0,20}(lose|drop|shed)|from referred to approved|clear the line/.test(q))return null;  // that is line arithmetic, not a weight lookup
  if(!/\bpoints?\b|weigh|weight of|red flag|does .{0,20}matter|affect the score|hurt the score|count against|penal|worse than|more serious/.test(q))return null;
  const terms=q.replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(w=>w.length>=3&&!UWG_STOP.has(w));
  if(!terms.length)return null;
@@ -2852,6 +2861,23 @@ function uwgSharedAnswer(q){
  const dups=Object.entries(g).filter(([,l])=>l.length>1).sort((a,b)=>b[1].length-a[1].length);
  if(!dups.length)return `No — every applicant has a distinct ${key[0]} in this book.`;
  return `Yes — <b>${dups.length}</b> ${key[0]}(s) appear more than once. Top overlaps:<br>${dups.slice(0,5).map(([k,l])=>`<b>${k}</b> — ${l.length} applicants (${l.slice(0,3).map(c=>`<span class="mono">${c.id}</span> ${c.name}`).join(', ')}${l.length>3?', …':''})`).join('<br>')}<br>Worth knowing why it matters: shared address, employer or surname is how a real desk spots <b>aggregation risk</b> (several policies on one life or household) and possible non-disclosure — neither of which the per-case score can see.`;
+}
+function uwgLineGapAnswer(q){
+ // "how many points would a 45-year-old need to lose to move from referred to
+ // approved" — arithmetic against the line, not a weight-table dump.
+ if(!/points? .{0,32}(lose|shed|drop|cut|need)|need to (lose|drop|shed)|(move|go|get) from referred to approved|from referred to approved|clear the (approval )?line|get (under|below) the (approval )?line|to become auto.?approved/.test(q))return null;
+ const explain=`A referred case auto-approves under <b>${A_LINE}</b>, so the points to lose are simply <b>score − ${A_LINE-1}</b>.`;
+ const ageM=q.match(/(\d{2})\s*[-\s]?(?:year|yr)s?[-\s]?old|\bage[d]?\s+(\d{2})\b/);
+ if(ageM){
+  const age=parseInt(ageM[1]||ageM[2],10);
+  const peers=CASES.filter(c=>c.verdict==='yellow'&&Math.abs((c.age||0)-age)<=2);
+  const ageF=uwgFactorTable().find(f=>/applicant age/i.test(f.label)&&new RegExp('\\b'+age+' ').test(f.detail+' '));
+  const rows=peers.slice(0,4).map(c=>`<span class="mono">${c.id}</span> ${c.name} (age ${c.age}) — score ${c.risk_score}, needs <b>${Math.max(1,c.risk_score-(A_LINE-1))}</b> point(s)`);
+  return `${explain} It depends where the case sits in the ${A_LINE}–${D_LINE-1} band — anywhere from <b>1</b> to <b>${D_LINE-A_LINE}</b> point(s).${ageF?` Note the age factor itself: being ${age} contributes <b>+${ageF.pts}</b>, and that can’t be “lost”.`:''}${rows.length?`<br>Referred cases at ~${age} in this book:<br>${rows.join('<br>')}`:`<br>No referred case at ~${age} in this book right now.`}<br>Points come off by resolving what put them on: clearing a document conflict, evidence that removes a factor, or a corrected extraction — the score follows the facts.`;
+ }
+ if(uwgLastCase&&uwgLastCase.verdict==='yellow')
+  return `${explain} <b>${uwgLastCase.name}</b> (<span class="mono">${uwgLastCase.id}</span>) scores <b>${uwgLastCase.risk_score}</b>, so it needs <b>${uwgLastCase.risk_score-(A_LINE-1)}</b> point(s) to clear the line.`;
+ return `${explain} Referred cases sit ${A_LINE}–${D_LINE-1}, so between <b>1</b> and <b>${D_LINE-A_LINE}</b> point(s) depending on the case — give me a case ID, a name or an age and I’ll do the arithmetic.`;
 }
 function uwgQueueAnswer(){
  // "Who should I review first?" — the queue’s own priority order, live.
@@ -3154,6 +3180,7 @@ function uwgAnswerCore(qRaw,prevQ,prevA){
  const wi=uwgWhatIfAnswer(q);if(wi)return wi;
  const pr=uwgProfileAnswer(q);if(pr)return uwgWithFollowOn(pr,q);
  const sh=uwgSharedAnswer(q);if(sh)return sh;
+ const lg=uwgLineGapAnswer(q);if(lg)return lg;
  const fa=uwgFactorAnswer(q);if(fa)return fa;
  if(/worry about|anything i should know|brief me|briefing|summar(y|ise|ize) my (day|shift|queue)|how is my day|what.s on my plate/.test(q))return uwgBriefingAnswer();
  const grp=uwgGroupAnswer(q);if(grp)return uwgWithFollowOn(grp,q);
@@ -3222,7 +3249,14 @@ function uwgAnswerCore(qRaw,prevQ,prevA){
  const kb=uwgKbBest(q);let best=kb.entry,bestN=kb.score;
  if(best)return best.a();
  if(nm.list.length)return nameReply();   // no rulebook hit: try the loose name match
- return 'I cover the platform’s own rulebook: decision bands, the 6-check conflict screen, DOB / smoker policy, affordability, the requirements grid, desk routing, SLAs, evidence-anchored weights, the executive P&L, decision-change authority, exports and integrations. I can also look up any applicant — by case ID (<span class="mono">'+CASES[0].id+'</span>) or by name (“what is '+CASES[0].name+'’s income?”), with follow-ups (“what is her case ID?”) — read live metrics (“what is my loss ratio right now?”), rank the auto-approved or auto-declined book, and tell you who to review first in the queue.';
+ // Honest refusal beats a confident guess. Say plainly that the question
+ // wasn’t understood, surface the nearest topics as clues, and never dress
+ // a keyword accident up as an answer.
+ const near=[];
+ UWG_KB.forEach(e=>{let n=0;e.k.forEach(k=>{if(uwgKeyHit(q,k))n+=k.length;});if(n>0)near.push([n,e.k[0]]);});
+ near.sort((a,b)=>b[0]-a[0]);
+ const hints=near.slice(0,3).map(x=>'“'+x[1]+'”').join(', ');
+ return `I didn’t understand that well enough to answer reliably — and I’d rather tell you so than guess wrong.${hints?` The nearest topics I know: ${hints}.`:''} What works well: a case ID or applicant name (with a specific field), a metric (“loss ratio right now”), a book question (“how many cases…”, “total premium in the queue”), a ranking, a what-if (“approval line to 60”), or a rulebook topic. Rephrase and I’ll take another run at it.`;
 }
 render();
 // Esc returns from a case file to the queue with its context intact (§3.3).
