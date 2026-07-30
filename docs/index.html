@@ -480,6 +480,31 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 :root[data-theme="light"] .scale-seg+.scale-seg{border-left-color:#fff}
 :root[data-theme="light"] #login{background:linear-gradient(160deg,#DDE0EC,#F5F6F9) !important}
 :root[data-theme="light"] .login-card input{background:#F3F4F8 !important;color:var(--ink) !important}
+/* ---------- sign-in shell: brand panel + form (7/30 redesign) ---------- */
+.login-shell{display:grid;grid-template-columns:380px 420px;max-width:94vw;border-radius:24px;overflow:hidden;box-shadow:0 32px 90px rgba(18,18,55,.38);background:var(--card)}
+.login-shell .login-card{border-radius:0 !important;box-shadow:none !important;border:none !important;width:auto;max-width:none;padding:34px 36px 30px}
+.login-brand{position:relative;overflow:hidden;background:linear-gradient(155deg,#504DC9,#28276E 52%,#131230);padding:38px 34px 30px;display:flex}
+.lb-body{position:relative;z-index:2;display:flex;flex-direction:column;gap:14px}
+.lb-h{font-family:'Poppins',sans-serif;font-size:23px;font-weight:700;line-height:1.32;color:#fff;margin:2px 0 0}
+.lb-h em{font-style:normal;color:#C8C6FF}
+.lb-mono{font:600 9.5px 'JetBrains Mono',monospace;letter-spacing:1.1px;color:#A5A3EA}
+.lb-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:2px}
+.lb-chips span{border:1px solid rgba(255,255,255,.30);color:#EBEAFF;border-radius:999px;padding:5px 11px;font:600 9.5px 'JetBrains Mono',monospace;letter-spacing:.5px;backdrop-filter:blur(2px)}
+.lb-foot{margin-top:auto;padding-top:26px;font:500 10.5px 'Poppins',sans-serif;color:#8B89CF;line-height:1.55}
+.lb-rings{position:absolute;right:-130px;bottom:-150px;width:380px;height:380px;z-index:1;pointer-events:none}
+.lb-rings i{position:absolute;inset:0;border:1px solid rgba(255,255,255,.13);border-radius:50%}
+.lb-rings i:nth-child(2){inset:52px}.lb-rings i:nth-child(3){inset:110px;border-color:rgba(255,255,255,.20)}
+.lb-sweep{position:absolute;inset:-40%;z-index:0;pointer-events:none;opacity:.5;background:conic-gradient(from 0deg,transparent 0deg,rgba(150,148,255,.16) 40deg,transparent 90deg);animation:lbSpin 26s linear infinite}
+@keyframes lbSpin{to{transform:rotate(360deg)}}
+.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 20px}
+.role-chip{text-align:left;border:1px solid var(--line);background:transparent;border-radius:12px;padding:8px 12px;cursor:pointer;font-family:'Poppins',sans-serif;transition:border-color .12s,background .12s}
+.role-chip b{display:block;font-size:12px;font-weight:700;color:var(--ink);line-height:1.3}
+.role-chip span{font:600 8.5px 'JetBrains Mono',monospace;letter-spacing:.5px;text-transform:uppercase;color:var(--mut)}
+.role-chip:hover{border-color:var(--acc)}
+.role-chip.sel{border-color:var(--acc);background:var(--acc-soft)}
+.role-chip.sel b{color:var(--acc)}
+@media (max-width:880px){.login-shell{grid-template-columns:1fr;max-width:460px}.login-brand{padding:26px 30px 22px}.lb-h{font-size:18px}.lb-foot{padding-top:14px}.lb-rings{display:none}}
+@media (prefers-reduced-motion:reduce){.lb-sweep{animation:none}}
 /* ---------- UW Guide — embedded knowledge assistant ---------- */
 #uwgBtn{position:fixed;right:20px;bottom:20px;z-index:960;display:none;align-items:center;gap:6px;font:600 12.5px 'Poppins',sans-serif;color:#fff;background:var(--acc);border:none;border-radius:999px;padding:11px 18px;cursor:pointer;box-shadow:0 8px 24px rgba(106,103,247,.38)}
 #uwgBtn:hover{filter:brightness(1.08)}
@@ -532,17 +557,36 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
  </div>
 </div>
 <div id="login">
- <div class="login-card">
-  <div class="brandmark">◆ UNDERWRITING COPILOT</div>
-  <h1>Sign in to the workbench</h1>
-  <p class="sub">Secure access. Underwriters work their assigned case queue; managers get portfolio oversight and the fairness view.</p>
-  <label>Username</label>
-  <input id="loginUser" placeholder="username" autocomplete="off" oninput="loginErr('')" onkeydown="if(event.key==='Enter')doLogin()">
-  <label>Password</label>
-  <input id="loginPass" type="password" placeholder="password" onkeydown="if(event.key==='Enter')doLogin()">
-  <div id="loginError" class="login-error"></div>
-  <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign in →</button>
-  <div class="login-foot"><b>Demo accounts</b><br>Senior underwriter — <span class="mono">mrivera / senior</span><br>Mid-tier underwriter — <span class="mono">ewong / review</span><br>New analyst — <span class="mono">dpark / analyst</span><br>Manager — <span class="mono">nsethi / oversight</span><br>Executive (CUO) — <span class="mono">mvale / executive</span><br>Operations admin — <span class="mono">panand / admin</span></div>
+ <div class="login-shell">
+  <div class="login-brand">
+   <div class="lb-sweep"></div>
+   <div class="lb-rings"><i></i><i></i><i></i></div>
+   <div class="lb-body">
+    <div class="brandmark" style="color:#BDBBFF">◆ UNDERWRITING COPILOT</div>
+    <h2 class="lb-h">Every application read, screened, scored — <em>and routed to the right human.</em></h2>
+    <div class="lb-mono">EXTRACTION · CONFLICT SCREEN · RISK SCORE · DECISION</div>
+    <div class="lb-chips"><span>STP 83%</span><span>6-CHECK SCREEN</span><span>28·ln WEIGHTS</span><span>$47 / APP</span></div>
+    <div class="lb-foot">Synthetic book · 200 applications · no real applicants — sign-in is an honest role selector, not authentication.</div>
+   </div>
+  </div>
+  <div class="login-card">
+   <h1>Sign in to the workbench</h1>
+   <p class="sub">One product, six seats — the role you pick decides what you see. Choose a persona, or type the credentials.</p>
+   <div class="role-grid">
+    <button class="role-chip" onclick="loginFill('mrivera','senior',this)"><b>Marcus Rivera</b><span>Senior underwriter</span></button>
+    <button class="role-chip" onclick="loginFill('ewong','review',this)"><b>Erin Wong</b><span>Mid-tier underwriter</span></button>
+    <button class="role-chip" onclick="loginFill('dpark','analyst',this)"><b>Dana Park</b><span>New analyst</span></button>
+    <button class="role-chip" onclick="loginFill('nsethi','oversight',this)"><b>Nadia Sethi</b><span>Manager</span></button>
+    <button class="role-chip" onclick="loginFill('mvale','executive',this)"><b>Marcus Vale</b><span>Executive · CUO</span></button>
+    <button class="role-chip" onclick="loginFill('panand','admin',this)"><b>Priya Anand</b><span>Operations admin</span></button>
+   </div>
+   <label>Username</label>
+   <input id="loginUser" placeholder="username" autocomplete="off" oninput="loginErr('')" onkeydown="if(event.key==='Enter')doLogin()">
+   <label>Password</label>
+   <input id="loginPass" type="password" placeholder="password" onkeydown="if(event.key==='Enter')doLogin()">
+   <div id="loginError" class="login-error"></div>
+   <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign in →</button>
+  </div>
  </div>
 </div>
 <div id="app">
@@ -760,6 +804,13 @@ const UWS={senior:{uid:"mrivera",name:"Marcus Rivera",label:"Senior"},
           analyst:{uid:"dpark",name:"Dana Park",label:"New Analyst"}};
 let CURRENT_ROLE=null, CURRENT_USER="", CURRENT_UID="", CURRENT_TIER="";
 function loginErr(m){const e=document.getElementById('loginError');if(e)e.textContent=m;}
+function loginFill(u,p,btn){
+ // persona quick-pick: fills the credentials, keeps the deliberate Sign in click
+ document.getElementById('loginUser').value=u;document.getElementById('loginPass').value=p;loginErr('');
+ document.querySelectorAll('.role-chip').forEach(x=>x.classList.remove('sel'));
+ if(btn)btn.classList.add('sel');
+ const b=document.getElementById('loginBtn');if(b)b.focus();
+}
 function doLogin(){
  const _ld=document.getElementById('landing');if(_ld)_ld.remove();   // tour / direct logins skip the landing
  const u=(document.getElementById('loginUser').value||'').trim().toLowerCase();
