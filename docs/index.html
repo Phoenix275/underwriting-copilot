@@ -2370,6 +2370,101 @@ const UWG_KB=[
   a:()=>`<b>NIGO</b> (“not in good order”) — incomplete or malformed applications — is the biggest single source of cycle-time loss. Underwriters send a case back with <b>Request information</b>, which stamps it Info Requested, logs what’s missing, and parks the SLA clock on the applicant’s side.`},
  {k:['refer','why manual','yellow','middle band','human review'],
   a:()=>`A case is referred when the system can’t safely decide alone: a mid-band score (${A_LINE}–${D_LINE-1}), a document conflict, a failed affordability screen, or disclosed unique circumstances. Open any referred case and ask me <i>“why is this case here?”</i> — I’ll read its actual drivers.`},
+ {k:['how do i approve','how do i record','how do i decline','record a decision','where do i decide','how do i action','add a note','leave a note','leave a comment','annotate','case note'],
+  a:()=>`Open a case from the queue, go to the <b>Decision</b> tab, and use Approve or Decline on the case desk — a written rationale is required, and it writes to the audit trail and moves the case to Completed. <b>Request information</b> parks it as NIGO instead, and <b>+ Note</b> adds a comment without changing state. Auto-decided cases can be pulled into manual review from their space if you want to touch one.`},
+ {k:['paramed','what is an aps','what does aps','what is aps','attending physician','what is mib','what is mvr','glossary','what does that mean','stand for','acronym','abbreviation','jargon'],
+  a:()=>`Quick glossary: <b>APS</b> — Attending Physician Statement, records from the applicant's doctor (~$350, weeks; the slowest requirement). <b>Paramed</b> — a nurse-run exam: height, weight, blood pressure, blood draw. <b>MIB</b> — the industry's prior-application database. <b>MVR</b> — motor vehicle record. <b>NIGO</b> — "not in good order", an incomplete application. <b>STP</b> — straight-through processing, decided with no human touch. <b>Cotinine</b> — the lab marker that confirms tobacco use. <b>A&A grid</b> — the age × amount table that decides which requirements apply.`},
+ {k:['who are the underwriters','who is on the team','team members','which underwriters','who works here','staff'],
+  a:()=>`Three underwriting desks by experience — <b>${UWS.senior.name}</b> (senior, $750k+ and hard conflicts), <b>${UWS.mid.name}</b> (mid-tier, $250k+), <b>${UWS.analyst.name}</b> (new analyst, clean cases to $250k) — plus a manager for oversight and overrides, a Chief Underwriting Officer for the money view, and an operations administrator for flow and compliance. All fictional personas on synthetic data.`},
+ {k:['demo login','credentials','what are the logins','username','how do i sign in','sign in as','test account'],
+  a:()=>`Six demo accounts, shown on the sign-in card: <span class="mono">mrivera / senior</span>, <span class="mono">ewong / review</span>, <span class="mono">dpark / analyst</span>, <span class="mono">nsethi / oversight</span> (manager), <span class="mono">mvale / executive</span> (CUO), <span class="mono">panand / admin</span> (operations). It is a role selector rather than real authentication — each role reveals a different product.`},
+ {k:['what should i show','demo tips','how do i present','order to demo','best way to show','walkthrough order','pitch this'],
+  a:()=>`Land the problem before the product. Suggested order: (1) the <b>🎓 Tutorial</b> intro — value chain, ~40% of underwriter time on data gathering, 3–8 week turnaround; (2) <b>one case end to end</b> as a junior analyst, escalating to senior — that is the story people remember; (3) a <b>flagged case</b>, so the 6-check screen shows a real discrepancy with both values; (4) <b>Auto-Approved ranked by margin</b> for the capacity argument; (5) the <b>Executive P&L</b> — the $47 vs $162 per application is the line that sells automation; (6) the <b>Model Card</b> if anyone asks how it is defensible. Ask me anything mid-demo — I read from the live book, so nothing goes stale.`},
+ {k:['roadmap','what is next','future','coming soon','not built yet','next step','what would you add','improve'],
+  a:()=>`Honest roadmap. Nearest-term: <b>table ratings</b> (the composite already implies a mortality multiple, so rated offers replace binary refer/decline), <b>NIGO intake triage</b>, and <b>requirement/vendor SLA tracking</b> — the biggest real cycle-time levers. Then: workforce and queue balancing, user/access administration with separation-of-duties, a formal reconsideration path, and pilot connectors (CRM, new business, agent portal, notifications, claims). Deliberately excluded: image-based fraud detection and any dependency on external claims or health repositories, since the target markets have none to rely on.`},
+ {k:['extraction accurate','how accurate','ocr','reads the document','confidence','misread','low confidence','parse fail','garbled'],
+  a:()=>`Extraction runs at <b>${(M.extraction.field_level_accuracy*100).toFixed(1)}% field-level accuracy</b> against ground truth on this book, and the conflict screen catches <b>${(M.conflict_screening.detection_recall*100).toFixed(0)}%</b> of injected discrepancies with ${M.conflict_screening.fp} false alarms. The design point that matters: extraction never decides anything alone — every parsed field is shown beside its source document so an underwriter can check it, and a disagreement between documents refers the case rather than resolving it silently. A low-confidence or unparseable field is a human's problem to look at, which is the correct failure mode.`},
+ {k:['handwriting','handwritten','scanned badly','retinal','biometric','image fraud','image-based','image based','photo','picture','selfie','face','damage assessment'],
+  a:()=>`Explicit non-goals, and worth stating in a pitch. <b>Image-based fraud detection</b> (comparing photos, assessing damage) is a different problem domain — the validated capability here is document-level inconsistency detection, which is where life underwriting misrepresentation actually shows up. <b>Handwritten OCR</b> and <b>biometric or retinal checks</b> are research items, not build items. The scope discipline is deliberate: document intake only, no external data at decision time.`},
+ {k:['language','malay','bahasa','translate','multilingual','non-english','indonesian document'],
+  a:()=>`English-only in this build — the extraction schema, the UI and I all assume English documents. For Malaysia or Indonesia a pilot would need multilingual extraction (Bahasa Malaysia and Bahasa Indonesia, plus mixed-language forms, which are common) and localised UI labels. The scoring engine itself is language-agnostic: it consumes extracted fields, not text, so the work is in the reader and the interface rather than the risk logic.`},
+ {k:['why does this exist','why does this project','project exist','why this exists','why was this built','who built this','purpose of the project','background','the story','why build','origin'],
+  a:()=>`It is a prototype built to answer one question: can a small carrier make <b>low-premium life policies economically writable</b>? Manual underwriting costs roughly $160 an application, which a policy earning a few hundred dollars a year cannot carry — so the thesis is straight-through processing for the clean majority and concentrated human judgement on the ${CASES.filter(c=>c.verdict==='yellow').length} cases that need it. Everything here runs on <b>synthetic data</b>, with no real insurer and no real applicants, and the honest-limits framing is part of the deliverable rather than a footnote.`},
+ {k:['retention','reinsur','treaty','ceding','cede','jumbo','facultative','automatic binding'],
+  a:()=>`Not modelled in this prototype, and worth saying plainly. A real carrier holds risk up to a <b>retention limit</b> and reinsures the excess — automatically under a treaty up to a binding limit, facultatively above it, with jumbo limits on total in-force cover. This demo underwrites the risk decision only; the ${fmtBigMoney(APPETITE_MONTHLY)} monthly appetite is the sole capacity lever in it. Retention, treaty terms and cession routing would be pilot configuration on top of the same engine.`},
+ {k:['postpone','postponement','defer the case','hold the case','revisit later','not now'],
+  a:()=>`Not a separate state in this build — the recorded dispositions are approve, decline, and referred-with-evidence-outstanding. In practice a postpone is modelled as <b>Request information</b>: the case moves to Info Requested with a written reason, the SLA clock parks on the applicant's side, and it comes back when the evidence lands. A true "postpone 6 months" status (pending recent surgery, for example) is a pilot addition.`},
+ {k:['table rating','substandard','rated offer','counteroffer','counter offer','loading','modal premium','rate up','offer terms'],
+  a:()=>`The demo's outcomes are approve at <b>Preferred</b> or <b>Standard</b>, refer, or decline — it does not yet issue table ratings. A production build slots naturally here: the composite already implies a mortality multiple (weights are <span class="mono">28 × ln(multiple)</span>, so <span class="mono">exp(score/28)</span> recovers it), which maps to Table A–H loadings instead of a binary refer/decline. That is the highest-value next step for the pricing side, because most referred cases are insurable at a price rather than uninsurable.`},
+ {k:['reconsider','reconsideration','re-apply','reapply','appeal a decline','after a decline','second chance','contest the decision'],
+  a:()=>`Yes. A declined case is a record, not a locked door: any auto-decision can be <b>pulled into manual review</b> from its space, and a recorded decision can be reopened by the underwriter who made it, overridden by a manager, or amended by operations if it was recorded in error. Every reopen is logged with who did it and what it superseded. Carrier practice is usually to invite reconsideration when new evidence arrives (a repeat lab, a specialist letter) — that arrives here as an evidence request on the reopened case.`},
+ {k:['lab result valid','how long are lab','evidence valid','stale','expire','expiry','age of evidence','out of date'],
+  a:()=>`Not enforced in the demo — every packet is treated as current. Carrier norms: routine labs and paramed exams are good for <b>6–12 months</b>, an APS typically 12 months, MVR and Rx pulls a few months, and anything older is re-ordered. Worth adding as a rule alongside the requirements grid, since re-ordering stale evidence is a real cost and a real cycle-time hit.`},
+ {k:['occupation','pilot','miner','job risk','dangerous job','occupational','commercial pilot','military','fire fighter','firefighter'],
+  a:()=>`Occupation is captured on every case and shown on the file, but the rule engine does <b>not</b> currently score it — the weighted factors are age, tobacco, build, conditions, family history, financial signals, hazardous activities, driving, alcohol and the Section 6 declarations. So a commercial pilot scores on their health and finances here, while a real carrier would add an aviation or occupational loading (or an exclusion rider). It surfaces indirectly: an unusual occupation often arrives with disclosed circumstances, which forces a human look.`},
+ {k:['juvenile','child','minor applicant','under 18','kids policy'],
+  a:()=>`Out of scope for this book — the synthetic applicants are adults (age ${Math.min.apply(null,CASES.map(c=>c.age))}–${Math.max.apply(null,CASES.map(c=>c.age))}), and juvenile underwriting is a different discipline: no financial underwriting on the child, parental insurable-interest checks, sibling-equity limits, and much lighter medical requirements. The engine would need its own requirement grid and weight table for it.`},
+ {k:['simplified','full underwriting','accelerated','fluidless','no exam','guaranteed issue','underwriting path','which path'],
+  a:()=>`One path in the demo: every application gets the full document packet, the 6-check screen and a composite score, and the age × amount grid decides what extra evidence is needed. That is effectively <b>accelerated underwriting</b> — clean cases clear with no human and no new exams, which is exactly what the ${(M.decisioning.straight_through_rate*100).toFixed(0)}% straight-through rate measures. Simplified issue (a few questions, no labs) and guaranteed issue would be separate products with their own grids, not variations of this decision logic.`},
+ {k:['blood pressure','hypertension reading','systolic','cholesterol level','what reading','build chart','height weight table','bmi threshold'],
+  a:()=>`Individual clinical cut-offs are not published as thresholds in this build — blood pressure and cholesterol are captured on the paramedical and shown on the file, while the scored factors are <b>BMI band</b>, declared conditions (hypertension included), tobacco, age and the rest of the weight table. So a reading contributes through its diagnosis rather than through a hard cut-off. A production build would carry the carrier's own build chart and BP/lipid tables; the derivation script (<span class="mono">derive_weights.py</span>) is where those would be anchored to mortality data rather than picked by hand.`},
+ {k:['foreign','residency','overseas','travel plan','visa','expat','abroad','non-resident'],
+  a:()=>`<b>Foreign travel planned</b> is a Section 6 declaration and is captured per case; answering yes contributes points and shows on the file as a disclosure. Residency and destination-specific rules (war-zone exclusions, country risk classes, non-resident eligibility) are not modelled — and deliberately so, since the design assumes <b>no external data source</b>: there is no shared cross-insurer or travel-risk repository in the target markets, so any such rule would have to arrive as carrier configuration.`},
+ {k:['replacement','replacing','churn','1035','surrender','existing policy','switch policies'],
+  a:()=>`Captured: every case carries <b>existing cover in force</b> and a <b>replacing</b> flag, and both are visible on the file. Replacement matters twice — the total in-force amount drives the requirements grid and the affordability screen, and replacing a policy raises a suitability question (is the applicant better off?) that regulators care about. The demo surfaces the facts; the suitability review would be a pilot rule with its own disclosure form.`},
+ {k:['family member','own family','relative','conflict of interest','separation of duties','my own case','friend'],
+  a:()=>`Right instinct, and it is a known gap: role separation exists (only a manager can override, only ops can amend) but the demo does <b>not</b> block an underwriter from working a case involving someone they know, because the synthetic book has no relationship data to check against. Real practice is a declared conflict-of-interest register plus an automatic reassignment rule on name/address/policy-number matches. It is listed in the operations roadmap as a separation-of-duties check.`},
+ {k:['who can see','access log','who opened','audit who','viewed the case','track access','surveillance'],
+  a:()=>`Every <b>action</b> is attributed — claims, notes, status changes, evidence requests, decisions and overrides all land in the case audit trail with a name, role and timestamp, and export to CSV or JSON. What is not tracked in this build is passive <b>viewing</b>: opening a case leaves no record. Real carriers log reads too, for privacy audits. Also worth being honest about: sign-in here is a demo role selector, not authentication, so attribution is only as trustworthy as the person picking the role.`},
+ {k:['retention of records','how long are records','archive','retain','record keeping','data retention','purge'],
+  a:()=>`Nothing is purged in the demo — the decision trail persists in your browser until you clear site data, and there is no scheduled retention. Insurance retention is typically measured in <b>years after the policy ends</b> (jurisdiction-specific, commonly 7–10), covering the application, the evidence, and the decision rationale. A pilot needs a retention schedule and a defensible deletion process; the export formats are already the right shape for an archive.`},
+ {k:['does the model learn','learn from my override','training loop','feedback loop','my override','improve over time','retrain on'],
+  a:()=>`Yes, deliberately. Every recorded decision writes to an <b>override store</b> alongside the case, and the pipeline folds those human calls back into the training pool on its next run — so the underwriters' judgement becomes training signal rather than being thrown away. The manager's view reports the override rate and how many overrides have already been trained on, and the Model Card carries the export. The guardrail: the rule half stays evidence-anchored, so learning from humans can shift the ML half without quietly rewriting the published mortality weights.`},
+ {k:['how often is the model retrained','retrain','cadence','drift','monitor the model','model refresh','champion challenger'],
+  a:()=>`In this prototype, retraining happens on every pipeline run — it appends the batch to the training pool and refits, which is why AUC, thresholds and the straight-through rate drift slightly run to run (currently AUC ${(M.risk_models.gradient_boosting.auc*100).toFixed(1)}% on ${(M.risk_models.n_train||0).toLocaleString()} records). A production cadence would be scheduled rather than per-batch — monthly or quarterly, with champion/challenger comparison, calibration and fairness checks before promotion, and drift monitoring in between. The decision <b>lines stay fixed</b> across retrains, so a model refresh cannot silently change the book's risk appetite.`},
+ {k:['explain a decline','tell the agent','adverse action','explain to the customer','justify the decision','why was it declined to','communicate the decision'],
+  a:()=>`Every decision comes with the material to explain it: the <b>rate class and reason</b>, the ranked rule factors with their points, any document conflicts with both conflicting values, the affordability result, and a downloadable <b>decision memo</b> from the case desk. Because the rule half is published (<span class="mono">28 × ln(mortality multiple)</span>), a decline can be explained factor by factor rather than as "the model said no" — which is what makes it defensible to an agent, an applicant, and a regulator. Formal adverse-action notice wording is a carrier/jurisdiction template, not something the demo generates.`},
+ {k:['appeal','appeals process','complain','dispute','ombudsman','applicant rights'],
+  a:()=>`No formal applicant-facing appeals workflow in the demo. What exists is the internal equivalent: a declined case can be pulled into manual review, reopened, overridden by a manager or amended by ops, all with written reasons, and the decision memo gives the applicant's agent something concrete to argue with. A production appeals process would add an intake channel, a service-level clock, and a reviewer who did not make the original call — that last part matters, and the role model here already supports it.`},
+ {k:['regulation','regulatory','compliance requirement','which laws','gdpr','pdpa','solvency','ojk','bnm','regulator expects'],
+  a:()=>`This is a synthetic prototype, so it is not certified against any regime — but it is built for the questions regulators actually ask: <b>explainability</b> (published weights, factor-level reasons), <b>human oversight</b> (every borderline case goes to a person, and the model advises rather than decides), <b>auditability</b> (attributed, timestamped, exportable trail), <b>fairness measurement</b> (Model Card reports by group), and <b>data minimisation</b> (document-intake only, no external profiling). In the target markets that maps to insurance-authority conduct rules plus the local data-protection act; the specifics belong in a pilot's compliance review, not in a demo's claims.`},
+ {k:['two underwriters at once','same case at once','simultaneous','collision','locking','concurrent','claim the case','take over'],
+  a:()=>`Cases are <b>assigned</b> rather than locked. Each referred case routes to one desk by authority, shows its owner, and another underwriter can explicitly <b>Take over</b> — which is logged as a reassignment in the audit trail. Since state lives in your browser in this demo, there is no server-side lock; a live build would add optimistic locking so two people cannot record conflicting decisions on the same case.`},
+ {k:['hand over','handover','vacation','out of office','cover for me','absence','reassign my queue','my backlog'],
+  a:()=>`Per-case today: open a case and use <b>Take over</b> to move ownership, which logs the reassignment. Bulk handover of a whole desk is not built — and it is exactly what the operations roadmap calls workforce and queue balancing: reassigning a backed-up desk, forecasting capacity, and covering absence. The admin's <b>Workload by desk</b> panel already shows where the load sits, which is the input that decision needs.`},
+ {k:['bulk decline','decline all','batch decline','mass decline'],
+  a:()=>`No — and that asymmetry is intentional. <b>Bulk approve</b> exists for the auto-approved space because those cases already cleared the screen and the score, so the batch action confirms a decision the system already made. A decline is adverse: it needs a case-by-case rationale you would have to defend one applicant at a time. Auto-declines are recorded automatically with their reason, and any of them can be pulled into manual review individually.`},
+ {k:['filter','sort the queue','reorder','sort by','search by','find cases where','narrow the list','group by'],
+  a:()=>`The rail search matches <b>applicant name or case ID</b>, and the four spaces separate the queue from the auto-decisioned record. Ordering is deliberate rather than user-sortable: the review queue is fixed to <b>coverage + time-in-queue</b> so the model's opinion never decides who gets looked at first, and Auto-Approved is fixed to expected margin for capacity. Ad-hoc filtering (by policy, employer, desk, score band) is not in the UI — but ask me instead: I can answer "how many whole-life cases", "which desk is busiest", "cases with coverage over 900k".`},
+ {k:['decision memo','memo contents','what is in the memo','download the memo','case summary document'],
+  a:()=>`The decision memo is the case's shareable record: applicant and policy details, the composite score with its rule and ML halves, the ranked risk factors, any document conflicts, the affordability result, the system's recommendation, the human decision with its written rationale, and the attributed timestamped audit trail. It downloads from the case desk once a decision is recorded — that is the artifact an agent, a reinsurer or an auditor asks for.`},
+ {k:['print','pdf a case','export the case','share the case','hard copy'],
+  a:()=>`Use the <b>decision memo</b> download for a shareable record of one case, or the admin's CSV/JSON exports for the whole trail. There is no dedicated print stylesheet, so browser print will work but will not be pretty — worth adding for the underwriters who still put a file in front of a chief medical officer.`},
+ {k:['tablet','mobile','phone','ipad','responsive','small screen','laptop screen'],
+  a:()=>`It is one self-contained page with a responsive layout, so it opens and works on a tablet or laptop — the chat panel and cards reflow, and there is nothing to install. It is designed for a <b>desk</b> though: the queue, the case tabs and the executive tables assume width, so a phone will feel cramped. Since everything is in one file with no server, a tablet works offline just as well as online.`},
+ {k:['offline','no internet','without a server','airplane','local file','self contained'],
+  a:()=>`Yes — that is a design constraint, not an accident. The whole app is a <b>single self-contained HTML file</b>: the book, the model coefficients, the scoring engine and this assistant all ship inside it, with no external requests at runtime. Open it from a file on a laptop with no network and every feature works, including scoring a new application and this conversation. State saves to your browser.`},
+ {k:['api','integrate with','webhook','rest','sdk','programmatic','headless','batch scoring'],
+  a:()=>`Two surfaces exist. A <b>FastAPI service</b> in the repo serves the portfolio and accepts decisions (<span class="mono">GET /portfolio</span>, <span class="mono">POST /cases/{id}/decision</span>, SQLite-backed) for a live deployment; the deployed demo runs without it, snapshot-only. For batch work, the manager's <b>Pilot benchmark CSV</b> is the intended artifact: run a batch of real applications through the engine and get scores, flags, routing and time-to-decision beside your underwriters' own decisions. Anything richer — CRM sync, agent-portal callbacks — is pilot connector work behind the same extraction layer.`},
+ {k:['add a user','new user','provision','user admin','manage users','permissions','new role','access control'],
+  a:()=>`Not in the demo: the six accounts are fixed in the source and sign-in is an honest <b>role selector</b>, not authentication. Real user administration — provisioning, role changes, authority limits per underwriter, separation-of-duties checks, deprovisioning — is an operations responsibility and sits on the roadmap. The role model itself is the part worth reviewing now: which authority each role holds, and what each one can and cannot change.`},
+ {k:['data residency','where does data live','hosting','cloud','on premise','sovereignty','malaysia','indonesia','servers'],
+  a:()=>`In the demo, nowhere but your browser — the page is static and stores state locally, so no application data leaves the machine. For a pilot, residency is a deployment choice rather than a rewrite: the scoring engine is a Python service plus a static front end, so it can run in-country or on-premise to satisfy local data-protection requirements. The design deliberately avoids external data dependencies at decision time, which keeps that choice open.`},
+ {k:['session timeout','log me out','stay signed in','auto logout','idle','security of login','password','authentication','real login','is the login','sign-in real','sign in real','\bauth\b'],
+  a:()=>`No timeout, and no real authentication — the demo's sign-in is a role selector, so treat it as a stage prop rather than a security control. Sign out clears the session in this tab; state persists in the browser until site data is cleared. Real auth, SSO, idle timeout and access logging are pilot requirements, not demo features.`},
+ {k:['are you an ai','are you a bot','are you human','are you chatgpt','what are you','llm','who are you'],
+  a:()=>`I am an assistant built into this page — not a language model calling out to a server. Everything I answer comes from the platform's own rulebook and the live book in front of you, which is why I ship inside a single offline file and why my numbers always match the screen. The trade-off is honest: I know this product deeply and nothing else, so I will tell you when something is outside the build instead of guessing. A pilot could swap my retrieval layer for a hosted model without changing this panel.`},
+ {k:['trust your numbers','why should i trust','how do i know you are right','are you accurate','make things up','hallucinat','verify what you say'],
+  a:()=>`Check me — everything I quote is on screen. Case answers read the same fields the case file shows; portfolio figures use the same computation as the Executive Overview; rankings use the same ordering as the spaces; rule points come from the published weight table. I compute rather than recall, so I cannot drift from the app. Two honest limits: the book is <b>synthetic data</b>, so no figure here describes a real person or a real carrier's results, and the P&L rests on named illustrative assumptions (SG&A 12%, select-period factor) that a pilot would replace with your actuals.`},
+ {k:['what can you not','what cant you','your limits','limitations','out of scope for you','what dont you know'],
+  a:()=>`Straight answer. I <b>cannot</b>: change data or record decisions for you (ask me what to do, then do it in the case desk); read anything outside this book, since there are no external data calls by design; price a policy or issue table ratings, which this build does not do; or speak to reinsurance, juvenile, or occupational-loading rules that are not modelled. I also cannot promise a legal or actuarial opinion — the book is synthetic and the economics rest on labelled assumptions. Everything else about this platform, its rules, its cases and its numbers, ask away.`},
+ {k:['hire another underwriter','more underwriters','headcount','capacity planning','staffing','throughput per underwriter','how many can one'],
+  a:()=>{const y=CASES.filter(c=>c.verdict==='yellow').length;
+   return `Do the arithmetic on the current book: <b>${y} of ${CASES.length}</b> applications need a human (${(100-M.decisioning.straight_through_rate*100).toFixed(0)}%), at roughly $${COST_HUMAN} of fully-loaded underwriter time each. Another underwriter adds review capacity but does nothing for the ${(M.decisioning.straight_through_rate*100).toFixed(0)}% that never reaches a desk — so the cheaper lever is usually the <b>approval line</b> (configuration, and I can model moving it: ask "if I raise the approval line to 60, how many more auto-approve?"). Hire for the referred band when volume grows; automate to keep that band from growing with it.`;}},
+ {k:['model is unavailable','model goes down','if the model fails','system down','fallback','outage','manual mode'],
+  a:()=>`The business does not stop. The two halves fail differently: the <b>rule engine</b> is a deterministic weight table that always scores, and the <b>ML half</b> is exported coefficients evaluated in the page, so there is no live service to be down — the demo has no runtime dependency at all. If a pilot's model service were unavailable, the safe posture is to route everything to <b>manual review</b> rather than fall back to the rule half alone: underwriting continues at manual cost and manual speed, which is the pre-automation baseline, and nothing gets auto-decided on half the evidence.`},
+ {k:['score a','what would a','hypothetical','test an applicant','try a case','new application','price out','run a scenario for'],
+  a:()=>`Use the <b>Score a new application</b> form (on the Portfolio & Model Card page) — enter age, tobacco, build, conditions and the financials and it runs the same engine in your browser: composite score, both halves, the factor breakdown and the band. I cannot score an applicant from a sentence, because a real score needs the full field set the form asks for, and inventing the missing fields would give you a confident wrong number. Tell me the profile you want to test and I will tell you which fields drive it.`},
  {k:['disagree','disagreement','two underwriters','conflicting opinion','who wins','tie break','second opinion'],
   a:()=>`Two kinds of disagreement. <b>Model disagreement</b> — when the rule engine and the ML model diverge sharply on the same file — is itself a referral trigger: the case goes to a human rather than being auto-decided. <b>Human disagreement</b> resolves by authority: the case belongs to whoever holds it, and only a <b>manager</b> can override a recorded decision (logged as MANAGER OVERRIDE, with a written reason and what it superseded). Operations can amend a decision recorded in error, but that is a correction, not a risk opinion.`},
  {k:['rule engine vs','rule half','ml half','difference between the rule','rules vs the model','why two models','why both'],
@@ -2382,7 +2477,7 @@ const UWG_KB=[
   a:()=>`Three defences. <b>Inputs</b>: the rule weights are derived from published mortality evidence (NHANES + NCHS linked mortality), not from historical accept/decline decisions, so past human bias is not learned as signal. <b>Measurement</b>: the Model Card reports <b>fairness by age band and group</b> alongside calibration, so drift is visible rather than assumed away. <b>Process</b>: no protected characteristic is a rule factor, every borderline case gets a human, and every decision carries a written reason in an audit trail a regulator can read.`},
  {k:['who owns','who changes','who signs off','who decides the line','change the threshold','approval line owner','governance of'],
   a:()=>`The acceptance lines (<b>approve under ${A_LINE}</b>, <b>decline at ${D_LINE}</b>) and the ${fmtBigMoney(APPETITE_MONTHLY)} monthly appetite are <b>configuration owned by underwriting leadership</b> — the Chief Underwriting Officer's levers, versioned, not baked into the model. Tightening or loosening the book is a config change with an owner, not a retrain. Individual case authority sits with the desks; decision changes sit with the manager; ops owns the flow.`},
- {k:['what can you do','what do you know','help me','your capabilities','what can i ask','how do i use you'],
+ {k:['what can you do','what do you know','help me','your capabilities','what can i ask','how do i use you','show me everything','everything you can','list what you'],
   a:()=>`Ask me anything about this platform or the book. I answer: <b>rules</b> (decision bands, conflict screen, affordability, requirements grid, routing, SLAs, weights) · <b>live numbers</b> (“what is my loss ratio right now?”, “how much are we earning a month?”) · <b>any applicant</b> by name or case ID, including single fields (“${CASES[0].name}’s credit score”, “does it match across the documents?”) · <b>rankings</b> (auto-approved by margin, auto-declined by risk, who to review first) · and <b>the app itself</b> (roles, exports, spaces, overrides, where things live).`},
  {k:['what is this app','what is this platform','what does this do','what is underwriting copilot','about this system','what am i looking at'],
   a:()=>`<b>Underwriting Copilot</b> — an AI-assisted life-insurance underwriting workbench. It reads a five-document application packet, runs a 6-check cross-document conflict screen, scores risk 0–100 on evidence-anchored weights plus a trained model, and routes only the ambiguous middle band to a human. It runs on a <b>synthetic book of ${CASES.length} applications</b> — a prototype, not a live carrier system — and the whole thing is one self-contained file that works offline.`},
@@ -2470,7 +2565,8 @@ function uwgSubset(q){
   [/unique|disclos|section 6/,'with unique circumstances disclosed',()=>CASES.filter(c=>c.unique)],
   [/pdf|scanned|original doc/,'with original PDFs attached',()=>CASES.filter(c=>c.has_docs)],
   [/condition|medical|diabet|hypertens/,'with declared medical conditions',()=>CASES.filter(c=>c.conditions&&c.conditions!=='None')],
-  [/hazard|skydiv|dangerous activit/,'with hazardous activities',()=>CASES.filter(c=>c.hazard&&c.hazard!=='None')]];
+  [/hazard|skydiv|dangerous activit/,'with hazardous activities',()=>CASES.filter(c=>c.hazard&&c.hazard!=='None')],
+  [/my desk|my queue|my cases|assigned to me|on my plate|\bmine\b/,'open on your desk',()=>undecidedY.filter(c=>CURRENT_ROLE!=='underwriter'||wfGet(c.id).assigneeUid===CURRENT_UID)]];
  for(const [re,label,fn] of S)if(re.test(q))return {label,list:fn()};
  return null;
 }
@@ -2490,12 +2586,14 @@ function uwgAggregateAnswer(q){
  const wantsCount=/how many|number of|count of|how much of the book/.test(q);
  const wantsPct=/what (percent|percentage|share)|percentage of|what pc/.test(q);
  const wantsAvg=/average|mean |typical/.test(q);
- const wantsMax=/highest|largest|biggest|most |top |maximum|longest|oldest|worst/.test(q);
- const wantsMin=/lowest|smallest|least|minimum|shortest|youngest|cheapest|best score/.test(q);
+ const wantsMax=/highest|largest|biggest|most |top |maximum|longest|oldest|worst|riskiest|most risky/.test(q);
+ const wantsMin=/lowest|smallest|least|minimum|shortest|youngest|cheapest|best score|safest|least risky/.test(q);
  const wantsAny=/^(is|are|does|do) (there|any|anyone|anybody)|\bany case|\banyone (who|with|over|under)/.test(q);
  if(!(wantsCount||wantsPct||wantsAvg||wantsMax||wantsMin||wantsAny))return null;
  const sub=uwgSubset(q);
- const met=uwgMetricOf(q);
+ let met=uwgMetricOf(q);
+ if(!met&&(wantsMax||wantsMin)&&/worst|best|riskiest|safest/.test(q))met=uwgMetricOf('risk score');
+ if(!sub&&!met)return null;   // no subject and no metric: not an analytics question
  // a numeric qualifier: "over 60", "above $700k", "score under 40"
  let list=sub?sub.list:CASES.slice(),label=sub?sub.label:'in the book';
  const num=q.match(/(over|above|more than|greater than|under|below|less than|at least)\s*\$?\s*([\d.,]+)\s*(k|m|million|thousand)?/);
@@ -2525,6 +2623,80 @@ function uwgAggregateAnswer(q){
  if(wantsAny)return list.length?`Yes — <b>${list.length}</b> case(s) ${label}: ${ex(list)}${list.length>3?`, and ${list.length-3} more`:''}.`:`No — nothing ${label} in the current book.`;
  return `<b>${list.length}</b> of ${CASES.length} case(s) ${label} — <b>${pct}%</b> of the book.${list.length?` For example ${ex(list)}.`:''}`;
 }
+function uwgGroupAnswer(q){
+ // "which policy type approves most?", "workload by desk", "exposure by state"
+ if(/riskiest|worst case|highest|lowest|oldest case|which case/.test(q))return null;   // that is a case question
+ const grp=/by (policy|product|type)|policy type|which product|whole life|term life|universal/.test(q)?'policy'
+  :/desk|analyst|senior|mid.?tier|workload|who is busiest|team load/.test(q)?'desk'
+  :/state|region|geograph|where.*exposure|by city/.test(q)?'state':null;
+ if(!grp)return null;
+ if(grp==='desk'){
+  const y=CASES.filter(c=>c.verdict==='yellow'&&!wfGet(c.id).decision);
+  const d={};y.forEach(c=>{const t=wfGet(c.id).tier||'unassigned';(d[t]=d[t]||[]).push(c);});
+  const rows=Object.entries(d).sort((a,b)=>b[1].length-a[1].length).map(([t,l])=>{
+   const avg=l.reduce((s,c)=>s+ageHours(c),0)/l.length;
+   const br=l.filter(c=>ageHours(c)>=8).length;
+   return `<b>${(UWS[t]||{}).label||t}</b>${(UWS[t]||{}).name?` (${UWS[t].name})`:''} — ${l.length} open, avg ${fmtAge(avg)} in queue, ${br} over SLA`;});
+  return `Workload across the desks right now:<br>${rows.join('<br>')}<br>Routing is by authority, not availability — a case lands on the desk allowed to hold it, so an uneven split is expected.`;
+ }
+ if(grp==='policy'){
+  const g={};CASES.forEach(c=>{(g[c.policy]=g[c.policy]||[]).push(c);});
+  const rows=Object.entries(g).map(([p,l])=>{
+   const ap=l.filter(c=>c.verdict==='green').length,rf=l.filter(c=>c.verdict==='yellow').length,dc=l.filter(c=>c.verdict==='red').length;
+   const cov=l.reduce((s,c)=>s+(c.coverage||0),0);
+   return {p,n:l.length,ap,rf,dc,rate:ap/l.length*100,cov};})
+   .sort((a,b)=>b.rate-a.rate);
+  return `By policy type — approval rate, mix and exposure:<br>${rows.map(r=>`<b>${r.p}</b> — ${r.n} cases (${(r.n/CASES.length*100).toFixed(0)}% of book), <b>${r.rate.toFixed(0)}% auto-approved</b>, ${r.rf} referred, ${r.dc} declined, ${fmtBigMoney(r.cov)} requested`).join('<br>')}`;
+ }
+ const g={};CASES.forEach(c=>{const k=c.state||'—';(g[k]=g[k]||[]).push(c);});
+ const rows=Object.entries(g).map(([st,l])=>({st,n:l.length,cov:l.filter(c=>finalOf(c)==='approve').reduce((s,c)=>s+(c.coverage||0),0)}))
+  .sort((a,b)=>b.cov-a.cov).slice(0,6);
+ return `Accepted exposure by state (top ${rows.length}):<br>${rows.map(r=>`<b>${r.st}</b> — ${fmtBigMoney(r.cov)} accepted across ${r.n} application(s)`).join('<br>')}<br>Concentration is worth watching: a single-state catastrophe correlates claims that the score treats as independent.`;
+}
+function uwgWhatIfAnswer(q){
+ // Threshold and claims scenarios, recomputed live rather than described.
+ const line=q.match(/(approval|approve|accept)[^\d]{0,24}(\d{2})|(\d{2})[^\d]{0,14}(approval|approve) line/);
+ if(line&&/raise|lower|move|change|set|if (i|we)/.test(q)){
+  const v=parseInt(line[2]||line[3],10);
+  if(v>=10&&v<=95){
+   const now=CASES.filter(c=>c.verdict==='green').length;
+   const then=CASES.filter(c=>c.risk_score<v&&!(c.conflicts||[]).some(k=>k.severity==='major')).length;
+   const d=then-now;
+   const newCov=CASES.filter(c=>c.risk_score<v&&!(c.conflicts||[]).some(k=>k.severity==='major')).reduce((s,c)=>s+(c.coverage||0),0);
+   return `Moving the approval line from <b>${A_LINE}</b> to <b>${v}</b>: auto-approvals go from <b>${now}</b> to <b>${then}</b> (<b>${d>=0?'+':''}${d}</b> cases, ${(then/CASES.length*100).toFixed(0)}% straight-through), and accepted cover would be about <b>${fmtBigMoney(newCov)}</b> against the ${fmtBigMoney(APPETITE_MONTHLY)} appetite. ${d>0?`Those ${d} case(s) stop getting a human look — the trade is throughput for scrutiny.`:'Fewer cases clear automatically; more underwriter time per policy.'}`;
+  }
+ }
+ const worse=q.match(/claims?[^\d]{0,24}(\d{1,3})\s*%|(\d{1,3})\s*%[^.]{0,24}(worse|higher|more claims)/);
+ if(worse&&/claim|loss|mortality/.test(q)){
+  const pct=parseInt(worse[1]||worse[2],10);
+  const appr=CASES.filter(c=>finalOf(c)==='approve');
+  const prem=appr.reduce((s,c)=>s+(c.premium||0),0);
+  const base=appr.reduce((s,c)=>s+expectedAnnualClaim(c),0);
+  const refN=CASES.filter(c=>c.verdict==='yellow').length;
+  const ops=CASES.length*COST_AUTO+refN*COST_HUMAN;
+  const cl=base*(1+pct/100);
+  const op=prem-cl-prem*SGA_RATE-ops;
+  const comb=(cl+prem*SGA_RATE+ops)/prem*100;
+  return `If claims run <b>${pct}% worse</b> than modelled (${fmtMoneyK(base)} → ${fmtMoneyK(cl)}/yr): operating income moves from <b>${fmtMoneyK(prem-base-prem*SGA_RATE-ops)}</b> to <b>${op>=0?'':'−'}${fmtMoneyK(Math.abs(op))}/yr</b>, and the combined ratio goes to <b>${comb.toFixed(0)}%</b> — ${comb<100?'still an underwriting profit':'an underwriting loss'}. The lever is the approval line, which is configuration.`;
+ }
+ return null;
+}
+function uwgBriefingAnswer(){
+ // "anything I should worry about today?" — the shift briefing.
+ const mine=CASES.filter(c=>c.verdict==='yellow'&&!wfGet(c.id).decision&&(CURRENT_ROLE!=='underwriter'||wfGet(c.id).assigneeUid===CURRENT_UID));
+ const br=mine.filter(c=>ageHours(c)>=8).sort((a,b)=>ageHours(b)-ageHours(a));
+ const conf=mine.filter(c=>(c.conflicts||[]).length);
+ const big=mine.slice().sort((a,b)=>(b.coverage||0)-(a.coverage||0))[0];
+ const appr=CASES.filter(c=>finalOf(c)==='approve');
+ const pct=appr.reduce((s,c)=>s+(c.coverage||0),0)/APPETITE_MONTHLY*100;
+ const L=[`<b>${mine.length}</b> case(s) open${CURRENT_ROLE==='underwriter'?' on your desk':''}.`];
+ if(br.length)L.push(`⚠ <b>${br.length} past the 8-hour SLA</b> — oldest is <span class="mono">${br[0].id}</span> ${br[0].name} at ${fmtAge(ageHours(br[0]))}.`);
+ else L.push(`✓ Nothing past the 8-hour SLA.`);
+ if(conf.length)L.push(`⚠ <b>${conf.length} carrying document conflicts</b> — resolve those before scoring anything else: ${conf.slice(0,2).map(c=>`<span class="mono">${c.id}</span>`).join(', ')}.`);
+ if(big)L.push(`Largest exposure waiting: <span class="mono">${big.id}</span> ${big.name}, ${fmt$(big.coverage)}.`);
+ L.push(`Book is at <b>${pct.toFixed(0)}%</b> of the ${fmtBigMoney(APPETITE_MONTHLY)} monthly appetite.`);
+ return L.join('<br>');
+}
 function uwgQueueAnswer(){
  // "Who should I review first?" — the queue’s own priority order, live.
  const pend=CASES.filter(c=>c.verdict==='yellow'&&!wfGet(c.id).decision);
@@ -2540,6 +2712,27 @@ function uwgFieldAnswer(c,q){
  const st=wfGet(c.id);
  const F=[
   [/case id|which id|the id\b/, ()=>`case ID <b><span class="mono">${c.id}</span></b>`],
+  [/why (is|are|was|were) (it|this|that|he|she|they)? ?so (high|low|risky)|why so (high|low)|what.s driving it|why such a/, ()=>{
+    const f=(c.rule_factors||[]).filter(x=>x[2]>0).sort((a,b)=>b[2]-a[2]).slice(0,4);
+    return `score <b>${c.risk_score}</b> because — ${f.length?f.map(x=>`${x[0]} ${x[1]} <b>+${x[2]}</b>`).join(', '):'no rule factors fired; the ML half carries it'}${(c.conflicts||[]).length?`, plus ${c.conflicts.length} document conflict(s)`:''}`;}],
+  [/who decided|who approved|who declined|decided by|who signed|who made the (call|decision)|has anyone decided|been decided/, ()=>{
+    if(st.decision)return `decided <b>${st.decision.action}</b> by ${st.decision.by} (${st.decision.role}) at ${st.decision.at} — “${st.decision.rationale}”${st.decision.managerOverride?' [manager override]':''}${st.decision.opsAmendment?' [ops amendment]':''}`;
+    if(c.verdict==='yellow')return `<b>not decided yet</b> — open with ${st.assignee||'no one'}${st.tier?` (${(UWS[st.tier]||{}).label} desk)`:''}, ${fmtAge(ageHours(c))} in queue`;
+    return `no human decision on record — the system decided <b>${c.decision}</b> straight-through`;}],
+  [/what would it take|how (could|do) (i|we) approve|to get (it|this) approved|path to approval|make it approvable/, ()=>{
+    const gap=c.risk_score-(A_LINE-1);
+    const out=reqOutstandingList(c);
+    const bits=[];
+    if(c.risk_score>=A_LINE)bits.push(`the score needs to fall <b>${gap} point(s)</b> to clear the ${A_LINE}-point line`);
+    if((c.conflicts||[]).length)bits.push(`resolve ${c.conflicts.length} document conflict(s) (${c.conflicts.map(k=>k.type.replace(/_/g,' ')).join(', ')})`);
+    if(out.length)bits.push(`complete outstanding evidence: <b>${out.join(', ')}</b>`);
+    if(c.afford&&c.afford.verdict!=='pass')bits.push(`clear affordability (currently ${c.afford.label}) — usually by reducing the face amount`);
+    if(c.unique)bits.push('a whole-person judgement on the disclosed circumstances');
+    return bits.length?`to approve: ${bits.join('; ')}. Nothing here is automatic — an underwriter can approve it now with a written rationale, since the score advises rather than decides`:`nothing is blocking it — you can approve now with a rationale`;}],
+  [/reopen|can i change (it|this)|amend it|undo (it|this)|take it back/, ()=>{
+    if(!st.decision)return `nothing to reopen — no decision is recorded yet`;
+    const who=CURRENT_ROLE==='manager'?'You can reopen or override it directly':CURRENT_ROLE==='admin'?'You can reopen it or amend the decision (logged as OPS AMENDMENT)':st.decision.by===CURRENT_USER?'You recorded it, so you can reopen it from the case desk':'Only a manager (or operations, to correct an error) can change another underwriter’s recorded decision';
+    return `it is recorded as <b>${st.decision.action}</b> by ${st.decision.by}. ${who} — every change needs a written reason and keeps what it superseded`;}],
   // "does it match across the documents?" — run the whole 6-check screen out loud
   // Consistency verdict is concise: one line when clean, and only the failing
   // rows (with both values) when not. The third element claims the "all docs"
@@ -2633,6 +2826,11 @@ function uwgFieldAnswer(c,q){
    and half a name far more often than a clean full match. Tokens are scored
    exact / near-miss (edit distance 1–2), and a tie asks rather than guesses. */
 const UWG_STOP=new Set(['what','whats','which','the','and','for','with','about','tell','show','give','how','why','who','whom','does','did','his','her','hers','their','they','them','this','that','been','has','have','was','were','are','file','files','case','cases','document','documents','docs','packet','queue','score','weight','height','income','premium','coverage','decision','status','long','much','many','from','into','right','now','our','your','ours','yours','review','reviewed','need','needs','there','then','also','please','info','information']);
+function uwgKeyHit(q,k){
+ const qn=q.replace(/['’]/g,'');   // "can't" and "cant" are the same question
+ if(k.indexOf(' ')>=0)return qn.indexOf(k)>=0;
+ return new RegExp('\\b'+k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).test(qn);
+}
 function uwgLev(a,b){
  // Damerau (OSA): a swapped pair — "asiha" for "aisha" — is ONE error, the
  // single most common typo shape in a hand-typed name.
@@ -2759,6 +2957,10 @@ function uwgAnswer(qRaw){
   if(c)return withIntent(c);
   uwgPending=pending;   // not an answer to the ask — keep it alive one more turn
  }
+ // scenarios, group-bys and the shift briefing run before case lookups
+ const wi=uwgWhatIfAnswer(q);if(wi)return wi;
+ if(/worry about|anything i should know|brief me|briefing|summar(y|ise|ize) my (day|shift|queue)|how is my day|what.s on my plate/.test(q))return uwgBriefingAnswer();
+ const grp=uwgGroupAnswer(q);if(grp)return grp;
  // book-level analytics before anything case-specific: "how many…", "which
  // case has the highest…", "what is the average…", "is there any case with…"
  const agg=uwgAggregateAnswer(q);
@@ -2801,7 +3003,8 @@ function uwgAnswer(qRaw){
  // a named metric → the exact live number, before any explanatory entry
  const metric=uwgMetricAnswer(q);
  if(metric)return metric;
- if(nm.list.length)return nameReply();
+ // (fuzzy name fallback moved below the rulebook — a weak name guess must
+ // not outrank a real answer)
  // Conversation memory: once we have been talking about someone, an unqualified
  // follow-up stays with them — "and his credit score?", "how long in queue?",
  // "does it match across documents?" — no need to repeat the name. The case on
@@ -2821,8 +3024,9 @@ function uwgAnswer(qRaw){
  // multi-word keys beat incidental short ones, so “affordability screen” lands on
  // affordability rather than on any entry that happens to mention a screen.
  let best=null,bestN=0;
- UWG_KB.forEach(e=>{let n=0;e.k.forEach(k=>{if(q.includes(k))n+=k.includes(' ')?k.length+4:k.length;});if(n>bestN){bestN=n;best=e;}});
+ UWG_KB.forEach(e=>{let n=0;e.k.forEach(k=>{if(uwgKeyHit(q,k))n+=k.indexOf(' ')>=0?k.length+4:k.length;});if(n>bestN){bestN=n;best=e;}});
  if(best)return best.a();
+ if(nm.list.length)return nameReply();   // no rulebook hit: try the loose name match
  return 'I cover the platform’s own rulebook: decision bands, the 6-check conflict screen, DOB / smoker policy, affordability, the requirements grid, desk routing, SLAs, evidence-anchored weights, the executive P&L, decision-change authority, exports and integrations. I can also look up any applicant — by case ID (<span class="mono">'+CASES[0].id+'</span>) or by name (“what is '+CASES[0].name+'’s income?”), with follow-ups (“what is her case ID?”) — read live metrics (“what is my loss ratio right now?”), rank the auto-approved or auto-declined book, and tell you who to review first in the queue.';
 }
 render();
