@@ -516,46 +516,38 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 .role-chip.sel b{color:var(--acc)}
 @media (max-width:880px){.login-shell{grid-template-columns:1fr;max-width:460px}.login-brand{padding:26px 30px 22px}.lb-h{font-size:18px}.lb-foot{padding-top:14px}.lb-rings{display:none}}
 @media (prefers-reduced-motion:reduce){.lb-sweep{animation:none}}
-/* ---------- sign-in ambience: holographic HUD reticles ----------
-   JARVIS-style instrument rings: graduated tick rings, segmented arcs,
-   dashed orbits and a glowing core — four assemblies, every ring rotating
-   continuously at its own speed and direction. Pure CSS, transform-only. */
+/* ---------- sign-in ambience: crystalline holo-wireframe ----------
+   Stark-hologram vocabulary: faceted wireframe shards (triangulated mesh,
+   glowing vertices, glass facets that shimmer) turning continuously in 3D,
+   over constellation nets of nodes and struts. Angular, not circular. */
 .login-shell{position:relative;z-index:2}
-.lg-geo{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
-.hud{position:absolute;pointer-events:none}
-.hud .hr{position:absolute;border-radius:50%}
-.hud::before,.hud::after{content:'';position:absolute;border-radius:50%;border:1px solid rgba(106,103,247,.16)}
-.hud::before{inset:6%}
-.hud::after{inset:17.5%;border-color:rgba(106,103,247,.24)}
-/* fine graduation ring (outer) */
-.hr.t1{inset:0;background:repeating-conic-gradient(rgba(106,103,247,.5) 0deg .38deg,transparent .38deg 4.6deg);
- -webkit-mask:radial-gradient(closest-side,transparent 93.4%,#000 94% 98.2%,transparent 98.8%);
- mask:radial-gradient(closest-side,transparent 93.4%,#000 94% 98.2%,transparent 98.8%);
- animation:hudSpin 26s linear infinite}
-/* segmented arc ring */
-.hr.a1{inset:11%;background:conic-gradient(rgba(106,103,247,.55) 0deg 70deg,transparent 70deg 96deg,rgba(106,103,247,.32) 96deg 200deg,transparent 200deg 226deg,rgba(106,103,247,.55) 226deg 318deg,transparent 318deg);
- -webkit-mask:radial-gradient(closest-side,transparent 96.6%,#000 97% 98.2%,transparent 98.6%);
- mask:radial-gradient(closest-side,transparent 96.6%,#000 97% 98.2%,transparent 98.6%);
- animation:hudSpinR 38s linear infinite}
-/* dashed orbit */
-.hr.d1{inset:24%;border:1px dashed rgba(106,103,247,.42);animation:hudSpin 52s linear infinite}
-/* dense inner graduations */
-.hr.t2{inset:36%;background:repeating-conic-gradient(rgba(165,163,255,.55) 0deg .32deg,transparent .32deg 2.6deg);
- -webkit-mask:radial-gradient(closest-side,transparent 90%,#000 90.6% 96.4%,transparent 97%);
- mask:radial-gradient(closest-side,transparent 90%,#000 90.6% 96.4%,transparent 97%);
- animation:hudSpinR 15s linear infinite}
-/* glowing core ring */
-.hr.s1{inset:47%;border:1px solid rgba(165,163,255,.55);box-shadow:0 0 14px rgba(106,103,247,.22),inset 0 0 10px rgba(106,103,247,.12);animation:hudPulse 4.5s ease-in-out infinite}
-@keyframes hudSpin{to{transform:rotate(360deg)}}
-@keyframes hudSpinR{to{transform:rotate(-360deg)}}
-@keyframes hudPulse{0%,100%{box-shadow:0 0 20px rgba(106,103,247,.30),inset 0 0 14px rgba(106,103,247,.18)}50%{box-shadow:0 0 34px rgba(106,103,247,.55),inset 0 0 22px rgba(106,103,247,.30)}}
-.hud.ha{width:640px;height:640px;left:-160px;top:-150px}
-.hud.hb{width:940px;height:940px;right:-300px;bottom:-330px}
-.hud.hc{width:210px;height:210px;right:12%;top:11%}
-.hud.hd{width:150px;height:150px;left:10%;bottom:12%}
-:root[data-theme="light"] .hr.t1,:root[data-theme="light"] .hr.t2{filter:saturate(1.1)}
-@media (prefers-reduced-motion:reduce){.hud .hr{animation:none}}
-@media (max-width:880px){.hud.hc,.hud.hd{display:none}}
+.lg-geo{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;perspective:1100px}
+.cry{position:absolute;overflow:visible;filter:drop-shadow(0 0 7px rgba(106,103,247,.35))}
+.cry path,.cry polygon{stroke:rgba(106,103,247,.55);stroke-width:1;fill:none;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+.cry .hl{stroke:rgba(165,163,255,.8)}
+.cry polygon.fx,.cry polygon.fy,.cry polygon.fz{stroke:rgba(106,103,247,.35)}
+.cry .fx{fill:rgba(106,103,247,.10);animation:facetGlow 5.5s ease-in-out infinite}
+.cry .fy{fill:rgba(143,107,255,.08);animation:facetGlow 7s ease-in-out infinite;animation-delay:-2.4s}
+.cry .fz{fill:rgba(165,163,255,.09);animation:facetGlow 6.2s ease-in-out infinite;animation-delay:-4.1s}
+@keyframes facetGlow{0%,100%{fill-opacity:.35}50%{fill-opacity:1}}
+.cry .nd{fill:#A5A3FF;stroke:none;animation:nodeBlink 3.8s ease-in-out infinite}
+@keyframes nodeBlink{0%,100%{opacity:.45}50%{opacity:1}}
+.cry.ca{width:480px;height:480px;left:-70px;top:-60px;animation:cryTurn 24s linear infinite}
+.cry.cb{width:660px;height:660px;right:-170px;bottom:-190px;animation:cryTurnR 34s linear infinite}
+.cry.cc{width:210px;height:210px;right:12%;top:9%;animation:cryTurn 16s linear infinite}
+@keyframes cryTurn{from{transform:rotateX(16deg) rotateY(0deg)}to{transform:rotateX(16deg) rotateY(360deg)}}
+@keyframes cryTurnR{from{transform:rotateX(-12deg) rotateY(360deg)}to{transform:rotateX(-12deg) rotateY(0deg)}}
+.net{position:absolute;opacity:.75}
+.net path{stroke:rgba(106,103,247,.30);stroke-width:1;fill:none;vector-effect:non-scaling-stroke}
+.net circle{fill:#A5A3FF;animation:nodeBlink 4.2s ease-in-out infinite}
+.net circle:nth-of-type(2n){animation-delay:-1.4s}
+.net circle:nth-of-type(3n){animation-delay:-2.8s}
+.net.na{width:480px;left:4%;bottom:6%;animation:netDrift 13s ease-in-out infinite alternate}
+.net.nb{width:430px;right:3%;top:7%;animation:netDrift 11s ease-in-out infinite alternate-reverse}
+@keyframes netDrift{from{transform:translate(0,0)}to{transform:translate(26px,-18px)}}
+:root[data-theme="light"] .cry path,:root[data-theme="light"] .cry polygon{stroke:rgba(90,87,224,.55)}
+@media (prefers-reduced-motion:reduce){.cry,.net,.cry .fx,.cry .fy,.cry .fz,.cry .nd,.net circle{animation:none}}
+@media (max-width:880px){.cry.cc,.net.nb{display:none}}
 /* ---------- UW Guide — embedded knowledge assistant ---------- */
 #uwgBtn{position:fixed;right:20px;bottom:20px;z-index:960;display:none;align-items:center;gap:6px;font:600 12.5px 'Poppins',sans-serif;color:#fff;background:var(--acc);border:none;border-radius:999px;padding:11px 18px;cursor:pointer;box-shadow:0 8px 24px rgba(106,103,247,.38)}
 #uwgBtn:hover{filter:brightness(1.08)}
@@ -609,10 +601,32 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 </div>
 <div id="login">
  <div class="lg-geo" aria-hidden="true">
-  <div class="hud ha"><i class="hr t1"></i><i class="hr a1"></i><i class="hr d1"></i><i class="hr t2"></i><i class="hr s1"></i></div>
-  <div class="hud hb"><i class="hr t1"></i><i class="hr a1"></i><i class="hr d1"></i><i class="hr t2"></i><i class="hr s1"></i></div>
-  <div class="hud hc"><i class="hr t2"></i><i class="hr a1"></i><i class="hr d1"></i></div>
-  <div class="hud hd"><i class="hr d1"></i><i class="hr t2"></i><i class="hr s1"></i></div>
+  <svg class="cry ca" viewBox="0 0 420 420" xmlns="http://www.w3.org/2000/svg"><g><polygon class="fx" points="204,18 322,98 198,152"/>
+    <polygon class="fy" points="46,216 98,80 142,248"/>
+    <polygon class="fz" points="272,232 372,240 282,372"/>
+    <path d="M204,18 L322,98 L372,240 L282,372 L130,356 L46,216 L98,80 Z"/>
+    <path class="hl" d="M204,18 L198,152 L322,98 M198,152 L98,80 M198,152 L142,248 L46,216 M142,248 L130,356 M142,248 L272,232 L282,372 M272,232 L372,240 M272,232 L198,152 M130,356 L272,232"/>
+    <circle class="nd" cx="198" cy="152" r="3"/><circle class="nd" cx="272" cy="232" r="3"/><circle class="nd" cx="142" cy="248" r="3"/></g></svg>
+  <svg class="cry cb" viewBox="0 0 420 420" xmlns="http://www.w3.org/2000/svg"><g transform="rotate(140 210 210)"><polygon class="fx" points="204,18 322,98 198,152"/>
+    <polygon class="fy" points="46,216 98,80 142,248"/>
+    <polygon class="fz" points="272,232 372,240 282,372"/>
+    <path d="M204,18 L322,98 L372,240 L282,372 L130,356 L46,216 L98,80 Z"/>
+    <path class="hl" d="M204,18 L198,152 L322,98 M198,152 L98,80 M198,152 L142,248 L46,216 M142,248 L130,356 M142,248 L272,232 L282,372 M272,232 L372,240 M272,232 L198,152 M130,356 L272,232"/>
+    <circle class="nd" cx="198" cy="152" r="3"/><circle class="nd" cx="272" cy="232" r="3"/><circle class="nd" cx="142" cy="248" r="3"/></g></svg>
+  <svg class="cry cc" viewBox="0 0 420 420" xmlns="http://www.w3.org/2000/svg"><g transform="rotate(250 210 210)"><polygon class="fx" points="204,18 322,98 198,152"/>
+    <polygon class="fy" points="46,216 98,80 142,248"/>
+    <polygon class="fz" points="272,232 372,240 282,372"/>
+    <path d="M204,18 L322,98 L372,240 L282,372 L130,356 L46,216 L98,80 Z"/>
+    <path class="hl" d="M204,18 L198,152 L322,98 M198,152 L98,80 M198,152 L142,248 L46,216 M142,248 L130,356 M142,248 L272,232 L282,372 M272,232 L372,240 M272,232 L198,152 M130,356 L272,232"/>
+    <circle class="nd" cx="198" cy="152" r="3"/><circle class="nd" cx="272" cy="232" r="3"/><circle class="nd" cx="142" cy="248" r="3"/></g></svg>
+  <svg class="net na" viewBox="0 0 520 320" xmlns="http://www.w3.org/2000/svg">
+   <path d="M36,52 L150,96 L96,208 Z M150,96 L252,64 L318,168 L150,96 M318,168 L430,116 L488,238 M318,168 L360,268 L488,238 M96,208 L214,262 L360,268"/>
+   <circle cx="36" cy="52" r="2.6"/><circle cx="150" cy="96" r="3.2"/><circle cx="96" cy="208" r="2.6"/><circle cx="252" cy="64" r="2.6"/>
+   <circle cx="318" cy="168" r="3.4"/><circle cx="430" cy="116" r="2.6"/><circle cx="488" cy="238" r="2.6"/><circle cx="360" cy="268" r="2.6"/><circle cx="214" cy="262" r="2.6"/>
+  </svg>
+  <svg class="net nb" viewBox="0 0 520 320"><path d="M60,240 L170,180 L140,60 M170,180 L300,220 L340,90 L170,180 M300,220 L440,250 M340,90 L470,60"/>
+   <circle cx="60" cy="240" r="2.6"/><circle cx="170" cy="180" r="3.2"/><circle cx="140" cy="60" r="2.6"/><circle cx="300" cy="220" r="2.8"/><circle cx="340" cy="90" r="3.0"/><circle cx="440" cy="250" r="2.6"/><circle cx="470" cy="60" r="2.6"/>
+  </svg>
  </div>
  <div class="login-shell">
   <div class="login-brand">
