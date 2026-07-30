@@ -43,6 +43,9 @@ PUBLISH="$(mktemp -d)"
 trap 'rm -rf "$PUBLISH"' EXIT
 cp "$ROOT/output/underwriting_copilot_mvp.html" "$PUBLISH/index.html"
 cp "$ROOT/web/deploy/robots.txt" "$ROOT/web/deploy/llms.txt" "$PUBLISH/"
+# Advanced-mode worker: relays /api/uwg to the Anthropic API when an
+# ANTHROPIC_API_KEY secret is set on the project; serves assets otherwise.
+cp "$ROOT/web/deploy/_worker.js" "$PUBLISH/"
 
 # Upload. `wrangler pages deploy` refuses to run without a TTY, so it is wrapped
 # in script(1) to present a pseudo-terminal. The BSD (macOS) and util-linux
