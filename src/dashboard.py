@@ -2576,26 +2576,38 @@ function uwgSubset(q){
   [/smoker|tobacco|cotinine/,'smokers',()=>CASES.filter(c=>/smok/i.test(c.smoker||'')&&!/non/i.test(c.smoker||''))],
   [/auto.?declin|declined|rejected/,'auto-declined',()=>CASES.filter(c=>c.verdict==='red')],
   [/auto.?approv|approved|straight.?through/,'auto-approved',()=>CASES.filter(c=>c.verdict==='green')],
-  [/manual review|referred|in (the )?queue|need a human|pending/,'in manual review',()=>undecidedY],
+  [/manual review|referred|review queue|in (the )?queue|the queue|need a human|pending|undecided|awaiting/,'in manual review',()=>undecidedY],
   [/afford/,'failing the affordability screen',()=>CASES.filter(c=>c.afford&&c.afford.verdict==='fail')],
   [/unique|disclos|section 6/,'with unique circumstances disclosed',()=>CASES.filter(c=>c.unique)],
   [/pdf|scanned|original doc/,'with original PDFs attached',()=>CASES.filter(c=>c.has_docs)],
   [/condition|medical|diabet|hypertens/,'with declared medical conditions',()=>CASES.filter(c=>c.conditions&&c.conditions!=='None')],
   [/hazard|skydiv|dangerous activit/,'with hazardous activities',()=>CASES.filter(c=>c.hazard&&c.hazard!=='None')],
+  [/which desk|what desk|whose desk|which underwriter|who holds|which team/,'in manual review (the only cases on a desk)',()=>undecidedY],
   [/my desk|my queue|my cases|assigned to me|on my plate|\bmine\b/,'open on your desk',()=>undecidedY.filter(c=>CURRENT_ROLE!=='underwriter'||wfGet(c.id).assigneeUid===CURRENT_UID)]];
- for(const [re,label,fn] of S)if(re.test(q))return {label,list:fn()};
- return null;
+ const hits=[];
+ for(const [re,label,fn] of S)if(re.test(q))hits.push({label,fn});
+ if(!hits.length)return null;
+ // "both a conflict and a failed affordability" = the intersection
+ if(hits.length>1&&/\bboth\b|as well as|and also|at the same time/.test(q)){
+  let l=CASES.slice();hits.forEach(h=>{const ids=new Set(h.fn().map(c=>c.id));l=l.filter(c=>ids.has(c.id));});
+  return {label:hits.map(h=>h.label).join(' AND '),list:l};
+ }
+ return {label:hits[0].label,list:hits[0].fn()};
 }
 function uwgMetricOf(q){
- if(/years? old|yrs old|aged \d|\bage of\b/.test(q))return {label:'age',get:c=>c.age||0,fmt:v=>Math.round(v)+' years'};
- if(/queue|waiting|sla|time in/.test(q))return {label:'time in queue',get:c=>ageHours(c),fmt:v=>fmtAge(v)};
- if(/coverage|cover\b|face amount|exposure/.test(q))return {label:'coverage',get:c=>c.coverage||0,fmt:v=>fmt$(v)};
- if(/premium/.test(q))return {label:'premium',get:c=>c.premium||0,fmt:v=>fmt$(v)+'/yr'};
- if(/\bage\b|oldest|youngest/.test(q))return {label:'age',get:c=>c.age||0,fmt:v=>Math.round(v)+' years'};
- if(/credit/.test(q))return {label:'credit score',get:c=>c.credit||0,fmt:v=>Math.round(v)};
- if(/\bbmi\b/.test(q))return {label:'BMI',get:c=>c.bmi||0,fmt:v=>v.toFixed(1)};
- if(/income|salary/.test(q))return {label:'income',get:c=>c.income||0,fmt:v=>fmt$(v)};
- if(/score|risk/.test(q))return {label:'risk score',get:c=>c.risk_score||0,fmt:v=>Math.round(v)};
+ // `worse` gives each metric a direction, so "the worst credit score" means the
+ // LOWEST while "the worst risk score" means the highest. `sum` marks the
+ // metrics it is meaningful to total.
+ if(/years? old|yrs old|aged \d|\bage of\b/.test(q))return {label:'age',get:c=>c.age||0,fmt:v=>Math.round(v)+' years',worse:'high'};
+ if(/coverage|cover\b|face amount|exposure/.test(q))return {label:'coverage',get:c=>c.coverage||0,fmt:v=>fmt$(v),worse:'high',sum:1};
+ if(/premium/.test(q))return {label:'premium',get:c=>c.premium||0,fmt:v=>fmt$(v)+'/yr',worse:'low',sum:1};
+ if(/expected claim|claims cost|payout/.test(q))return {label:'expected annual claims',get:c=>expectedAnnualClaim(c),fmt:v=>fmt$(v)+'/yr',worse:'high',sum:1};
+ if(/\bage\b|oldest|youngest/.test(q))return {label:'age',get:c=>c.age||0,fmt:v=>Math.round(v)+' years',worse:'high'};
+ if(/credit/.test(q))return {label:'credit score',get:c=>c.credit||0,fmt:v=>Math.round(v),worse:'low'};
+ if(/\bbmi\b/.test(q))return {label:'BMI',get:c=>c.bmi||0,fmt:v=>v.toFixed(1),worse:'high'};
+ if(/income|salary/.test(q))return {label:'income',get:c=>c.income||0,fmt:v=>fmt$(v),worse:'low',sum:1};
+ if(/score|risk/.test(q))return {label:'risk score',get:c=>c.risk_score||0,fmt:v=>Math.round(v),worse:'high'};
+ if(/queue|waiting|\bsla\b|time in|how long/.test(q))return {label:'time in queue',get:c=>ageHours(c),fmt:v=>fmtAge(v),worse:'high'};
  return null;
 }
 function uwgAggregateAnswer(q){
@@ -2605,9 +2617,14 @@ function uwgAggregateAnswer(q){
  const wantsMax=/highest|largest|biggest|most |top |maximum|longest|oldest|worst|riskiest|most risky/.test(q);
  const wantsMin=/lowest|smallest|least|minimum|shortest|youngest|cheapest|best score|safest|least risky/.test(q);
  const wantsAny=/^(is|are|does|do) (there|any|anyone|anybody)|\bany case|\banyone (who|with|over|under)/.test(q);
- if(!(wantsCount||wantsPct||wantsAvg||wantsMax||wantsMin||wantsAny))return null;
+ // "how much premium is sitting in the queue" — a total, not a count. Excludes
+ // price questions ("how much does an APS cost"), which belong to the rulebook.
+ const wantsSum=/how much|\btotal\b|combined|sum of|aggregate|worth of|how many dollars/.test(q)
+   &&!/how much (does|do|would|did|will) (an?|it|the|that|this)\b/.test(q);
+ if(!(wantsCount||wantsPct||wantsAvg||wantsMax||wantsMin||wantsAny||wantsSum))return null;
  const sub=uwgSubset(q);
  let met=uwgMetricOf(q);
+ if(!met&&(wantsMax||wantsMin)&&/largest|biggest|smallest|most expensive|cheapest/.test(q))met=uwgMetricOf('coverage');
  if(!met&&(wantsMax||wantsMin)&&/worst|best|riskiest|safest/.test(q))met=uwgMetricOf('risk score');
  if(!sub&&!met)return null;   // no subject and no metric: not an analytics question
  // a numeric qualifier: "over 60", "above $700k", "score under 40"
@@ -2621,12 +2638,26 @@ function uwgAggregateAnswer(q){
   label=`${label==='in the book'?'':label+' '}with ${met.label} ${up?'over':'under'} ${met.fmt(v)}`;
  }
  const ex=l=>l.slice(0,3).map(c=>`<span class="mono">${c.id}</span> ${c.name}`).join(', ');
+ if(wantsSum&&!met&&/money|dollar|value|tied up|worth|exposure|capital/.test(q))met=uwgMetricOf('coverage');
+ if(wantsSum&&met&&met.sum){
+  if(!list.length)return `Nothing ${label} to total.`;
+  const tot=list.reduce((s,c)=>s+met.get(c),0);
+  const bookTot=CASES.reduce((s,c)=>s+met.get(c),0);
+  const biggest=list.slice().sort((a,b)=>met.get(b)-met.get(a))[0];
+  return `<b>${met.fmt(tot)}</b> of ${met.label} across <b>${list.length}</b> case(s) ${label} — ${bookTot?(tot/bookTot*100).toFixed(0):0}% of the book's ${met.fmt(bookTot)}. Largest single: <span class="mono">${biggest.id}</span> ${biggest.name} at ${met.fmt(met.get(biggest))}.`;
+ }
  if(wantsMax||wantsMin){
   if(!met)return null;
-  const sorted=list.slice().sort((a,b)=>wantsMax?met.get(b)-met.get(a):met.get(a)-met.get(b));
+  // "worst"/"best" follow the metric's own direction
+  let hi=wantsMax;
+  if(/\bworst\b|riskiest/.test(q))hi=met.worse!=='low';
+  else if(/\bbest\b|safest|healthiest|strongest/.test(q))hi=met.worse==='low';
+  const sorted=list.slice().sort((a,b)=>hi?met.get(b)-met.get(a):met.get(a)-met.get(b));
+  const wantsMaxL=hi;
   const top=sorted.slice(0,3);if(!top.length)return `No cases ${label}.`;
   uwgLastCase=top[0];
-  return `${wantsMax?'Highest':'Lowest'} <b>${met.label}</b> ${label==='in the book'?'in the book':label}:<br>${top.map((c,i)=>`${i+1}. <span class="mono">${c.id}</span> ${c.name} — <b>${met.fmt(met.get(c))}</b>${met.label!=='risk score'?`, score ${c.risk_score}`:''}, ${c.decision.toLowerCase()}`).join('<br>')}`;
+  return `${wantsMaxL?'Highest':'Lowest'} <b>${met.label}</b> ${label==='in the book'?'in the book':label}:<br>${top.map((c,i)=>{const st=wfGet(c.id);
+    return `${i+1}. <span class="mono">${c.id}</span> ${c.name} — <b>${met.fmt(met.get(c))}</b>${met.label!=='risk score'?`, score ${c.risk_score}`:''}, ${c.decision.toLowerCase()}${(c.verdict==='yellow'&&st.assignee)?` · ${st.assignee} (${(UWS[st.tier]||{}).label||''} desk)`:''}`;}).join('<br>')}`;
  }
  if(wantsAvg){
   if(!met)return null;
@@ -2641,7 +2672,7 @@ function uwgAggregateAnswer(q){
 }
 function uwgGroupAnswer(q){
  // "which policy type approves most?", "workload by desk", "exposure by state"
- if(/riskiest|worst case|highest|lowest|oldest case|which case/.test(q))return null;   // that is a case question
+ if(/riskiest|worst case|highest|lowest|oldest case|which case|largest|biggest|most expensive/.test(q))return null;   // that is a case question
  const grp=/by (policy|product|type)|policy type|which product|whole life|term life|universal/.test(q)?'policy'
   :/desk|analyst|senior|mid.?tier|workload|who is busiest|team load/.test(q)?'desk'
   :/state|region|geograph|where.*exposure|by city/.test(q)?'state':null;
@@ -2712,6 +2743,71 @@ function uwgBriefingAnswer(){
  if(big)L.push(`Largest exposure waiting: <span class="mono">${big.id}</span> ${big.name}, ${fmt$(big.coverage)}.`);
  L.push(`Book is at <b>${pct.toFixed(0)}%</b> of the ${fmtBigMoney(APPETITE_MONTHLY)} monthly appetite.`);
  return L.join('<br>');
+}
+function uwgProfileAnswer(q){
+ // A judgement question about a profile rather than a case: "is a 21-year-old
+ // asking for $1M a red flag?" Answer with what the engine would actually do,
+ // then ground it in comparable cases from the live book.
+ const ageM=q.match(/(\d{2})\s*[-\s]?\s*(?:year|yr)s?\s*[-\s]?\s*old|\bage[d]?\s+(\d{2})\b/);
+ const amtM=q.match(/\$\s*([\d.,]+)\s*(m|million|k|thousand)?|\b([\d.]+)\s*(m|million|k)\b/);
+ if(!ageM||!amtM)return null;
+ if(!/red flag|concern|worry|unusual|suspicious|normal|\bok\b|okay|fine\b|acceptable|problem|should i|would you|risky|reasonable/.test(q))return null;
+ const age=parseInt(ageM[1]||ageM[2],10);
+ let amt=parseFloat((amtM[1]||amtM[3]||'0').replace(/,/g,''));
+ const u=(amtM[2]||amtM[4]||'').toLowerCase();
+ if(u==='m'||u==='million')amt*=1e6;else if(u==='k'||u==='thousand')amt*=1000;
+ if(!age||!amt||amt<1000)return null;
+ const req=requirementsFor({age:age,coverage:amt});
+ const peers=CASES.filter(c=>Math.abs((c.age||0)-age)<=6&&(c.coverage||0)>=amt*0.7);
+ const ref=peers.filter(c=>c.verdict==='yellow').length,dec=peers.filter(c=>c.verdict==='red').length;
+ const scores=peers.map(c=>c.risk_score).sort((a,b)=>a-b);
+ const affordPeers=peers.filter(c=>c.afford&&c.afford.verdict!=='pass').length;
+ const L=[];
+ L.push(`<b>Not on age or amount alone.</b> Nothing in the decision logic declines a combination of age and face amount — age contributes points (younger is fewer, so a ${age}-year-old sits near the bottom of the mortality table) and the amount drives requirements, not the band.`);
+ L.push(`What ${fmt$(amt)} at ${age} <i>does</i> trigger: ${req.length?`the age × amount grid requires <b>${req.join(', ')}</b>`:'no extra evidence under the grid'}, and the <b>affordability screen</b> — which is where this profile usually gets caught. ${fmt$(amt)} of cover implies an income multiple a ${age}-year-old rarely supports, and a failing screen refers the case to <b>financial underwriting</b> rather than declining it, because the fix is normally a smaller face amount.`);
+ if(peers.length)L.push(`In this book, <b>${peers.length}</b> comparable applicant(s) (age ${age-6}–${age+6}, ${fmt$(amt*0.7)}+ of cover): scores run <b>${scores[0]}–${scores[scores.length-1]}</b>, ${ref} referred, ${dec} declined${affordPeers?`, and ${affordPeers} tripped the affordability screen`:''}.`);
+ else L.push(`This book has no comparable applicant at that age and amount, so there is no precedent to read off.`);
+ L.push(`The judgement a desk actually applies: <b>insurable interest</b> and <b>suitability</b> — why this amount, who benefits, is it replacing something — none of which the score can see. That is exactly the kind of case the middle band exists to put in front of a human.`);
+ return L.join('<br>');
+}
+let UWG_FACTORS=null;
+function uwgFactorTable(){
+ // The real weight table, read off the book's own scored factors.
+ if(UWG_FACTORS)return UWG_FACTORS;
+ const m={};
+ CASES.forEach(c=>(c.rule_factors||[]).forEach(f=>{
+  if(!f||f[2]==null||f[2]<=0)return;
+  const k=(f[0]+'|'+f[1]).toLowerCase();
+  if(!m[k])m[k]={label:f[0],detail:String(f[1]),pts:f[2],n:0};
+  m[k].n++;}));
+ UWG_FACTORS=Object.values(m);
+ return UWG_FACTORS;
+}
+function uwgFactorAnswer(q){
+ // "how many points does heavy alcohol cost?", "does a criminal record matter?"
+ if(!/how many points|points does|how much does .{0,24}(add|cost|count)|weigh|weight of|red flag|does .{0,20}matter|affect the score|hurt the score|count against|penal/.test(q))return null;
+ const terms=q.replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(w=>w.length>=3&&!UWG_STOP.has(w));
+ if(!terms.length)return null;
+ const scored=uwgFactorTable().map(f=>{
+  const hay=(f.label+' '+f.detail).toLowerCase();
+  let sc=0;terms.forEach(w=>{if(hay.indexOf(w)>=0)sc+=w.length;});
+  return {f,sc};}).filter(x=>x.sc>=3).sort((a,b)=>b.sc-a.sc||b.f.pts-a.f.pts);
+ if(!scored.length)return null;
+ const top=scored.slice(0,4).map(x=>x.f);
+ return `From the live weight table (points are <span class="mono">round(28 × ln(relative mortality))</span>, so they are mortality evidence, not opinion):<br>${top.map(f=>`<b>${f.label} — ${f.detail}</b>: <b>+${f.pts}</b> point(s), seen on ${f.n} case(s) in this book`).join('<br>')}<br>For scale, the approval line is <b>${A_LINE}</b> and the decline line <b>${D_LINE}</b> — so ${top[0].pts} point(s) is ${(top[0].pts/A_LINE*100).toFixed(0)}% of the way to a referral on its own. No single factor decides; they accumulate into the composite.`;
+}
+function uwgSharedAnswer(q){
+ // "are any two applicants in the same city / with the same employer?"
+ if(!/same (city|town|state|employer|company|name|surname)|any two|duplicate|\bshare\b.{0,14}(employer|city|address|name|surname|company|town)|more than one .{0,18}(in|from)/.test(q))return null;
+ const key=/employer|company/.test(q)?['employer',c=>c.employer]
+  :/state|region/.test(q)?['state',c=>c.state]
+  :/surname|last name/.test(q)?['surname',c=>(c.name||'').split(' ').pop()]
+  :/\bname\b/.test(q)?['full name',c=>c.name]
+  :['city',c=>c.city];
+ const g={};CASES.forEach(c=>{const k=key[1](c)||'—';if(/^(self.?employed|unemployed|retired|none|n\/a|—)$/i.test(String(k)))return;(g[k]=g[k]||[]).push(c);});
+ const dups=Object.entries(g).filter(([,l])=>l.length>1).sort((a,b)=>b[1].length-a[1].length);
+ if(!dups.length)return `No — every applicant has a distinct ${key[0]} in this book.`;
+ return `Yes — <b>${dups.length}</b> ${key[0]}(s) appear more than once. Top overlaps:<br>${dups.slice(0,5).map(([k,l])=>`<b>${k}</b> — ${l.length} applicants (${l.slice(0,3).map(c=>`<span class="mono">${c.id}</span> ${c.name}`).join(', ')}${l.length>3?', …':''})`).join('<br>')}<br>Worth knowing why it matters: shared address, employer or surname is how a real desk spots <b>aggregation risk</b> (several policies on one life or household) and possible non-disclosure — neither of which the per-case score can see.`;
 }
 function uwgQueueAnswer(){
  // "Who should I review first?" — the queue’s own priority order, live.
@@ -2794,6 +2890,9 @@ function uwgFieldAnswer(c,q){
   [/unique|circumstance|disclos|section 6|declaration/, ()=>{
     const d=c.decl||{};const yes=[['prior_decline','a prior application declined'],['dangerous_driving','dangerous driving'],['drug_counselling','drug or alcohol counselling'],['criminal','a criminal offence'],['bankruptcy','bankruptcy'],['foreign_travel','foreign travel planned'],['weight_change','a weight change over 10 lb']].filter(([k])=>d[k]).map(([,l])=>l);
     return `${c.unique?`unique circumstances: <b>${c.unique}</b>. `:''}${yes.length?`Section 6 answered YES to: <b>${yes.join(', ')}</b>`:(c.unique?'No Section 6 declarations':'nothing disclosed — no unique circumstances, no Section 6 declarations')}`;}],
+  [/in line with|proportion|multiple of income|relative to .{0,12}income|sensible|reasonable|too much cover|over.?insured/, ()=>{
+    const mult=c.income?(c.coverage||0)/c.income:0;const pp=c.income?(c.premium||0)/c.income*100:0;
+    return `${fmt$(c.coverage)} of cover on ${fmt$(c.income)} of income is a <b>${mult.toFixed(1)}× income multiple</b>, with the premium at <b>${pp.toFixed(1)}%</b> of income — affordability screen says <b>${((c.afford||{}).label)||'—'}</b>${(c.afford||{}).verdict!=='pass'?', so it refers to financial underwriting rather than declining':''}`;}],
   [/afford|financially justif/, ()=>`affordability <b>${((c.afford||{}).label)||'—'}</b>${(c.afford||{}).verdict==='fail'?' — referred to financial underwriting':''}`],
   [/conflict|flag|mismatch|discrepan/, ()=>{const k=c.conflicts||[];
     return k.length?`<b>${k.length}</b> conflict(s): ${k.map(x=>x.type.replace(/_/g,' ')+' ('+x.severity+')').join(', ')}`:`<b>no document conflicts</b> — the packet is internally consistent`;}],
@@ -2841,7 +2940,7 @@ function uwgFieldAnswer(c,q){
 /* Applicant matching is typo-tolerant: people type “almedia” for “Almeida”
    and half a name far more often than a clean full match. Tokens are scored
    exact / near-miss (edit distance 1–2), and a tie asks rather than guesses. */
-const UWG_STOP=new Set(['what','whats','which','the','and','for','with','about','tell','show','give','how','why','who','whom','does','did','his','her','hers','their','they','them','this','that','been','has','have','was','were','are','file','files','case','cases','document','documents','docs','packet','queue','score','weight','height','income','premium','coverage','decision','status','long','much','many','from','into','right','now','our','your','ours','yours','review','reviewed','need','needs','there','then','also','please','info','information']);
+const UWG_STOP=new Set(['is','of','to','me','my','it','do','on','in','at','by','we','us','an','or','if','so','no','be','as','am','he','its','any','all','has','was','you','your','a','i','what','whats','which','the','and','for','with','about','tell','show','give','how','why','who','whom','does','did','his','her','hers','their','they','them','this','that','been','has','have','was','were','are','file','files','case','cases','document','documents','docs','packet','queue','score','weight','height','income','premium','coverage','decision','status','long','much','many','from','into','right','now','our','your','ours','yours','review','reviewed','need','needs','there','then','also','please','info','information']);
 function uwgKeyHit(q,k){
  const qn=q.replace(/['’]/g,'');   // "can't" and "cant" are the same question
  if(k.indexOf(' ')>=0)return qn.indexOf(k)>=0;
@@ -2869,7 +2968,7 @@ function uwgTokenScore(nameTok,qTok){
  return 0;
 }
 function uwgNameMatches(q){
- const qTok=q.replace(/[^a-z\s]/g,' ').split(/\s+/).filter(t=>t.length>=3&&!UWG_STOP.has(t));
+ const qTok=q.replace(/[^a-z\s]/g,' ').split(/\s+/).filter(t=>t.length>=2&&!UWG_STOP.has(t));
  if(!qTok.length)return {list:[],score:0,allScored:[]};
  let best=0,scored=[];
  CASES.forEach(c=>{
@@ -2946,7 +3045,14 @@ function uwgSend(){
  i.value='';uwgMsg(q.replace(/</g,'&lt;'),'me');
  setTimeout(()=>{uwgMsg(uwgAnswer(q),'bot');uwgChipsRender();},220);
 }
+let uwgHistory=[],uwgLastAnswer='';
 function uwgAnswer(qRaw){
+ const prevQ=uwgHistory.length?uwgHistory[uwgHistory.length-1]:null,prevA=uwgLastAnswer;
+ const a=uwgAnswerCore(qRaw,prevQ,prevA);
+ uwgHistory.push(qRaw);uwgLastAnswer=a;
+ return a;
+}
+function uwgAnswerCore(qRaw,prevQ,prevA){
  const q=qRaw.toLowerCase();
  // When the last turn asked "which one?", this turn's job is to finish the
  // ORIGINAL question — so the chosen case is answered with the intent the
@@ -2973,8 +3079,25 @@ function uwgAnswer(qRaw){
   if(c)return withIntent(c);
   uwgPending=pending;   // not an answer to the ask — keep it alive one more turn
  }
- // scenarios, group-bys and the shift briefing run before case lookups
+ // conversational repair first — these are about the conversation, not the book
+ if(/what did i (just )?ask|my last question|what was my question|repeat my question|what have i asked/.test(q))
+  return prevQ?`You asked: “${prevQ.replace(/</g,'&lt;')}”${uwgHistory.length>1?` (before that: “${uwgHistory[uwgHistory.length-2].replace(/</g,'&lt;')}”)`:''}`
+   :`Nothing yet — this is your first question.`;
+ if(/short version|shorter|tl;?dr|in one line|one sentence|briefly|too long|summar(ise|ize) (that|it)|condense/.test(q)){
+  if(!prevA)return `Ask me something first and I will give you the short version of it.`;
+  const flat=prevA.replace(/<br>/g,' ').replace(/<[^>]+>/g,'').trim();
+  const first=(flat.match(/^[^.!?]{10,220}[.!?]/)||[flat.slice(0,200)])[0];
+  return `Short version: ${first}`;
+ }
+ if(/doesn.?t sound right|does not sound right|are you sure|you sure\?|that.?s wrong|thats wrong|check it|double.?check|verify that|prove it|says who/.test(q)){
+  const src=uwgLastCase?`For ${uwgLastCase.name} (<span class="mono">${uwgLastCase.id}</span>), open the case file — the Extraction, Risk Score and Decision tabs show the same values I quoted.`:'';
+  return `Fair — check me rather than trust me. Every figure I give is computed live from this book at the moment you ask: case answers read the same fields the case file shows, portfolio numbers use the same computation as the Executive Overview, and rule points come from the published weight table. ${src} If a number still looks wrong, tell me which one and I will show you the arithmetic behind it. Two standing caveats: the book is <b>synthetic</b>, and the P&L rests on named illustrative assumptions rather than carrier actuals.`;
+ }
+ // scenarios, judgement calls, group-bys and the shift briefing before case lookups
  const wi=uwgWhatIfAnswer(q);if(wi)return wi;
+ const pr=uwgProfileAnswer(q);if(pr)return pr;
+ const sh=uwgSharedAnswer(q);if(sh)return sh;
+ const fa=uwgFactorAnswer(q);if(fa)return fa;
  if(/worry about|anything i should know|brief me|briefing|summar(y|ise|ize) my (day|shift|queue)|how is my day|what.s on my plate/.test(q))return uwgBriefingAnswer();
  const grp=uwgGroupAnswer(q);if(grp)return grp;
  // book-level analytics before anything case-specific: "how many…", "which
