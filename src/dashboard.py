@@ -539,8 +539,10 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
    third ring instead of paying for it nine times */
 .wt:nth-child(3n) polygon{filter:drop-shadow(0 0 7px rgba(106,103,247,.45))}
 /* the tunnel is invisible behind the landing overlay — don't animate two
-   full-screen systems at once on first paint */
-#landing~#login .wt,#landing~#login .warp-core{animation-play-state:paused}
+   full-screen systems at once on first paint. The pause lifts the moment the
+   landing starts its exit (.out), not when it's removed 950ms later — the
+   tunnel must already be turning as the landing fades. */
+#landing:not(.out)~#login .wt,#landing:not(.out)~#login .warp-core{animation-play-state:paused}
 .wt:nth-child(2n) polygon{stroke:rgba(172,170,255,.55)}
 .wt:nth-child(3n) polygon{stroke:rgba(90,87,224,.6)}
 @keyframes warpFly{
