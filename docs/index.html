@@ -5,7 +5,12 @@
    ~1MB document, and applying the light default there caused a visible
    dark-to-light flash on first open. */
 (function(){var t='light';try{if(localStorage.getItem('uw_theme')==='dark')t='dark';}catch(e){}
-if(t==='light')document.documentElement.setAttribute('data-theme','light');})();
+if(t==='light')document.documentElement.setAttribute('data-theme','light');
+/* Until sign-in, the page must not scroll: the workbench sits in normal flow
+   behind the fixed landing/login overlays, so without this the document is
+   thousands of pixels tall — a stray scrollbar, trackpad inertia scrolling an
+   invisible page, and entering the app at a random offset. */
+document.documentElement.classList.add('preauth');})();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -373,9 +378,12 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 #app.role-turn{animation:roleTurn .8s .25s cubic-bezier(.22,1,.36,1) backwards}
 @keyframes roleTurn{0%{opacity:.35;transform:translateX(30px) scale(.992)}100%{opacity:1;transform:none}}
 @media (prefers-reduced-motion: reduce){#roleswap{display:none}#app.role-turn{animation:none}}
-.login-card{animation:loginIn .6s cubic-bezier(.22,1,.36,1) both}
+/* The WHOLE shell enters as one unit — animating only the right pane made
+   half the card pop while the brand pane sat still. */
+.login-shell{animation:loginIn .7s cubic-bezier(.22,1,.36,1) both}
 @keyframes loginIn{0%{opacity:0;transform:translateY(14px) scale(.985)}100%{opacity:1;transform:none}}
-@media (prefers-reduced-motion: reduce){#whoosh{display:none}#app.app-reveal,.login-card{animation:none}}
+@media (prefers-reduced-motion: reduce){#whoosh{display:none}#app.app-reveal,.login-shell{animation:none}}
+html.preauth{overflow:hidden}
 .cap-cut td{text-align:center;font:600 10.5px 'JetBrains Mono',monospace;color:var(--warn);padding:10px 6px;border-top:2px dashed var(--warn) !important;border-bottom:2px dashed var(--warn);letter-spacing:.5px}
 /* ---- executive rail: book-at-a-glance instead of a case list ---- */
 .exec-rail{padding:6px 4px}
@@ -531,7 +539,7 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
    full-screen systems at once on first paint. The pause lifts the moment the
    landing starts its exit (.out), not when it's removed 950ms later — the
    tunnel must already be turning as the landing fades. */
-#landing:not(.out)~#login .wt,#landing:not(.out)~#login .warp-core{animation-play-state:paused}
+#landing:not(.out)~#login .wt,#landing:not(.out)~#login .warp-core,#landing:not(.out)~#login .login-shell{animation-play-state:paused}
 .wt:nth-child(2n) polygon{stroke:rgba(172,170,255,.55)}
 .wt:nth-child(3n) polygon{stroke:rgba(90,87,224,.6)}
 @keyframes warpFly{
@@ -884,6 +892,7 @@ function doLogin(){
  CURRENT_UID=u;CURRENT_USER=acct.name;CURRENT_ROLE=acct.role;CURRENT_TIER=acct.tier||"";
  seedReview();
  document.getElementById('login').style.display='none';
+ document.documentElement.classList.remove('preauth');scrollTo(0,0);
  applyRole();
  if(CURRENT_ROLE==='manager'){queueScope='team';view='manager';}
  else if(CURRENT_ROLE==='executive'){queueScope='team';view='executive';}
@@ -923,8 +932,8 @@ function landingGo(){
  const ld=document.getElementById('landing');if(!ld)return;
  try{if(matchMedia('(prefers-reduced-motion: reduce)').matches){ld.remove();return;}}catch(e){}
  ld.classList.add('out');
- const card=document.querySelector('.login-card');
- if(card){card.style.animation='none';void card.offsetWidth;card.style.animation='';}
+ // no restart needed: the shell's entrance animation is held paused at 0%
+ // behind the landing and begins the moment .out lifts the pause above
  setTimeout(()=>{ld.remove();},950);
 }
 function applyRole(){
@@ -938,6 +947,7 @@ function signOut(){CURRENT_ROLE=null;CURRENT_USER="";CURRENT_UID="";
  document.getElementById('loginUser').value='';document.getElementById('loginPass').value='';loginErr('');
  const _b=document.getElementById('uwgBtn'),_p=document.getElementById('uwgPanel');
  if(_b)_b.style.display='none';if(_p)_p.classList.remove('on');
+ document.documentElement.classList.add('preauth');scrollTo(0,0);
  document.getElementById('login').style.display='flex';}
 /* ---------- underwriter case desk: status, assignment, notes, decision log (localStorage) ---------- */
 const WF_STATUSES=[["new","New"],["in_review","In Review"],["info_requested","Info Requested"],["referred","Referred"],["approved","Approved"],["declined","Declined"]];
