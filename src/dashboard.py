@@ -516,47 +516,39 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 .role-chip.sel b{color:var(--acc)}
 @media (max-width:880px){.login-shell{grid-template-columns:1fr;max-width:460px}.login-brand{padding:26px 30px 22px}.lb-h{font-size:18px}.lb-foot{padding-top:14px}.lb-rings{display:none}}
 @media (prefers-reduced-motion:reduce){.lb-sweep{animation:none}}
-/* ---------- sign-in ambience: true-3D glass prisms ----------
-   Triangular prisms built face-by-face in CSS 3D (three rectangular sides at
-   120°, triangular caps), tumbling continuously — plus wireframe triangles
-   spinning on tilted axes and drifting shard glints. Everything moves. */
+/* ---------- sign-in ambience: triangle warp tunnel ----------
+   A continuous stream of hairline triangles flying out of the centre behind
+   the console, twisting as they expand past the screen edges — the whole
+   viewport is the effect. Nine rings in flight at any moment on a 9s loop,
+   so the tunnel never pauses. Hairline strokes stay 1px at any scale
+   (vector-effect), which keeps it crisp instead of chunky. */
 .login-shell{position:relative;z-index:2}
-.lg-geo{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;perspective:1400px}
-.pf{position:absolute;animation:pfFloat 9s ease-in-out infinite alternate}
-.pf.w1{left:7%;top:9%;animation-delay:-2s}
-.pf.w2{right:4%;bottom:2%;animation-delay:-5s}
-.pf.w3{right:13%;top:13%;animation-delay:-7s}
-@keyframes pfFloat{from{transform:translateY(0)}to{transform:translateY(-26px)}}
-.prism{position:relative;transform-style:preserve-3d;animation:priSpin 16s linear infinite}
-.prism.p1{--s:150px;--h:210px;--r:43.3px;--ht:130px;width:1px;height:1px}
-.prism.p2{--s:230px;--h:320px;--r:66.4px;--ht:199px;width:1px;height:1px;animation-duration:24s;animation-direction:reverse}
-.prism.p3{--s:88px;--h:126px;--r:25.4px;--ht:76px;width:1px;height:1px;animation-duration:11s}
-.prism i{position:absolute;left:0;top:0}
-.prism .f{width:var(--s);height:var(--h);margin-left:calc(var(--s)/-2);margin-top:calc(var(--h)/-2);
- background:linear-gradient(160deg,rgba(139,136,255,.22),rgba(106,103,247,.05) 55%,rgba(165,163,255,.14));
- border:1px solid rgba(155,152,255,.65);box-shadow:inset 0 0 26px rgba(106,103,247,.14);
- transform:rotateY(0deg) translateZ(var(--r))}
-.prism .f.fb{transform:rotateY(120deg) translateZ(var(--r))}
-.prism .f.fc{transform:rotateY(240deg) translateZ(var(--r))}
-.prism .cap{width:var(--s);height:var(--ht);margin-left:calc(var(--s)/-2);margin-top:calc(var(--ht)/-2);
- clip-path:polygon(50% 0,100% 100%,0 100%);background:rgba(139,136,255,.16)}
-.prism .cap.ct{transform:translateY(calc(var(--h)/-2)) rotateX(90deg) translateY(calc(var(--ht)/-6))}
-.prism .cap.cb{transform:translateY(calc(var(--h)/2)) rotateX(-90deg) translateY(calc(var(--ht)/6)) scaleY(-1)}
-@keyframes priSpin{from{transform:rotateX(-16deg) rotateY(0deg)}to{transform:rotateX(-16deg) rotateY(360deg)}}
-.wtri{position:absolute;overflow:visible;filter:drop-shadow(0 0 8px rgba(106,103,247,.35))}
-.wtri polygon{fill:none;stroke:rgba(126,123,250,.6);stroke-width:1.6;vector-effect:non-scaling-stroke;stroke-linejoin:round}
-.wtri polygon:last-child{stroke:rgba(165,163,255,.45)}
-.wtri.wa{width:260px;left:9%;bottom:9%;animation:triTumble 13s linear infinite}
-.wtri.wb{width:150px;right:24%;top:32%;animation:triTumble 9s linear infinite reverse}
-@keyframes triTumble{from{transform:rotate3d(1,.55,.2,0deg)}to{transform:rotate3d(1,.55,.2,360deg)}}
-.shard{position:absolute;width:12px;height:12px;background:rgba(165,163,255,.7);clip-path:polygon(50% 0,100% 100%,0 100%);animation:shardDrift 8s ease-in-out infinite alternate}
-.shard.s1{left:22%;top:26%}
-.shard.s2{right:8%;top:56%;width:9px;height:9px;animation-delay:-3s}
-.shard.s3{left:15%;bottom:24%;width:16px;height:16px;animation-delay:-6s}
-@keyframes shardDrift{from{transform:translateY(0) rotate(0deg);opacity:.5}to{transform:translateY(-30px) rotate(140deg);opacity:1}}
-:root[data-theme="light"] .prism .f{border-color:rgba(106,103,247,.55)}
-@media (prefers-reduced-motion:reduce){.pf,.prism,.wtri,.shard{animation:none}}
-@media (max-width:880px){.pf.w3,.wtri.wb{display:none}}
+.lg-geo{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.warp{position:absolute;inset:0}
+.wt{position:absolute;left:50%;top:50%;width:36vmax;height:31.3vmax;overflow:visible;opacity:0;
+ animation:warpFly 9s linear infinite;animation-delay:var(--d);will-change:transform,opacity}
+.wt polygon{fill:none;stroke:rgba(116,113,250,.62);stroke-width:1.3;vector-effect:non-scaling-stroke;stroke-linejoin:round;
+ filter:drop-shadow(0 0 7px rgba(106,103,247,.45))}
+.wt:nth-child(2n) polygon{stroke:rgba(172,170,255,.55)}
+.wt:nth-child(3n) polygon{stroke:rgba(90,87,224,.6)}
+@keyframes warpFly{
+ 0%{transform:translate(-50%,-50%) scale(.03) rotate(0deg);opacity:0}
+ 10%{opacity:.9}
+ 75%{opacity:.75}
+ 100%{transform:translate(-50%,-50%) scale(6.4) rotate(88deg);opacity:0}}
+.warp-core{position:absolute;left:50%;top:50%;width:30vmin;height:30vmin;transform:translate(-50%,-50%);border-radius:50%;
+ background:radial-gradient(circle,rgba(139,136,255,.5),rgba(106,103,247,.12) 55%,transparent 72%);
+ filter:blur(18px);animation:coreBreath 5s ease-in-out infinite}
+@keyframes coreBreath{0%,100%{opacity:.55;transform:translate(-50%,-50%) scale(1)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.25)}}
+:root[data-theme="light"] .wt polygon{stroke-width:1.5}
+@media (prefers-reduced-motion:reduce){
+ .wt{animation:none;opacity:.22}
+ .wt:nth-child(1){transform:translate(-50%,-50%) scale(.6) rotate(12deg)}
+ .wt:nth-child(2){transform:translate(-50%,-50%) scale(1.4) rotate(30deg)}
+ .wt:nth-child(3){transform:translate(-50%,-50%) scale(2.6) rotate(48deg)}
+ .wt:nth-child(4){transform:translate(-50%,-50%) scale(4.2) rotate(66deg)}
+ .wt:nth-child(n+5){display:none}
+ .warp-core{animation:none}}
 /* ---------- UW Guide — embedded knowledge assistant ---------- */
 #uwgBtn{position:fixed;right:20px;bottom:20px;z-index:960;display:none;align-items:center;gap:6px;font:600 12.5px 'Poppins',sans-serif;color:#fff;background:var(--acc);border:none;border-radius:999px;padding:11px 18px;cursor:pointer;box-shadow:0 8px 24px rgba(106,103,247,.38)}
 #uwgBtn:hover{filter:brightness(1.08)}
@@ -610,12 +602,18 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 </div>
 <div id="login">
  <div class="lg-geo" aria-hidden="true">
-  <div class="pf w1"><div class="prism p1"><i class="f"></i><i class="f fb"></i><i class="f fc"></i><i class="cap ct"></i><i class="cap cb"></i></div></div>
-  <div class="pf w2"><div class="prism p2"><i class="f"></i><i class="f fb"></i><i class="f fc"></i><i class="cap ct"></i><i class="cap cb"></i></div></div>
-  <div class="pf w3"><div class="prism p3"><i class="f"></i><i class="f fb"></i><i class="f fc"></i><i class="cap ct"></i><i class="cap cb"></i></div></div>
-  <svg class="wtri wa" viewBox="0 0 200 176"><polygon points="100,8 192,168 8,168"/><polygon points="100,44 162,150 38,150"/></svg>
-  <svg class="wtri wb" viewBox="0 0 200 176"><polygon points="100,8 192,168 8,168"/><polygon points="100,44 162,150 38,150"/></svg>
-  <span class="shard s1"></span><span class="shard s2"></span><span class="shard s3"></span>
+  <div class="warp">
+  <svg class="wt" style="--d:-0s" viewBox="0 0 200 174"><polygon points="100,4 196,170 4,170"/></svg>
+  <svg class="wt" style="--d:-1s" viewBox="0 0 200 174"><polygon points="100,4 196,170 4,170"/></svg>
+  <svg class="wt" style="--d:-2s" viewBox="0 0 200 174"><polygon points="100,4 196,170 4,170"/></svg>
+  <svg class="wt" style="--d:-3s" viewBox="0 0 200 174"><polygon points="100,4 196,170 4,170"/></svg>
+  <svg class="wt" style="--d:-4s" viewBox="0 0 200 174"><polygon points="100,4 196,170 4,170"/></svg>
+  <svg class="wt" style="--d:-5s" viewBox="0 0 200 174"><polygon points="100,4 196,170 4,170"/></svg>
+  <svg class="wt" style="--d:-6s" viewBox="0 0 200 174"><polygon points="100,4 196,170 4,170"/></svg>
+  <svg class="wt" style="--d:-7s" viewBox="0 0 200 174"><polygon points="100,4 196,170 4,170"/></svg>
+  <svg class="wt" style="--d:-8s" viewBox="0 0 200 174"><polygon points="100,4 196,170 4,170"/></svg>
+  </div>
+  <div class="warp-core"></div>
  </div>
  <div class="login-shell">
   <div class="login-brand">
