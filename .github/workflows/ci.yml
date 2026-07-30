@@ -14,6 +14,10 @@ jobs:
         with:
           python-version: "3.13"
           cache: pip
+          # The repo has no requirements.txt/pyproject.toml at the root, so the
+          # pip cache cannot auto-detect a manifest and setup-python fails hard
+          # — which skipped the whole test suite. Point it at the real file.
+          cache-dependency-path: requirements-dev.txt
       - run: pip install -r requirements-dev.txt
       - name: Run test suite (offline — no dataset downloads needed)
         run: pytest tests/ -q
