@@ -505,38 +505,47 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 .role-chip.sel b{color:var(--acc)}
 @media (max-width:880px){.login-shell{grid-template-columns:1fr;max-width:460px}.login-brand{padding:26px 30px 22px}.lb-h{font-size:18px}.lb-foot{padding-top:14px}.lb-rings{display:none}}
 @media (prefers-reduced-motion:reduce){.lb-sweep{animation:none}}
-/* ---------- sign-in ambience: crystalline holo-wireframe ----------
-   Stark-hologram vocabulary: faceted wireframe shards (triangulated mesh,
-   glowing vertices, glass facets that shimmer) turning continuously in 3D,
-   over constellation nets of nodes and struts. Angular, not circular. */
+/* ---------- sign-in ambience: true-3D glass prisms ----------
+   Triangular prisms built face-by-face in CSS 3D (three rectangular sides at
+   120°, triangular caps), tumbling continuously — plus wireframe triangles
+   spinning on tilted axes and drifting shard glints. Everything moves. */
 .login-shell{position:relative;z-index:2}
-.lg-geo{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;perspective:1100px}
-.cry{position:absolute;overflow:visible;filter:drop-shadow(0 0 7px rgba(106,103,247,.35))}
-.cry path,.cry polygon{stroke:rgba(106,103,247,.55);stroke-width:1;fill:none;vector-effect:non-scaling-stroke;stroke-linejoin:round}
-.cry .hl{stroke:rgba(165,163,255,.8)}
-.cry polygon.fx,.cry polygon.fy,.cry polygon.fz{stroke:rgba(106,103,247,.35)}
-.cry .fx{fill:rgba(106,103,247,.10);animation:facetGlow 5.5s ease-in-out infinite}
-.cry .fy{fill:rgba(143,107,255,.08);animation:facetGlow 7s ease-in-out infinite;animation-delay:-2.4s}
-.cry .fz{fill:rgba(165,163,255,.09);animation:facetGlow 6.2s ease-in-out infinite;animation-delay:-4.1s}
-@keyframes facetGlow{0%,100%{fill-opacity:.35}50%{fill-opacity:1}}
-.cry .nd{fill:#A5A3FF;stroke:none;animation:nodeBlink 3.8s ease-in-out infinite}
-@keyframes nodeBlink{0%,100%{opacity:.45}50%{opacity:1}}
-.cry.ca{width:480px;height:480px;left:-70px;top:-60px;animation:cryTurn 24s linear infinite}
-.cry.cb{width:660px;height:660px;right:-170px;bottom:-190px;animation:cryTurnR 34s linear infinite}
-.cry.cc{width:210px;height:210px;right:12%;top:9%;animation:cryTurn 16s linear infinite}
-@keyframes cryTurn{from{transform:rotateX(16deg) rotateY(0deg)}to{transform:rotateX(16deg) rotateY(360deg)}}
-@keyframes cryTurnR{from{transform:rotateX(-12deg) rotateY(360deg)}to{transform:rotateX(-12deg) rotateY(0deg)}}
-.net{position:absolute;opacity:.75}
-.net path{stroke:rgba(106,103,247,.30);stroke-width:1;fill:none;vector-effect:non-scaling-stroke}
-.net circle{fill:#A5A3FF;animation:nodeBlink 4.2s ease-in-out infinite}
-.net circle:nth-of-type(2n){animation-delay:-1.4s}
-.net circle:nth-of-type(3n){animation-delay:-2.8s}
-.net.na{width:480px;left:4%;bottom:6%;animation:netDrift 13s ease-in-out infinite alternate}
-.net.nb{width:430px;right:3%;top:7%;animation:netDrift 11s ease-in-out infinite alternate-reverse}
-@keyframes netDrift{from{transform:translate(0,0)}to{transform:translate(26px,-18px)}}
-:root[data-theme="light"] .cry path,:root[data-theme="light"] .cry polygon{stroke:rgba(90,87,224,.55)}
-@media (prefers-reduced-motion:reduce){.cry,.net,.cry .fx,.cry .fy,.cry .fz,.cry .nd,.net circle{animation:none}}
-@media (max-width:880px){.cry.cc,.net.nb{display:none}}
+.lg-geo{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;perspective:1400px}
+.pf{position:absolute;animation:pfFloat 9s ease-in-out infinite alternate}
+.pf.w1{left:7%;top:9%;animation-delay:-2s}
+.pf.w2{right:4%;bottom:2%;animation-delay:-5s}
+.pf.w3{right:13%;top:13%;animation-delay:-7s}
+@keyframes pfFloat{from{transform:translateY(0)}to{transform:translateY(-26px)}}
+.prism{position:relative;transform-style:preserve-3d;animation:priSpin 16s linear infinite}
+.prism.p1{--s:150px;--h:210px;--r:43.3px;--ht:130px;width:1px;height:1px}
+.prism.p2{--s:230px;--h:320px;--r:66.4px;--ht:199px;width:1px;height:1px;animation-duration:24s;animation-direction:reverse}
+.prism.p3{--s:88px;--h:126px;--r:25.4px;--ht:76px;width:1px;height:1px;animation-duration:11s}
+.prism i{position:absolute;left:0;top:0}
+.prism .f{width:var(--s);height:var(--h);margin-left:calc(var(--s)/-2);margin-top:calc(var(--h)/-2);
+ background:linear-gradient(160deg,rgba(139,136,255,.22),rgba(106,103,247,.05) 55%,rgba(165,163,255,.14));
+ border:1px solid rgba(155,152,255,.65);box-shadow:inset 0 0 26px rgba(106,103,247,.14);
+ transform:rotateY(0deg) translateZ(var(--r))}
+.prism .f.fb{transform:rotateY(120deg) translateZ(var(--r))}
+.prism .f.fc{transform:rotateY(240deg) translateZ(var(--r))}
+.prism .cap{width:var(--s);height:var(--ht);margin-left:calc(var(--s)/-2);margin-top:calc(var(--ht)/-2);
+ clip-path:polygon(50% 0,100% 100%,0 100%);background:rgba(139,136,255,.16)}
+.prism .cap.ct{transform:translateY(calc(var(--h)/-2)) rotateX(90deg) translateY(calc(var(--ht)/-6))}
+.prism .cap.cb{transform:translateY(calc(var(--h)/2)) rotateX(-90deg) translateY(calc(var(--ht)/6)) scaleY(-1)}
+@keyframes priSpin{from{transform:rotateX(-16deg) rotateY(0deg)}to{transform:rotateX(-16deg) rotateY(360deg)}}
+.wtri{position:absolute;overflow:visible;filter:drop-shadow(0 0 8px rgba(106,103,247,.35))}
+.wtri polygon{fill:none;stroke:rgba(126,123,250,.6);stroke-width:1.6;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+.wtri polygon:last-child{stroke:rgba(165,163,255,.45)}
+.wtri.wa{width:260px;left:9%;bottom:9%;animation:triTumble 13s linear infinite}
+.wtri.wb{width:150px;right:24%;top:32%;animation:triTumble 9s linear infinite reverse}
+@keyframes triTumble{from{transform:rotate3d(1,.55,.2,0deg)}to{transform:rotate3d(1,.55,.2,360deg)}}
+.shard{position:absolute;width:12px;height:12px;background:rgba(165,163,255,.7);clip-path:polygon(50% 0,100% 100%,0 100%);animation:shardDrift 8s ease-in-out infinite alternate}
+.shard.s1{left:22%;top:26%}
+.shard.s2{right:8%;top:56%;width:9px;height:9px;animation-delay:-3s}
+.shard.s3{left:15%;bottom:24%;width:16px;height:16px;animation-delay:-6s}
+@keyframes shardDrift{from{transform:translateY(0) rotate(0deg);opacity:.5}to{transform:translateY(-30px) rotate(140deg);opacity:1}}
+:root[data-theme="light"] .prism .f{border-color:rgba(106,103,247,.55)}
+@media (prefers-reduced-motion:reduce){.pf,.prism,.wtri,.shard{animation:none}}
+@media (max-width:880px){.pf.w3,.wtri.wb{display:none}}
 /* ---------- UW Guide — embedded knowledge assistant ---------- */
 #uwgBtn{position:fixed;right:20px;bottom:20px;z-index:960;display:none;align-items:center;gap:6px;font:600 12.5px 'Poppins',sans-serif;color:#fff;background:var(--acc);border:none;border-radius:999px;padding:11px 18px;cursor:pointer;box-shadow:0 8px 24px rgba(106,103,247,.38)}
 #uwgBtn:hover{filter:brightness(1.08)}
@@ -590,32 +599,12 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 </div>
 <div id="login">
  <div class="lg-geo" aria-hidden="true">
-  <svg class="cry ca" viewBox="0 0 420 420" xmlns="http://www.w3.org/2000/svg"><g><polygon class="fx" points="204,18 322,98 198,152"/>
-    <polygon class="fy" points="46,216 98,80 142,248"/>
-    <polygon class="fz" points="272,232 372,240 282,372"/>
-    <path d="M204,18 L322,98 L372,240 L282,372 L130,356 L46,216 L98,80 Z"/>
-    <path class="hl" d="M204,18 L198,152 L322,98 M198,152 L98,80 M198,152 L142,248 L46,216 M142,248 L130,356 M142,248 L272,232 L282,372 M272,232 L372,240 M272,232 L198,152 M130,356 L272,232"/>
-    <circle class="nd" cx="198" cy="152" r="3"/><circle class="nd" cx="272" cy="232" r="3"/><circle class="nd" cx="142" cy="248" r="3"/></g></svg>
-  <svg class="cry cb" viewBox="0 0 420 420" xmlns="http://www.w3.org/2000/svg"><g transform="rotate(140 210 210)"><polygon class="fx" points="204,18 322,98 198,152"/>
-    <polygon class="fy" points="46,216 98,80 142,248"/>
-    <polygon class="fz" points="272,232 372,240 282,372"/>
-    <path d="M204,18 L322,98 L372,240 L282,372 L130,356 L46,216 L98,80 Z"/>
-    <path class="hl" d="M204,18 L198,152 L322,98 M198,152 L98,80 M198,152 L142,248 L46,216 M142,248 L130,356 M142,248 L272,232 L282,372 M272,232 L372,240 M272,232 L198,152 M130,356 L272,232"/>
-    <circle class="nd" cx="198" cy="152" r="3"/><circle class="nd" cx="272" cy="232" r="3"/><circle class="nd" cx="142" cy="248" r="3"/></g></svg>
-  <svg class="cry cc" viewBox="0 0 420 420" xmlns="http://www.w3.org/2000/svg"><g transform="rotate(250 210 210)"><polygon class="fx" points="204,18 322,98 198,152"/>
-    <polygon class="fy" points="46,216 98,80 142,248"/>
-    <polygon class="fz" points="272,232 372,240 282,372"/>
-    <path d="M204,18 L322,98 L372,240 L282,372 L130,356 L46,216 L98,80 Z"/>
-    <path class="hl" d="M204,18 L198,152 L322,98 M198,152 L98,80 M198,152 L142,248 L46,216 M142,248 L130,356 M142,248 L272,232 L282,372 M272,232 L372,240 M272,232 L198,152 M130,356 L272,232"/>
-    <circle class="nd" cx="198" cy="152" r="3"/><circle class="nd" cx="272" cy="232" r="3"/><circle class="nd" cx="142" cy="248" r="3"/></g></svg>
-  <svg class="net na" viewBox="0 0 520 320" xmlns="http://www.w3.org/2000/svg">
-   <path d="M36,52 L150,96 L96,208 Z M150,96 L252,64 L318,168 L150,96 M318,168 L430,116 L488,238 M318,168 L360,268 L488,238 M96,208 L214,262 L360,268"/>
-   <circle cx="36" cy="52" r="2.6"/><circle cx="150" cy="96" r="3.2"/><circle cx="96" cy="208" r="2.6"/><circle cx="252" cy="64" r="2.6"/>
-   <circle cx="318" cy="168" r="3.4"/><circle cx="430" cy="116" r="2.6"/><circle cx="488" cy="238" r="2.6"/><circle cx="360" cy="268" r="2.6"/><circle cx="214" cy="262" r="2.6"/>
-  </svg>
-  <svg class="net nb" viewBox="0 0 520 320"><path d="M60,240 L170,180 L140,60 M170,180 L300,220 L340,90 L170,180 M300,220 L440,250 M340,90 L470,60"/>
-   <circle cx="60" cy="240" r="2.6"/><circle cx="170" cy="180" r="3.2"/><circle cx="140" cy="60" r="2.6"/><circle cx="300" cy="220" r="2.8"/><circle cx="340" cy="90" r="3.0"/><circle cx="440" cy="250" r="2.6"/><circle cx="470" cy="60" r="2.6"/>
-  </svg>
+  <div class="pf w1"><div class="prism p1"><i class="f"></i><i class="f fb"></i><i class="f fc"></i><i class="cap ct"></i><i class="cap cb"></i></div></div>
+  <div class="pf w2"><div class="prism p2"><i class="f"></i><i class="f fb"></i><i class="f fc"></i><i class="cap ct"></i><i class="cap cb"></i></div></div>
+  <div class="pf w3"><div class="prism p3"><i class="f"></i><i class="f fb"></i><i class="f fc"></i><i class="cap ct"></i><i class="cap cb"></i></div></div>
+  <svg class="wtri wa" viewBox="0 0 200 176"><polygon points="100,8 192,168 8,168"/><polygon points="100,44 162,150 38,150"/></svg>
+  <svg class="wtri wb" viewBox="0 0 200 176"><polygon points="100,8 192,168 8,168"/><polygon points="100,44 162,150 38,150"/></svg>
+  <span class="shard s1"></span><span class="shard s2"></span><span class="shard s3"></span>
  </div>
  <div class="login-shell">
   <div class="login-brand">
