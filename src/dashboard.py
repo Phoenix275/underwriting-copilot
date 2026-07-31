@@ -813,7 +813,7 @@ function tourRender(){
  const last=tourIdx===TUTORIAL_STEPS.length-1;
  p.innerHTML=`<div class="tour-step">Step ${tourIdx+1} of ${TUTORIAL_STEPS.length} · Guided tour</div>
   <div class="tour-title">${s.title}</div>
-  ${s.do?`<div class="tour-do"><b>On screen:</b> ${s.do}</div>`:''}
+  ${s.do?`<div class="tour-do">${s.do}</div>`:''}
   <div class="tour-learn">${typeof s.learn==='function'?s.learn():s.learn}</div>
   ${s.action?`<button class="tour-btn doit" onclick="tourAct()">▶ ${s.action.label}</button>`:''}
   <div class="tour-prog"><div style="width:${(tourIdx+1)/TUTORIAL_STEPS.length*100}%"></div></div>
@@ -1020,14 +1020,30 @@ function assignTier(c){
  if(cov>=250000)return 'mid';
  return 'analyst';                              // ≤ $250k, clean → new analyst
 }
+function tierRank(t){return t==='senior'?2:t==='mid'?1:0;}
 function seedReview(){
  // once per case: stamp a clock-start and route to an underwriter by experience tier
  const all=wfAll();let changed=false;
  CASES.forEach(c=>{if(c.verdict!=='yellow')return;
    const st=all[c.id]||{status:'new',assignee:null,notes:[],history:[],decision:null};
    if(st.receivedAt==null){st.receivedAt=Date.now()-(idHash(c.id)%17)*3600000;changed=true;}
+   // The demo clock is designed to span ~0–17h. Workbench state saved on a
+   // previous day would otherwise show week-long queue times and a 100% SLA
+   // breach forever — re-baseline anything stale back into the window.
+   else if(!st.decision&&Date.now()-st.receivedAt>24*3600000){
+     st.receivedAt=Date.now()-(idHash(c.id)%17)*3600000;changed=true;}
    if(!st.assigneeUid){const t=assignTier(c);const uw=UWS[t];st.assigneeUid=uw.uid;st.assignee=uw.name;st.tier=t;
      if(st.status==='new')st.status='in_review';changed=true;}
+   // Authority is a routing RULE, not a suggestion. Stored state (an older
+   // build, or a take-over recorded before the guard existed) can leave a
+   // case on a desk that isn't allowed to hold it — a $1M case on the new
+   // analyst. Escalate it back to the required desk at every sign-in, logged.
+   // (A desk ABOVE the requirement is fine: a senior can hold small cases.)
+   else if(!st.decision){const req=assignTier(c);
+     if(tierRank(st.tier)<tierRank(req)){const uw=UWS[req];
+       (st.history=st.history||[]).push({by:'system',role:'routing',at:nowStr(),
+        action:'Escalated by authority → '+uw.name+' ('+uw.label+' desk) — the case exceeds the '+((UWS[st.tier]||{}).label||'assigned')+' desk’s limit'});
+       st.assigneeUid=uw.uid;st.assignee=uw.name;st.tier=req;changed=true;}}
    all[c.id]=st;});
  if(changed)localStorage.setItem('uw_workbench',JSON.stringify(all));
 }
@@ -1187,10 +1203,28 @@ function wfDecide(id,kind){
  localStorage.setItem('uw_overrides',JSON.stringify(ov));
  render();}
 function wfPull(id){const st=wfGet(id);st.pulled=true;st.status='in_review';
- st.assignee=CURRENT_USER;st.assigneeUid=CURRENT_UID;st.tier=CURRENT_TIER;st.receivedAt=Date.now();
- st.history.push({by:CURRENT_USER,role:CURRENT_ROLE,at:nowStr(),action:'Pulled auto-decision into manual review'});
+ // Pulling an auto-decision into review is open to any underwriter, but the
+ // case still lands on the desk its size demands — pulling is not a way to
+ // hold beyond authority.
+ const c=CASES.find(x=>x.id===id);const req=c?assignTier(c):null;
+ if(CURRENT_ROLE==='underwriter'&&req&&tierRank(CURRENT_TIER)<tierRank(req)){
+  const uw=UWS[req];st.assignee=uw.name;st.assigneeUid=uw.uid;st.tier=req;st.receivedAt=Date.now();
+  st.history.push({by:CURRENT_USER,role:CURRENT_ROLE,at:nowStr(),action:'Pulled auto-decision into manual review — routed to '+uw.name+' ('+uw.label+' desk) by authority'});
+ }else{
+  st.assignee=CURRENT_USER;st.assigneeUid=CURRENT_UID;st.tier=CURRENT_TIER;st.receivedAt=Date.now();
+  st.history.push({by:CURRENT_USER,role:CURRENT_ROLE,at:nowStr(),action:'Pulled auto-decision into manual review'});
+ }
  wfSave(id,st);space='review';render();}
-function wfReassign(id){const st=wfGet(id);st.assigneeUid=CURRENT_UID;st.assignee=CURRENT_USER;st.tier=CURRENT_TIER;
+function wfReassign(id){
+ // "Take over" respects the authority ladder — the rule the tour promises
+ // ("a junior never holds a case beyond their authority") is enforced here,
+ // not just narrated.
+ const c=CASES.find(x=>x.id===id);
+ if(CURRENT_ROLE==='underwriter'&&c){const req=assignTier(c);
+  if(tierRank(CURRENT_TIER)<tierRank(req)){
+   alert('Beyond this desk’s authority — '+fmt$(c.coverage)+((c.conflicts||[]).some(k=>k.severity==='major')?' with a major conflict':'')+' requires the '+UWS[req].label+' desk. Routing is automatic; the case stays with '+UWS[req].name+'.');
+   return;}}
+ const st=wfGet(id);st.assigneeUid=CURRENT_UID;st.assignee=CURRENT_USER;st.tier=CURRENT_TIER;
  st.history.push({by:CURRENT_USER,role:CURRENT_ROLE,at:nowStr(),action:'Reassigned to '+CURRENT_USER});wfSave(id,st);render();}
 function wfReopen(id){const st=wfGet(id);const wasBy=st.decision?st.decision.by:'';st.decision=null;st.status='in_review';
  st.history.push({by:CURRENT_USER,role:CURRENT_ROLE,at:nowStr(),action:'Reopened for review'+((CURRENT_ROLE==='manager'||CURRENT_ROLE==='admin')&&wasBy?' by '+(CURRENT_ROLE==='manager'?'manager':'operations')+' (was decided by '+wasBy+')':'')});wfSave(id,st);
