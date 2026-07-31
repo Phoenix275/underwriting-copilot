@@ -1508,8 +1508,8 @@ function main(){
    <button class="ai-btn" style="background:var(--rail-2)" onclick="goBack()">← ${backLabel()}</button>
    ${navCtl}</div>
   <div class="case-head">
-   <div><h2>${c.name}</h2>
-    <div class="case-meta"><span class="mono" style="font-weight:700;color:var(--ink)">${c.id}</span><span>${c.occupation}</span><span>${c.city}, ${c.state}</span><span>${c.policy}</span></div></div>
+   <div><h2 class="mono">${c.id}</h2>
+    <div class="case-meta"><span style="font-weight:700;color:var(--ink)">${c.name}</span><span>${c.occupation}</span><span>${c.city}, ${c.state}</span><span>${c.policy}</span></div></div>
    <div class="headline-score">
     <div><div class="hs-num" style="color:var(--${vm[1]})">${c.risk_score}<span style="font-size:16px;color:var(--mut)">/100</span></div>
      <div class="hs-lab">Composite Risk Score</div></div>
