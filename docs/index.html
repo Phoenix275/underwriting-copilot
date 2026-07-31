@@ -353,7 +353,10 @@ h1,h2,h3,.case-head h2,.hs-num,.g-num,.stat .sv,.ss-v,.login-card h1,.decision-d
 .doc-row.open .dstatus{color:var(--acc)}
 @media(max-width:900px){.ev-grid{grid-template-columns:1fr}}
 /* =================== LIGHT MODE (toggle) =================== */
-#themeToggle{position:fixed;top:14px;right:16px;z-index:2000;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:17px;line-height:1;cursor:pointer;box-shadow:0 6px 18px rgba(20,20,40,.28);display:flex;align-items:center;justify-content:center}
+/* both floating controls share one fixed top-right rack — the Interactive
+   Guide button sits at the screen's right edge, theme toggle to its left */
+#topCtrls{position:fixed;top:14px;right:16px;z-index:2000;display:flex;align-items:center;gap:10px}
+#themeToggle{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:17px;line-height:1;cursor:pointer;box-shadow:0 6px 18px rgba(20,20,40,.28);display:flex;align-items:center;justify-content:center}
 #themeToggle:hover{filter:brightness(1.08)}
 /* ---- sign-in whoosh: the wordmark flies through the camera into the workbench ---- */
 #whoosh{position:fixed;inset:0;z-index:2050;display:flex;align-items:center;justify-content:center;background:var(--bg);perspective:1000px;overflow:hidden;pointer-events:none;animation:whooshFade 1.7s cubic-bezier(.65,0,.35,1) forwards}
@@ -434,7 +437,7 @@ html.preauth{overflow:hidden}
 #landing .ld-center{will-change:transform,opacity}
 @media (prefers-reduced-motion: reduce){#landing .ld-orb,#landing .ld-glow,#landing .ld-center,#landing .ld-sweep,#landing .ld-btn{animation:none}#landing .ld-scene{transform:none !important}}
 /* interactive tutorial */
-#tourBtn{position:fixed;top:14px;right:66px;z-index:2000;height:40px;padding:0 16px;border-radius:999px;border:none;background:var(--acc);color:#fff;font:600 12.5px 'Poppins',sans-serif;cursor:pointer;box-shadow:0 6px 18px rgba(87,84,240,.4);display:flex;align-items:center;gap:6px}
+#tourBtn{height:40px;padding:0 16px;border-radius:999px;border:none;background:var(--acc);color:#fff;font:600 12.5px 'Poppins',sans-serif;cursor:pointer;box-shadow:0 6px 18px rgba(87,84,240,.4);display:flex;align-items:center;gap:6px}
 #tourBtn:hover{filter:brightness(1.07)}
 #tourPanel{position:fixed;bottom:20px;right:20px;z-index:2100;width:372px;max-width:calc(100vw - 40px);max-height:calc(100vh - 40px);overflow-y:auto;background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 22px 60px rgba(0,0,0,.45);padding:18px 20px;display:none;font-family:'Poppins',sans-serif}
 /* The tour and the UW Guide both live bottom-right — when the tour is running
@@ -565,8 +568,10 @@ html.preauth{overflow:hidden}
 :root[data-theme="light"] #uwgPanel{box-shadow:0 24px 60px rgba(30,32,60,.22)}
 @media (max-width:640px){#uwgPanel{right:8px;left:8px;width:auto}}
 </style>
-<button id="themeToggle" onclick="toggleTheme()" title="Toggle light / dark mode" aria-label="Toggle light or dark mode">🌙</button>
-<button id="tourBtn" onclick="tourStart()" title="Interactive guide — learn every feature, hands-on">🎓 Interactive Guide</button>
+<div id="topCtrls">
+ <button id="themeToggle" onclick="toggleTheme()" title="Toggle light / dark mode" aria-label="Toggle light or dark mode">🌙</button>
+ <button id="tourBtn" onclick="tourStart()" title="Interactive guide — learn every feature, hands-on">🎓 Interactive Guide</button>
+</div>
 <div id="tourPanel"></div>
 <div id="landing">
  <div class="ld-glow g1"></div><div class="ld-glow g2"></div><div class="ld-glow g3"></div>
