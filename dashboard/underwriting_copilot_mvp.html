@@ -533,48 +533,11 @@ html.preauth{overflow:hidden}
 .role-chip.sel b{color:var(--acc)}
 @media (max-width:880px){.login-shell{grid-template-columns:1fr;max-width:460px}.login-brand{padding:26px 30px 22px}.lb-h{font-size:18px}.lb-foot{padding-top:14px}.lb-rings{display:none}}
 @media (prefers-reduced-motion:reduce){.lb-sweep{animation:none}}
-/* ---------- sign-in ambience: triangle warp tunnel ----------
-   A continuous stream of hairline triangles flying out of the centre behind
-   the console, twisting as they expand past the screen edges — the whole
-   viewport is the effect. Nine rings in flight at any moment on a 9s loop,
-   so the tunnel never pauses. Strokes scale with the ring (thicker as it
-   nears the camera) — this lets the browser raster each ring once and fly
-   it on the compositor; non-scaling-stroke forced nine full-screen SVG
-   re-tessellations per frame and made every transition stutter. */
+/* Sign-in ambience removed by request — the page behind the console is a
+   clean static gradient. Kept: the shell's entrance stays paused until the
+   landing starts its exit, so the crossfade is one motion. */
 .login-shell{position:relative;z-index:2}
-.lg-geo{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
-.warp{position:absolute;inset:0}
-.wt{position:absolute;left:50%;top:50%;width:36vmax;height:31.3vmax;overflow:visible;opacity:0;
- animation:warpFly 9s linear infinite;animation-delay:var(--d);will-change:transform,opacity}
-.wt polygon{fill:none;stroke:rgba(116,113,250,.62);stroke-width:.55;stroke-linejoin:round}
-/* glow is a per-frame filter recalculation on a scaling element — accent every
-   third ring instead of paying for it nine times */
-.wt:nth-child(3n) polygon{filter:drop-shadow(0 0 7px rgba(106,103,247,.45))}
-/* the tunnel is invisible behind the landing overlay — don't animate two
-   full-screen systems at once on first paint. The pause lifts the moment the
-   landing starts its exit (.out), not when it's removed 950ms later — the
-   tunnel must already be turning as the landing fades. */
-#landing:not(.out)~#login .wt,#landing:not(.out)~#login .warp-core,#landing:not(.out)~#login .login-shell{animation-play-state:paused}
-.wt:nth-child(2n) polygon{stroke:rgba(172,170,255,.55)}
-.wt:nth-child(3n) polygon{stroke:rgba(90,87,224,.6)}
-@keyframes warpFly{
- 0%{transform:translate(-50%,-50%) scale(.03) rotate(0deg);opacity:0}
- 10%{opacity:.9}
- 75%{opacity:.75}
- 100%{transform:translate(-50%,-50%) scale(6.4) rotate(88deg);opacity:0}}
-.warp-core{position:absolute;left:50%;top:50%;width:30vmin;height:30vmin;transform:translate(-50%,-50%);border-radius:50%;
- background:radial-gradient(circle,rgba(139,136,255,.5),rgba(106,103,247,.12) 55%,transparent 72%);
- filter:blur(18px);animation:coreBreath 5s ease-in-out infinite}
-@keyframes coreBreath{0%,100%{opacity:.55;transform:translate(-50%,-50%) scale(1)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.25)}}
-:root[data-theme="light"] .wt polygon{stroke-width:.65}
-@media (prefers-reduced-motion:reduce){
- .wt{animation:none;opacity:.22}
- .wt:nth-child(1){transform:translate(-50%,-50%) scale(.6) rotate(12deg)}
- .wt:nth-child(2){transform:translate(-50%,-50%) scale(1.4) rotate(30deg)}
- .wt:nth-child(3){transform:translate(-50%,-50%) scale(2.6) rotate(48deg)}
- .wt:nth-child(4){transform:translate(-50%,-50%) scale(4.2) rotate(66deg)}
- .wt:nth-child(n+5){display:none}
- .warp-core{animation:none}}
+#landing:not(.out)~#login .login-shell{animation-play-state:paused}
 /* ---------- UW Guide — embedded knowledge assistant ---------- */
 #uwgBtn{position:fixed;right:20px;bottom:20px;z-index:960;display:none;align-items:center;gap:6px;font:600 12.5px 'Poppins',sans-serif;color:#fff;background:var(--acc);border:none;border-radius:999px;padding:11px 18px;cursor:pointer;box-shadow:0 8px 24px rgba(106,103,247,.38)}
 #uwgBtn:hover{filter:brightness(1.08)}
@@ -630,20 +593,6 @@ html.preauth{overflow:hidden}
  </div>
 </div>
 <div id="login">
- <div class="lg-geo" aria-hidden="true">
-  <div class="warp">
-  <svg class="wt" style="--d:-0s" viewBox="0 0 200 174"><polygon points="100,4 196,170 4,170"/></svg>
-  <svg class="wt" style="--d:-1s" viewBox="0 0 200 174"><polygon points="100,4 196,170 4,170"/></svg>
-  <svg class="wt" style="--d:-2s" viewBox="0 0 200 174"><polygon points="100,4 196,170 4,170"/></svg>
-  <svg class="wt" style="--d:-3s" viewBox="0 0 200 174"><polygon points="100,4 196,170 4,170"/></svg>
-  <svg class="wt" style="--d:-4s" viewBox="0 0 200 174"><polygon points="100,4 196,170 4,170"/></svg>
-  <svg class="wt" style="--d:-5s" viewBox="0 0 200 174"><polygon points="100,4 196,170 4,170"/></svg>
-  <svg class="wt" style="--d:-6s" viewBox="0 0 200 174"><polygon points="100,4 196,170 4,170"/></svg>
-  <svg class="wt" style="--d:-7s" viewBox="0 0 200 174"><polygon points="100,4 196,170 4,170"/></svg>
-  <svg class="wt" style="--d:-8s" viewBox="0 0 200 174"><polygon points="100,4 196,170 4,170"/></svg>
-  </div>
-  <div class="warp-core"></div>
- </div>
  <div class="login-shell">
   <div class="login-brand">
    <div class="lb-sweep"></div>
@@ -3127,6 +3076,83 @@ function uwgQueueAnswer(){
  const l=mine.slice().sort((a,b)=>priorityScore(b)-priorityScore(a)).slice(0,5);
  return `<b>Work top-down${scopeNote}</b> — ranked by coverage + time-in-queue (never by risk score):<br>${l.map((c,i)=>{const h=ageHours(c);return `${i+1}. <span class="mono">${c.id}</span> ${c.name} — ${fmt$(c.coverage)}, ${fmtAge(h)} in queue${h>=8?' · <b style="color:var(--bad)">SLA BREACH</b>':''}, priority ${priorityScore(c)}/100`;}).join('<br>')}${mine.length>5?`<br>(${mine.length-5} more behind them.)`:''}`;
 }
+/* ---------- the Guide knows the whole app: the team, the map, the screen ---------- */
+const UWG_STAFF=[
+ {uid:'mrivera',name:'Marcus Rivera',login:'mrivera / senior',role:'Senior underwriter',desk:true,
+  auth:'the top desk — every referred case at $750k+ or carrying a major conflict routes there automatically'},
+ {uid:'ewong',name:'Erin Wong',login:'ewong / review',role:'Mid-tier underwriter',desk:true,
+  auth:'holds clean referred cases from $250k up to $750k'},
+ {uid:'dpark',name:'Dana Park',login:'dpark / analyst',role:'New analyst — the junior desk',desk:true,
+  auth:'holds clean referred cases up to $250k; anything larger or conflicted escalates automatically'},
+ {uid:'nsethi',name:'Nadia Sethi',login:'nsethi / oversight',role:'Manager',desk:false,
+  auth:'oversight dashboard and the Model Card; can reopen or override any recorded decision (logged as MANAGER OVERRIDE)'},
+ {uid:'mvale',name:'Marcus Vale',login:'mvale / executive',role:'Executive — Chief Underwriting Officer',desk:false,
+  auth:'portfolio-only money view: P&L, combined ratio, appetite — no individual cases'},
+ {uid:'panand',name:'Priya Anand',login:'panand / admin',role:'Operations administrator',desk:false,
+  auth:'the decision feed (Reopen / Amend, logged as OPS AMENDMENT), evidence requests, exports and integration coverage'}];
+function uwgStaffCard(s){
+ const mine=CASES.filter(c=>c.verdict==='yellow'&&!wfGet(c.id).decision&&wfGet(c.id).assigneeUid===s.uid);
+ const cov=mine.reduce((t,c)=>t+(c.coverage||0),0);
+ const breach=mine.filter(c=>ageHours(c)>=8).length;
+ const done=Object.entries(wfAll()).filter(([id,st])=>st&&st.decision&&st.decision.by===s.name).length;
+ const live=s.desk?` Live desk right now: <b>${mine.length}</b> case(s) waiting${mine.length?` — ${fmt$(cov)} of coverage, ${breach} over the 8-hour SLA`:''}${done?`; ${done} decision(s) recorded`:''}.`
+  :(done?` <b>${done}</b> decision(s) recorded under this name.`:'');
+ return `<b>${s.name}</b> — ${s.role}: ${s.auth}.${live} Persona card on the sign-in screen (<span class="mono">${s.login}</span>) — fictional, on synthetic data.`;
+}
+function uwgStaffAnswer(q){
+ // The team is part of the product: "who is dana park", "tell me about the
+ // junior analyst", "who works here" must never fall into applicant lookup.
+ // ("marcus" and "priya" alone stay with applicants — the book has both.)
+ if(/who (works|is on the team|is in the team)|the team\b|list (the )?(team|underwriters|personas|roles|seats)|who can sign in|which personas|all the (roles|personas|seats)|who are the underwriters|meet the team/.test(q))
+  return `<b>Six seats on the platform</b> (all fictional, on synthetic data):<br><br>${UWG_STAFF.map(uwgStaffCard).join('<br><br>')}`;
+ const ABOUT=/who is|who.s\b|who runs|tell me about|what does|introduce|about the/;
+ const hits=UWG_STAFF.filter(s=>{
+  const parts=s.name.toLowerCase().split(' ');const fn=parts[0],ln=parts[1];
+  if(q.includes(fn+' '+ln))return true;
+  if(new RegExp('\\b'+ln+'\\b').test(q))return true;
+  if(['dana','erin','nadia'].indexOf(fn)>=0&&new RegExp('\\b'+fn+'\\b').test(q))return true;
+  return false;});
+ const roleHit=ABOUT.test(q)?UWG_STAFF.filter(s=>
+   (/junior|new analyst|analyst desk/.test(q)&&s.uid==='dpark')||
+   (/senior (underwriter|desk)/.test(q)&&s.uid==='mrivera')||
+   (/mid.tier/.test(q)&&s.uid==='ewong')||
+   (/\bmanager\b|oversight/.test(q)&&s.uid==='nsethi')||
+   (/\bexecutive\b|\bcuo\b|chief underwriting/.test(q)&&s.uid==='mvale')||
+   (/\badmin\b|operations/.test(q)&&s.uid==='panand')):[];
+ const all=hits.concat(roleHit.filter(s=>hits.indexOf(s)<0));
+ if(!all.length)return null;
+ if(all.length>2)return null;   // the question is broader than a person or two
+ return all.map(uwgStaffCard).join('<br><br>');
+}
+function uwgAppMapAnswer(q){
+ // "go through every part of the web app" — the Guide walks the whole product.
+ if(!/(walk|take|guide) me through (the |this )?(app|product|everything|it all|web ?app)|go (through|thru) every|every (part|section|screen|feature)|all the (screens|features|parts|sections|pages)|whole (app|product|platform)|entire (app|web ?app|product|platform)|app map|tour of the (app|product)|show me the (whole )?app|what can (this|the) (app|platform|product) do|how do i use (this|the app)/.test(q))return null;
+ const refN=CASES.filter(c=>c.verdict==='yellow').length;
+ const map=[
+  ['Sign-in','six persona cards — pick a seat and the credentials fill themselves. The role decides everything you see.'],
+  ['Review Queue',`the human work: ${refN} referred cases ranked by coverage + time-in-queue (never by risk score), SLA clocks (amber 6h, breach 8h), outstanding requirements from the age × amount grid, and an AI recommendation per row.`],
+  ['Case file','six tabs — Application (read-only evidence), Documents (the 5-document packet, request-info NIGO return, evidence ordering with an AI pre-check), Extraction & Conflicts (the 6-check screen, mismatches in red), Risk Score (rule + ML blend with the factor breakdown), Decision (approve / decline with a mandatory reason, plus the full audit trail).'],
+  ['Auto-Approved / Auto-Declined','the straight-through book — approvals ranked by expected margin against the monthly appetite line (with bulk approve), declines filed with their reasons.'],
+  ['Manager','oversight dashboard, every decided case, reopen / override authority, and the regulator-facing Model Card (weights, calibration, fairness).'],
+  ['Executive','money only — the P&L rail down to operating income and combined ratio, with ⚙ Customize to shape the view.'],
+  ['Operations Admin','the decision feed (Amend / Reopen, CSV/JSON export), outstanding evidence requests, and integration coverage.'],
+  ['Everywhere','🎓 Tutorial replays the guided tour, the theme toggle sits beside it, and I’m on every screen — ask about any case, number, rule or person you see.']];
+ return `<b>The whole app, part by part:</b><br>${map.map(kv=>`· <b>${kv[0]}</b> — ${kv[1]}`).join('<br>')}<br>Ask “what am I looking at?” on any screen and I’ll explain the one you’re on.`;
+}
+function uwgWhereAmIAnswer(q){
+ if(!/what am i looking at|where am i\b|this (screen|page|view)\b|current (screen|page|view)|what.s on (the |this )?screen|explain (this|the) (screen|page|view)|what can i do (here|on this)/.test(q))return null;
+ if(!CURRENT_ROLE)return null;
+ if(view==='case'&&activeId){const c=CASES.find(x=>x.id===activeId);
+  return `You’re in the case file for <b>${c?c.name:activeId}</b> (<span class="mono">${activeId}</span>). Tabs across the top: Application, Documents, Extraction & Conflicts, Risk Score, Decision — the Decision tab is where a call is recorded (with a written reason) and where the audit trail lives. Esc returns to the queue; ← / → move between cases.`;}
+ if(view==='executive')return `The <b>Executive Overview</b> — portfolio money only. The rail sizes figures by importance (operating income first), the blocks cover P&L, cost-to-underwrite and appetite, and <b>⚙ Customize view</b> shows or hides any block. No individual cases here by design.`;
+ if(view==='manager')return `The <b>Manager view</b> — queue health across the team, every decided case (reopen or override with a logged reason), and the Portfolio & Model Card in the left nav: score formula, evidence-anchored weights, calibration, fairness.`;
+ if(view==='admin')return `The <b>Operations Admin view</b> — the decision feed (every recorded decision; ↺ Reopen / Amend logs an OPS AMENDMENT), CSV/JSON exports, outstanding evidence requests, and the integration coverage panel.`;
+ const spaces={review:`the <b>Review Queue</b> — the ${CASES.filter(c=>c.verdict==='yellow').length} cases needing a human, ranked by coverage + time-in-queue`,
+  completed:'<b>Completed</b> — cases with a recorded human decision',
+  auto_approved:'<b>Auto-Approved</b> — straight-through approvals ranked by expected margin against the appetite line',
+  auto_declined:'<b>Auto-Declined</b> — straight-through declines, kept as a record'};
+ return `You’re in ${spaces[space]||'the workbench'}. The left rail switches case spaces, the search box finds any name or ID, and <b>Review</b> on a row opens the case file. Ask me about anything on screen.`;
+}
 function uwgQueueRefAnswer(q){
  // "compare the priority 1 case and priority 3 case in queue", "who is 2nd in
  // the queue" — queue POSITIONS are real references; resolve them to cases.
@@ -3480,6 +3506,7 @@ function uwgContext(qRaw){
    slaHours:8,slaWarnHours:6,
    straightThroughPct:+(M.decisioning.straight_through_rate*100).toFixed(1),
    user:{name:CURRENT_USER||null,role:CURRENT_ROLE||null},
+   team:UWG_STAFF.map(s=>({name:s.name,role:s.role,authority:s.auth})),
    openCase:(view==='case'&&activeId)?activeId:null,
    lastCaseDiscussed:uwgLastCase?uwgLastCase.id:null,
    app:{signIn:'Demo role selector, no real auth — persona cards fill demo credentials (senior underwriter, review desk, junior analyst, operations admin, manager, executive).',
@@ -3585,6 +3612,11 @@ function uwgAnswerCore(qRaw,prevQ,prevA){
  // queue-position references and the asker’s own tally — computed, never prose
  const qr=uwgQueueRefAnswer(q);if(qr)return qr;
  const myw=uwgMyWorkAnswer(q);if(myw)return myw;
+ // the team, the app map and the current screen — before applicant lookup,
+ // so "who is dana park" never falls into fuzzy name matching
+ const stf=uwgStaffAnswer(q);if(stf)return stf;
+ const amap=uwgAppMapAnswer(q);if(amap)return amap;
+ const here=uwgWhereAmIAnswer(q);if(here)return here;
  // scenarios, judgement calls, group-bys and the shift briefing before case lookups
  const wi=uwgWhatIfAnswer(q);if(wi)return wi;
  const pr=uwgProfileAnswer(q);if(pr)return uwgWithFollowOn(pr,q);
