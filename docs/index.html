@@ -582,11 +582,11 @@ html.preauth{overflow:hidden}
  <div class="ld-orbits">
   <span class="ld-orb" style="--r:305px;--t:34s;--a:15deg">RISK 24</span>
   <span class="ld-orb" style="--r:305px;--t:34s;--a:105deg">DOB ✓ VERIFIED</span>
-  <span class="ld-orb" style="--r:305px;--t:34s;--a:195deg">STP 77%</span>
+  <span class="ld-orb" style="--r:305px;--t:34s;--a:195deg">STP 83%</span>
   <span class="ld-orb" style="--r:305px;--t:34s;--a:285deg">6-CHECK SCREEN</span>
   <span class="ld-orb far" style="--r:455px;--t:52s;--a:0deg">APS ORDERED</span>
   <span class="ld-orb far" style="--r:455px;--t:52s;--a:72deg">COTININE −</span>
-  <span class="ld-orb far" style="--r:455px;--t:52s;--a:144deg">AUC 0.92</span>
+  <span class="ld-orb far" style="--r:455px;--t:52s;--a:144deg">AUC 0.90</span>
   <span class="ld-orb far" style="--r:455px;--t:52s;--a:216deg">$487k /YR</span>
   <span class="ld-orb far" style="--r:455px;--t:52s;--a:288deg">ACORD 103</span>
  </div>
@@ -1579,7 +1579,7 @@ function overview(){
   </div>
   <div class="note">Medical rule-engine weights are evidence-anchored: <b>points = round(28 × ln(relative-mortality multiple))</b> derived from NHANES + NCHS Linked Mortality data and cross-validated against real applicants — not hand-picked. Gradient boosting is chosen over a GLM for interaction capture, with logistic regression retained as the auditable in-browser stand-in. The rules layer is also the shock absorber for regime change (e.g. a 2020-style shift): a new knockout or threshold ships in days without a full retrain.</div></div>
  <div class="grid3">
-  <div class="stat"><div class="sv">${(M.extraction.field_level_accuracy*100).toFixed(1)}%</div><div class="sl"><b>Extraction accuracy</b> — field level vs ground truth</div></div>
+  <div class="stat"><div class="sv">${M.extraction.field_level_accuracy>=0.9995?'99%+':(M.extraction.field_level_accuracy*100).toFixed(1)+'%'}</div><div class="sl"><b>Extraction accuracy</b> — field level vs ground truth</div></div>
   <div class="stat"><div class="sv">${(M.conflict_screening.detection_recall*100).toFixed(0)}%</div><div class="sl"><b>Conflict recall</b> — injected-conflict detection (${M.conflict_screening.tp}/${M.conflict_screening.tp+M.conflict_screening.fn} caught, ${M.conflict_screening.fp} false alarms)</div></div>
   <div class="stat"><div class="sv">${(gb.auc*100).toFixed(1)}%</div><div class="sl"><b>Gradient Boosting AUC</b> — on ${M.risk_models.n_test.toLocaleString()} held-out records</div></div>
   <div class="stat"><div class="sv">${(lr.auc*100).toFixed(1)}%</div><div class="sl"><b>Logistic Regression AUC</b> — auditable baseline</div></div>
@@ -1696,7 +1696,7 @@ function managerView(){
     <td class="mono" style="color:var(--ok)">${(v.g/v.n*100).toFixed(0)}%</td><td class="mono" style="color:var(--warn)">${(v.y/v.n*100).toFixed(0)}%</td><td class="mono" style="color:var(--bad)">${(v.r/v.n*100).toFixed(0)}%</td></tr>`).join('')}</table></div>
  <div class="card"><h3>System Health</h3>
   <div class="legend-row">
-   <div class="legend-chip cls-ok"><span class="swatch" style="background:var(--ok)"></span>Extraction ${(M.extraction.field_level_accuracy*100).toFixed(0)}% field accuracy</div>
+   <div class="legend-chip cls-ok"><span class="swatch" style="background:var(--ok)"></span>Extraction ${M.extraction.field_level_accuracy>=0.9995?'99%+':(M.extraction.field_level_accuracy*100).toFixed(0)+'%'} field accuracy</div>
    <div class="legend-chip cls-ok"><span class="swatch" style="background:var(--ok)"></span>Conflict recall ${(M.conflict_screening.detection_recall*100).toFixed(0)}%</div>
    <div class="legend-chip cls-ok"><span class="swatch" style="background:var(--ok)"></span>GB model AUC ${(M.risk_models.gradient_boosting.auc*100).toFixed(1)}%</div>
    <div class="legend-chip" style="background:var(--acc-soft);color:var(--acc)"><span class="swatch" style="background:var(--acc)"></span>Trained on ${(lastRun.n_train_pool||M.risk_models.n_train).toLocaleString()} records · run #${lastRun.run||'—'}</div>
@@ -2526,7 +2526,7 @@ const UWG_KB=[
  {k:['roadmap','what is next','future','coming soon','not built yet','next step','what would you add','improve'],
   a:()=>`Honest roadmap. Nearest-term: <b>table ratings</b> (the composite already implies a mortality multiple, so rated offers replace binary refer/decline), <b>NIGO intake triage</b>, and <b>requirement/vendor SLA tracking</b> — the biggest real cycle-time levers. Then: workforce and queue balancing, user/access administration with separation-of-duties, a formal reconsideration path, and pilot connectors (CRM, new business, agent portal, notifications, claims). Deliberately excluded: image-based fraud detection and any dependency on external claims or health repositories, since the target markets have none to rely on.`},
  {k:['extraction accurate','how accurate','ocr','reads the document','confidence','misread','low confidence','parse fail','garbled'],
-  a:()=>`Extraction runs at <b>${(M.extraction.field_level_accuracy*100).toFixed(1)}% field-level accuracy</b> against ground truth on this book, and the conflict screen catches <b>${(M.conflict_screening.detection_recall*100).toFixed(0)}%</b> of injected discrepancies with ${M.conflict_screening.fp} false alarms. The design point that matters: extraction never decides anything alone — every parsed field is shown beside its source document so an underwriter can check it, and a disagreement between documents refers the case rather than resolving it silently. A low-confidence or unparseable field is a human's problem to look at, which is the correct failure mode.`},
+  a:()=>`Extraction runs at <b>${M.extraction.field_level_accuracy>=0.9995?'99%+':(M.extraction.field_level_accuracy*100).toFixed(1)+'%'} field-level accuracy</b> against ground truth on this book, and the conflict screen catches <b>${(M.conflict_screening.detection_recall*100).toFixed(0)}%</b> of injected discrepancies with ${M.conflict_screening.fp} false alarms. The design point that matters: extraction never decides anything alone — every parsed field is shown beside its source document so an underwriter can check it, and a disagreement between documents refers the case rather than resolving it silently. A low-confidence or unparseable field is a human's problem to look at, which is the correct failure mode.`},
  {k:['handwriting','handwritten','scanned badly','retinal','biometric','image fraud','image-based','image based','photo','picture','selfie','face','damage assessment'],
   a:()=>`Explicit non-goals, and worth stating in a pitch. <b>Image-based fraud detection</b> (comparing photos, assessing damage) is a different problem domain — the validated capability here is document-level inconsistency detection, which is where life underwriting misrepresentation actually shows up. <b>Handwritten OCR</b> and <b>biometric or retinal checks</b> are research items, not build items. The scope discipline is deliberate: document intake only, no external data at decision time.`},
  {k:['language','malay','bahasa','translate','multilingual','non-english','indonesian document'],
