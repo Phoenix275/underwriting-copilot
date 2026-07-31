@@ -446,11 +446,11 @@ html.preauth{overflow:hidden}
 #landing .ld-center{will-change:transform,opacity}
 @media (prefers-reduced-motion: reduce){#landing .ld-orb,#landing .ld-glow,#landing .ld-center,#landing .ld-sweep,#landing .ld-btn{animation:none}#landing .ld-scene{transform:none !important}}
 /* interactive tutorial */
-/* Edge-docked at the vertical middle of the right screen edge (like the
-   macOS Dictate pill): flush to the edge, rounded on the open side only,
-   sliding out a touch on hover. */
-#tourBtn{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:2000;height:44px;padding:0 14px 0 16px;border-radius:999px 0 0 999px;border:none;background:var(--acc);color:#fff;font:600 12.5px 'Poppins',sans-serif;cursor:pointer;box-shadow:-6px 8px 22px rgba(87,84,240,.38);display:flex;align-items:center;gap:6px;transition:padding .18s ease,filter .18s ease}
-#tourBtn:hover{filter:brightness(1.07);padding-right:20px}
+/* Edge-docked tab at the vertical middle of the right screen edge: the word
+   GUIDE reads top-to-bottom, one upright letter per line, flush to the edge
+   and rounded on the open side only. */
+#tourBtn{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:2000;writing-mode:vertical-lr;text-orientation:upright;letter-spacing:4px;padding:16px 11px 16px 12px;border-radius:12px 0 0 12px;border:none;background:var(--acc);color:#fff;font:600 12.5px 'Poppins',sans-serif;cursor:pointer;box-shadow:-6px 8px 22px rgba(87,84,240,.38);transition:padding .18s ease,filter .18s ease}
+#tourBtn:hover{filter:brightness(1.07);padding-right:16px}
 #tourPanel{position:fixed;bottom:20px;right:20px;z-index:2100;width:372px;max-width:calc(100vw - 40px);max-height:calc(100vh - 40px);overflow-y:auto;background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 22px 60px rgba(0,0,0,.45);padding:18px 20px;display:none;font-family:'Poppins',sans-serif}
 /* The tour and the UW Guide both live bottom-right — when the tour is running
    it would sit exactly on top of the assistant it just told you to open, so
@@ -583,7 +583,7 @@ html.preauth{overflow:hidden}
 <div id="topCtrls">
  <button id="themeToggle" onclick="toggleTheme()" title="Toggle light / dark mode" aria-label="Toggle light or dark mode">🌙</button>
 </div>
-<button id="tourBtn" onclick="tourStart()" title="Interactive guide — learn every feature, hands-on">🎓 Interactive Guide</button>
+<button id="tourBtn" onclick="tourStart()" title="Guide — a hands-on walkthrough of every feature">GUIDE</button>
 <div id="tourPanel"></div>
 <div id="landing">
  <div class="ld-glow g1"></div><div class="ld-glow g2"></div><div class="ld-glow g3"></div>
@@ -756,7 +756,7 @@ const TUTORIAL_STEPS=[
   learn:()=>`A knowledge assistant that answers from <b>this book, live</b> — not a canned FAQ. Four kinds of question, all of them computed at the moment you ask:<br>· the rulebook — “what are the decision bands?”<br>· any applicant, by name or case ID — “what is Farah Iyer’s credit score?”<br>· the whole book — “how many smokers are in the queue?”, “rank the auto-approved candidates”, “what is the combined ratio right now?”<br>· a what-if — “if I move the approval line to 60, how many more auto-approve?”<br>It remembers who you were just discussing, so “and her queue time?” stays on Farah. Nothing is pre-written, so it cannot drift from the product.${uwgLlm===true?` <b>This deployment runs on Claude</b> — it reasons over the live book in open language rather than matching keywords.`:` <b>Two brains, one interface:</b> with an API key configured it runs on <b>Claude</b> and reasons in open language; without one it uses the built-in offline engine — what you're seeing now — so the demo works with no network at all.`}`,
   action:{label:`Open the Guide`,fn:()=>tourOpenGuide()}},
  {title:`That's the whole product 🎉`,
-  learn:`Every application read, screened, scored, and routed — with a human on every borderline call and an audit trail behind every decision. Six seats on one product: junior and senior desks, manager oversight, executive P&L, operations correction — plus an assistant that can explain any of it on demand. This walkthrough can be re-launched anytime from the <b>🎓 Interactive Guide</b> button.`}
+  learn:`Every application read, screened, scored, and routed — with a human on every borderline call and an audit trail behind every decision. Six seats on one product: junior and senior desks, manager oversight, executive P&L, operations correction — plus an assistant that can explain any of it on demand. This walkthrough can be re-launched anytime from the vertical <b>GUIDE</b> tab on the right edge.`}
 ];
 function tourStart(){const ld=document.getElementById('landing');if(ld)ld.remove();
  tourIdx=0;const p=document.getElementById('tourPanel');if(p)p.classList.add('on');tourRender();}
@@ -766,7 +766,7 @@ function tourAct(){const s=TUTORIAL_STEPS[tourIdx];if(s&&s.action&&s.action.fn){
 function tourRender(){
  const s=TUTORIAL_STEPS[tourIdx];const p=document.getElementById('tourPanel');if(!p||!s)return;
  const last=tourIdx===TUTORIAL_STEPS.length-1;
- p.innerHTML=`<div class="tour-step">Step ${tourIdx+1} of ${TUTORIAL_STEPS.length} · Interactive guide</div>
+ p.innerHTML=`<div class="tour-step">Step ${tourIdx+1} of ${TUTORIAL_STEPS.length} · Guide</div>
   <div class="tour-title">${s.title}</div>
   ${s.do?`<div class="tour-do">${s.do}</div>`:''}
   <div class="tour-learn">${typeof s.learn==='function'?s.learn():s.learn}</div>
@@ -2537,7 +2537,7 @@ const UWG_KB=[
  {k:['demo login','credentials','what are the logins','username','how do i sign in','sign in as','test account'],
   a:()=>`Six demo accounts, shown on the sign-in card: <span class="mono">mrivera / senior</span>, <span class="mono">ewong / review</span>, <span class="mono">dpark / analyst</span>, <span class="mono">nsethi / oversight</span> (manager), <span class="mono">mvale / executive</span> (CUO), <span class="mono">panand / admin</span> (operations). It is a role selector rather than real authentication — each role reveals a different product.`},
  {k:['what should i show','demo tips','how do i present','order to demo','best way to show','walkthrough order','pitch this'],
-  a:()=>`Land the problem before the product. Suggested order: (1) the <b>🎓 Interactive Guide</b> intro — value chain, ~40% of underwriter time on data gathering, 3–8 week turnaround; (2) <b>one case end to end</b> as a junior analyst, escalating to senior — that is the story people remember; (3) a <b>flagged case</b>, so the 6-check screen shows a real discrepancy with both values; (4) <b>Auto-Approved ranked by margin</b> for the capacity argument; (5) the <b>Executive P&L</b> — the $47 vs $162 per application is the line that sells automation; (6) the <b>Model Card</b> if anyone asks how it is defensible. Ask me anything mid-demo — I read from the live book, so nothing goes stale.`},
+  a:()=>`Land the problem before the product. Suggested order: (1) the <b>GUIDE</b> walkthrough intro — value chain, ~40% of underwriter time on data gathering, 3–8 week turnaround; (2) <b>one case end to end</b> as a junior analyst, escalating to senior — that is the story people remember; (3) a <b>flagged case</b>, so the 6-check screen shows a real discrepancy with both values; (4) <b>Auto-Approved ranked by margin</b> for the capacity argument; (5) the <b>Executive P&L</b> — the $47 vs $162 per application is the line that sells automation; (6) the <b>Model Card</b> if anyone asks how it is defensible. Ask me anything mid-demo — I read from the live book, so nothing goes stale.`},
  {k:['roadmap','what is next','future','coming soon','not built yet','next step','what would you add','improve'],
   a:()=>`Honest roadmap. Nearest-term: <b>table ratings</b> (the composite already implies a mortality multiple, so rated offers replace binary refer/decline), <b>NIGO intake triage</b>, and <b>requirement/vendor SLA tracking</b> — the biggest real cycle-time levers. Then: workforce and queue balancing, user/access administration with separation-of-duties, a formal reconsideration path, and pilot connectors (CRM, new business, agent portal, notifications, claims). Deliberately excluded: image-based fraud detection and any dependency on external claims or health repositories, since the target markets have none to rely on.`},
  {k:['extraction accurate','how accurate','ocr','reads the document','confidence','misread','low confidence','parse fail','garbled'],
@@ -2648,7 +2648,7 @@ const UWG_KB=[
  {k:['theme','dark mode','light mode','colour','color scheme','toggle'],
   a:()=>`The ☀️/🌙 button top-right switches light and dark; the app opens in <b>light mode</b> and remembers your choice in this browser.`},
  {k:['tour','tutorial','interactive guide','walkthrough','guided','demo flow','how do i demo'],
-  a:()=>`The <b>🎓 Interactive Guide</b> button runs a hands-on walkthrough: it opens with the insurance value chain and the pain it addresses, then follows <b>one case end to end</b> — junior desk, escalation by authority, senior review, evidence, decision — before touring the manager, executive and operations personas. It drives the real app as it goes.`},
+  a:()=>`The vertical <b>GUIDE</b> tab on the right screen edge runs a hands-on walkthrough: it opens with the insurance value chain and the pain it addresses, then follows <b>one case end to end</b> — junior desk, escalation by authority, senior review, evidence, decision — before touring the manager, executive and operations personas. It drives the real app as it goes.`},
  {k:['bulk','approve all','batch','all at once'],
   a:()=>`The Auto-Approved space has <b>Bulk approve all</b> — it records the batch under one rationale, but writes each case to its own audit trail individually, so the record stays per-case.`},
  {k:['saved','stored','database','persist','local storage','where is the data','lose my work','real data','refresh','reload','close the browser','start over','reset the demo'],
@@ -3153,7 +3153,7 @@ function uwgAppMapAnswer(q){
   ['Manager','oversight dashboard, every decided case, reopen / override authority, and the regulator-facing Model Card (weights, calibration, fairness).'],
   ['Executive','money only — the P&L rail down to operating income and combined ratio, with ⚙ Customize to shape the view.'],
   ['Operations Admin','the decision feed (Amend / Reopen, CSV/JSON export), outstanding evidence requests, and integration coverage.'],
-  ['Everywhere','🎓 Interactive Guide replays the hands-on walkthrough, the theme toggle sits beside it, and I’m on every screen — ask about any case, number, rule or person you see.']];
+  ['Everywhere','the vertical GUIDE tab on the right edge replays the hands-on walkthrough, the theme toggle sits top-right, and I’m on every screen — ask about any case, number, rule or person you see.']];
  return `<b>The whole app, part by part:</b><br>${map.map(kv=>`· <b>${kv[0]}</b> — ${kv[1]}`).join('<br>')}<br>Ask “what am I looking at?” on any screen and I’ll explain the one you’re on.`;
 }
 function uwgWhereAmIAnswer(q){
@@ -3527,7 +3527,7 @@ function uwgContext(qRaw){
    openCase:(view==='case'&&activeId)?activeId:null,
    lastCaseDiscussed:uwgLastCase?uwgLastCase.id:null,
    app:{signIn:'Demo role selector, no real auth — persona cards fill demo credentials (senior underwriter, review desk, junior analyst, operations admin, manager, executive).',
-    layout:'Left rail case spaces: Review Queue (ranked by coverage + time-in-queue), Completed, Auto-approved, Auto-declined. Case file tabs: Extraction, Risk Score, Conflicts, Affordability, Documents, Decision. Floating Guide chat and the 🎓 Interactive Guide walkthrough.',
+    layout:'Left rail case spaces: Review Queue (ranked by coverage + time-in-queue), Completed, Auto-approved, Auto-declined. Case file tabs: Extraction, Risk Score, Conflicts, Affordability, Documents, Decision. Floating Guide chat and the vertical GUIDE walkthrough tab on the right edge.',
     exec:'Executive Overview is portfolio-only — operating income, combined ratio, coverage accepted, appetite, straight-through — with a Customize control to show/hide blocks per browser.',
     admin:'Operations Admin sees the decision feed (Reopen / Amend, logged as OPS AMENDMENT), the integration coverage panel and the model card with exportable overrides.',
     authority:'Junior desk is authority-limited and escalates by amount; senior desk decides large cases; a manager can override any decision; operations can amend with a written reason. Every change records who, when, why and what it superseded.'}},
